@@ -148,12 +148,14 @@ export default function MindMap() {
           nodesDraggable={true}
           panOnScroll={false} // ✅ 禁止滚动拖动画布
           zoomOnScroll={false} // ✅ 禁止滚轮缩放
+          panOnDrag={false} // 🚫 禁止拖动画布
           attributionPosition={null}
           border="none"
+          proOptions={{hideAttribution: true}}
         >
           <Background />
           <Controls />
-          <MiniMap />
+          {/* <MiniMap /> */}
         </ReactFlow>
       </ReactFlowProvider>
     </div>
