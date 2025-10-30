@@ -3,6 +3,7 @@ import Sidebar from "./main/Sidebar";
 import Home from "./pages/Home";
 import About from "./pages/About";
 import Settings from "./pages/settings/Settings";
+import MindMap from "./pages/MindMap";
 
 function App() {
   return (
@@ -14,7 +15,7 @@ function App() {
         {/* 右侧动态内容区 */}
         <div style={{ flex: 1, padding: "20px", overflowY: "auto", color: "#bfbfbfff" }}>
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<MindMap />} />
             <Route path="/about" element={<About />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>

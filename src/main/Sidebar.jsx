@@ -6,7 +6,7 @@ const Sidebar = () => {
 
   const navStyle = {
     width: "15px",
-    backgroundColor: "rgba(241,241,241,1)",
+    backgroundColor: "#f1f1f1",
     color: "#bfbfbfff",
     padding: "20px",
     display: "flex",
@@ -14,7 +14,7 @@ const Sidebar = () => {
   };
 
   const linkStyle = (path) => ({
-    color: location.pathname === path ? "#61dafb" : "#bfbfbfff",
+    color: location.pathname === path ? "#61dafb" : "#313030ff",
     textDecoration: "none",
     marginBottom: "16px",
     fontWeight: "bold",

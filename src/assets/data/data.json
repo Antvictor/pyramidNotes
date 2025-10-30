@@ -1,0 +1,16 @@
+[
+  {
+    "id": "1",
+    "label": "顶层笔记",
+    "markdown": "# 顶层笔记",
+    "parentId": null
+  },
+  { "id": "2", "label": "子主题 A", "markdown": "# 子主题 A", "parentId": "1" },
+  { "id": "3", "label": "子主题 B", "markdown": "# 子主题 B", "parentId": "1" },
+  {
+    "id": "4",
+    "label": "子主题 B-1",
+    "markdown": "# 子主题 B-1",
+    "parentId": "3"
+  }
+]
