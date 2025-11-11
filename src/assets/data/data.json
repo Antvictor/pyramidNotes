@@ -1,8 +1,8 @@
 [
   {
     "id": "1",
-    "label": "顶层笔记",
-    "markdown": "# 顶层笔记",
+    "label": "Root",
+    "markdown": "# 顶层笔记 /n ## Test",
     "parentId": null
   },
   { "id": "2", "label": "子主题 A", "markdown": "# 子主题 A", "parentId": "1" },

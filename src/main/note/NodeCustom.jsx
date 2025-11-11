@@ -3,6 +3,7 @@ import { Handle, Position } from 'reactflow'
 import { useNavigate } from 'react-router-dom'
 
 export default function NodeCustom({ data }) {
+  console.log(data);
   const navigate = useNavigate()
   return (
     <div

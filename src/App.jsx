@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import About from "./pages/About";
 import Settings from "./pages/settings/Settings";
 import MindMap from "./pages/MindMap";
+import Node from "./main/note/Node"
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
             <Route path="/" element={<MindMap />} />
             <Route path="/about" element={<About />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/note/:id" element={<Node />} />
           </Routes>
         </div>
       </div>

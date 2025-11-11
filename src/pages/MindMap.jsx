@@ -1,5 +1,4 @@
 import React, {
-  useState,
   useCallback,
   useMemo,
   useEffect,
@@ -85,7 +84,7 @@ export default function MindMap() {
     const initNodes = notesData.map((n) => ({
       id: n.id,
       type: "custom",
-      data: { label: n.label, ...n.data },
+      data: { label: n.label, ...n },
       // position: n.position || { x: Math.random() * 400, y: Math.random() * 400 },
       position: posMap.get(n.id),
     }));
