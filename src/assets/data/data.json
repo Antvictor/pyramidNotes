@@ -2,7 +2,7 @@
   {
     "id": "1",
     "label": "Root",
-    "markdown": "# 顶层笔记 /n ## Test",
+    "markdown": "",
     "parentId": null
   },
   { "id": "2", "label": "子主题 A", "markdown": "# 子主题 A", "parentId": "1" },
