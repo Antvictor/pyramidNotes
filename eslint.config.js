@@ -33,7 +33,7 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.node, // 允许 require、__dirname 等
       parserOptions: {
-        sourceType: 'script', // Electron 主进程多为 CommonJS
+        sourceType: 'module', // Electron 主进程多为 CommonJS
       },
     },
     rules: {

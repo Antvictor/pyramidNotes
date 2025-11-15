@@ -3,14 +3,18 @@
     "id": "1",
     "label": "Root",
     "markdown": "",
+    "name": "test",
     "parentId": null
   },
-  { "id": "2", "label": "子主题 A", "markdown": "# 子主题 A", "parentId": "1" },
-  { "id": "3", "label": "子主题 B", "markdown": "# 子主题 B", "parentId": "1" },
+  { "id": "2", "label": "子主题 A", 
+  "name": "test2", "markdown": "# 子主题 A", "parentId": "1" },
+  { "id": "3", "label": "子主题 B",
+  "name": "test3", "markdown": "# 子主题 B", "parentId": "1" },
   {
     "id": "4",
     "label": "子主题 B-1",
     "markdown": "# 子主题 B-1",
+    "name": "test4",
     "parentId": "3"
   }
 ]

@@ -16,7 +16,7 @@ export default function NodeCustom({ data }) {
         minWidth: 120,
         textAlign: 'center',
       }}
-      onClick={() => navigate(`/note/${data.id}`)}
+      onClick={() => navigate(`/note/${data.name}`)}
     >
       {data.label}
       <Handle type="target" position={Position.Top} />
