@@ -2,7 +2,7 @@ import React, {
   useCallback,
   useMemo,
   useEffect,
-  useRef,
+  // useRef,
 } from "react";
 import ReactFlow, {
   ReactFlowProvider,
@@ -60,7 +60,7 @@ function layoutTree(
 }
 
 export default function MindMap() {
-  const flowWrapperRef = useRef(null);
+  // const flowWrapperRef = useRef(null);
 
   // 节点和边状态
   const [nodes, setNodes, onNodesChange] = useNodesState([]);

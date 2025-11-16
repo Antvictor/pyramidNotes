@@ -21,7 +21,7 @@ const Markdown = ({ content = "", onChange }) => {
             });
             editor.on((listener) => {
                 // 监听文档变化
-                listener.markdownUpdated((ctx, markdown, prevMarkdown) => {
+                listener.markdownUpdated((ctx, markdown) => {
                     // console.log("内容变化:", markdown);
                     // console.log("内容变化prev:", prevMarkdown);
                     onChangeMarkdown.current(markdown);
