@@ -14,7 +14,13 @@ function App() {
         <Sidebar />
 
         {/* 右侧动态内容区 */}
-        <div style={{ flex: 1, padding: "20px", overflowY: "auto", color: "#bfbfbfff" }}>
+        <div style={{
+          flex: 1,
+          padding: "20px",
+          overflowY: "auto",
+          width: "100%",
+          color: "#bfbfbfff"
+        }}>
           <Routes>
             <Route path="/" element={<MindMap />} />
             <Route path="/about" element={<About />} />

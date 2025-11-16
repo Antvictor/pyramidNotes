@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Crepe } from "@milkdown/crepe";
 import "@milkdown/crepe/theme/common/style.css";
 import "@milkdown/crepe/theme/frame.css";
+import "./markdown.css";
 
 const Markdown = ({ content = "", onChange }) => {
     const ref = useRef(null);
@@ -16,11 +17,7 @@ const Markdown = ({ content = "", onChange }) => {
             editor = new Crepe({
                 root: ref.current,
                 defaultValue: content,
-                features: {
-                    block: {
-                        softBreak: false // ❌ 禁用 <br>，Enter 直接分段
-                    }
-                }
+                
             });
             editor.on((listener) => {
                 // 监听文档变化
@@ -31,7 +28,7 @@ const Markdown = ({ content = "", onChange }) => {
                 });
             });
             editor = editor.create();
-        }, 10);
+        }, 100);
 
         return () => {
             clearTimeout(timer);
@@ -39,7 +36,13 @@ const Markdown = ({ content = "", onChange }) => {
         };
     }, [content]);
     return (
-        <div ref={ref}></div>
+        <div 
+        className="crepe-root"
+        style={{
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                overflowWrap: 'anywhere',
+            }} ref={ref}></div>
     );
 }
 export default Markdown;

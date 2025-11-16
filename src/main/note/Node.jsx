@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { StrictMode, useEffect, useState } from "react";
 import Markdown from "./Markdown"; // 你自己的 Markdown 渲染组件
 
 
@@ -34,6 +34,11 @@ const Note = () => {
   }
 
   return (
+    // <StrictMode>
+    //   <MilkdownProvider>
+    //     <MilkdownEditor content={value} onChange={saveFile} />
+    //   </MilkdownProvider>
+    // </StrictMode>
     <Markdown content={value} onChange={saveFile} />
   );
 };
