@@ -13,14 +13,16 @@ export default function NodeCustom({ data }) {
         border: '1px solid #888',
         borderRadius: 4,
         cursor: 'pointer',
-        minWidth: 120,
+        minWidth: 120, 
         textAlign: 'center',
       }}
       onClick={() => navigate(`/note/${data.name}`)}
     >
-      {data.label}
-      <Handle type="target" position={Position.Top} />
-      <Handle type="source" position={Position.Bottom} />
+      {data.name}
+      <Handle id='top' type="target" position={Position.Top} />
+      <Handle id='left' type="target" position={Position.Left} />
+      <Handle id='bottom' type="source" position={Position.Bottom} />
+      <Handle id='right' type="source" position={Position.Right} />
     </div>
   )
 }

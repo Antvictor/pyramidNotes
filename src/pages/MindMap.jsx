@@ -2,6 +2,7 @@ import React, {
   useCallback,
   useMemo,
   useEffect,
+  useState,
   // useRef,
 } from "react";
 import ReactFlow, {
@@ -16,10 +17,14 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 
 // 自定义节点组件
-import NodeCustom from "../main/note/NodeCustom";
+import NodeCustom from "./note/NodeCustom";
+import db from "./db/db"
+import { table } from "@milkdown/crepe/feature/table";
+import ContextMenu from "./note/ContextMenu/ContextMenu";
 
 // 数据文件
-import notesData from "../assets/data/data.json";
+// import notesData from "../assets/data/data.json";
+
 const nodeTypes = { custom: NodeCustom };
 function layoutTree(
   nodes,
@@ -32,7 +37,7 @@ function layoutTree(
   const nodeMap = new Map();
   nodes.forEach((n) => nodeMap.set(n.id, { ...n, children: [] }));
   nodes.forEach((n) => {
-    if (n.parentId) nodeMap.get(n.parentId)?.children.push(nodeMap.get(n.id));
+    if (n.top) nodeMap.get(n.top)?.children.push(nodeMap.get(n.id));
   });
 
   const positions = new Map();
@@ -61,7 +66,37 @@ function layoutTree(
 
 export default function MindMap() {
   // const flowWrapperRef = useRef(null);
+  // 查询sqlite中的节点数据
+  const [notesData, setNotesData] = useState(null);
+  const addNote = (note) => {
+    setNotesData((prevData) => [...prevData, note]);
+  };
+  const deleteNode = (id) => {
+    setNodes(nds => nds.filter(n => n.id !== id));
+    setEdges(eds => eds.filter(e => e.source !== id && e.target !== id));
+    db.notes.delete({"id":id});
+  };
 
+  useEffect(() => {
+    db.notes.select().then((res) => {
+      console.log("notesData:", notesData);
+      console.log("res:", res);
+      if (!res || res.length === 0) {
+        // 新建根节点
+        const rootNode = {
+          id: "1",
+          name: "root",
+          content: "",
+          alias: "",
+          top: "0",
+          left: "0"
+        }
+        db.notes.insert(rootNode);
+        setNotesData([rootNode]);
+      } else { setNotesData(res); }
+    })
+
+  }, []);
   // 节点和边状态
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -75,30 +110,47 @@ export default function MindMap() {
     //     if (!flowWrapperRef.current) return;
 
     //     const { clientWidth: width, clientHeight: height } = flowWrapperRef.current;
-    const rootNode = notesData.find((n) => !n.parentId);
+    console.log("notesData:", notesData);
+    const rootNode = notesData.find((n) => "0" === n.top);
+    console.log("rootNode:", rootNode);
     const rootId = rootNode?.id;
 
-    console.log(rootId);
+    console.log("rootId:", rootId);
     const posMap = layoutTree(notesData, rootId, 50, 50);
-    console.log(posMap);
+    console.log("posMap:", posMap);
     const initNodes = notesData.map((n) => ({
       id: n.id,
       type: "custom",
-      data: { label: n.label, ...n },
+      data: { name: n.name, ...n },
       // position: n.position || { x: Math.random() * 400, y: Math.random() * 400 },
       position: posMap.get(n.id),
     }));
 
-    const initEdges = (notesData || []).map((e) => ({
-      id: e.id,
-      source: e.parentId,
-      target: e.id,
-      type: "tree",
-    }));
+    const initEdges = [];
+    (notesData || []).forEach((e) => {
+      if (e.top && e.top !== "0") {
+        initEdges.push({
+          id: `e${e.top}-${e.id}`,
+          source: e.top,
+          sourceHandle: "bottom",
+          target: e.id,
+          targetHandle: "top",
+        });
+      };
+      if (e.left) {
+        initEdges.push({
+          id: `e${e.left}-${e.id}`,
+          source: e.left,
+          sourceHandle: "right",
+          target: e.id,
+          targetHandle: "left",
+        });
+      }
+    });
 
     setNodes(initNodes);
     setEdges(initEdges);
-  }, []);
+  }, [notesData]);
 
   // 添加连接
   const onConnect = useCallback(
@@ -106,23 +158,58 @@ export default function MindMap() {
     [setEdges]
   );
 
-  // 点击空白处添加节点示例（可删）
-  const onPaneClick = useCallback(
-    (event) => {
-      const reactFlowBounds = event.currentTarget.getBoundingClientRect();
+  const [menu, setMenu] = useState({
+    show: false,
+    x: 0,
+    y: 0,
+    type: "",
+    nodeId: null
+  });
+
+  // 右键空白区域
+  const onPaneContextMenu = useCallback((e) => {
+    e.preventDefault();
+    setMenu({
+      show: true,
+      x: e.clientX,
+      y: e.clientY,
+      type: "pane",
+      nodeId: null
+    });
+  }, []);
+
+  // 右键节点
+  const onNodeContextMenu = useCallback((e, node) => {
+    e.preventDefault();
+    setMenu({
+      show: true,
+      x: e.clientX,
+      y: e.clientY,
+      type: "node",
+      nodeId: node.id
+    });
+  }, []);
+
+  const closeMenu = () => setMenu((m) => ({ ...m, show: false }));
+
+  // 新增节点
+  const addNewNode = useCallback(
+    () => {
+      // const reactFlowBounds = event.currentTarget.getBoundingClientRect();
       const id = `${nodes.length + 1}`;
-      const newNode = {
-        id,
-        type: "custom",
-        data: { label: `节点${id}` },
-        position: {
-          x: event.clientX - reactFlowBounds.left,
-          y: event.clientY - reactFlowBounds.top,
-        },
-      };
-      setNodes((nds) => nds.concat(newNode));
+      const newNodeDb = {
+        id: `${id}`,
+        name: `${id}`,
+        content: "",
+        alias: "",
+        top: "1",
+        left: ""
+      }
+      console.log("newNodeDb:", newNodeDb);
+      db.notes.insert(newNodeDb);
+      addNote(newNodeDb);
     },
-    [nodes, setNodes]
+    [nodes.length]
   );
 
   return (
@@ -143,19 +230,27 @@ export default function MindMap() {
           onConnect={onConnect}
           nodeTypes={memoNodeTypes}
           fitView
-          onPaneClick={onPaneClick}
+          onPaneContextMenu={onPaneContextMenu}
+          onNodeContextMenu={onNodeContextMenu}
           nodesDraggable={true}
           panOnScroll={false} // ✅ 禁止滚动拖动画布
           zoomOnScroll={false} // ✅ 禁止滚轮缩放
           panOnDrag={false} // 🚫 禁止拖动画布
           attributionPosition={null}
           border="none"
-          proOptions={{hideAttribution: true}}
+          proOptions={{ hideAttribution: true }}
         >
           <Background />
           <Controls />
           {/* <MiniMap /> */}
         </ReactFlow>
+        <ContextMenu
+          menu={menu}
+          onClose={closeMenu}
+          onCreateNode={addNewNode}
+          onEditNode={(id) => console.log("修改节点：", id)}
+          onDeleteNode={deleteNode}
+        />
       </ReactFlowProvider>
     </div>
   );

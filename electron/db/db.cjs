@@ -1,27 +1,29 @@
 const Database = require('better-sqlite3');
 const { app, ipcMain } = require('electron');
-const { path } = require('path');
+const fs = require('fs');
+const  path  = require('path');
 
-const dbPath = path.join(app.getPath('userData') + "/data", 'data');
+const dbPath = path.join(app.getPath('userData'),'data','data');
+console.log('Database path:', dbPath);
+if (!fs.existsSync(dbPath)) {
+    fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+}
 const db = new Database(dbPath);
 
 function initializeDatabase() {
     db.exec(`
         create table if not exists notes(
-            id integer primary key autoincrement,
+            id TEXT primary key not null,
             name TEXT,
             content TEXT,
-            alias TEXT
-        );
-        create table if not exists graphs(
-            id integer primary key autoincrement,
-            top integer,
-            left integer
+            alias TEXT,
+            top TEXT,
+            left TEXT
         );
         `);
 
     // IPC：统一查询接口
-    ipcMain.handle('db-query', (event, sql, params = []) => {
+    ipcMain.handle('dbQuery', (event, sql, params = []) => {
         try {
             const stmt = db.prepare(sql);
             if (sql.trim().toUpperCase().startsWith('SELECT')) {

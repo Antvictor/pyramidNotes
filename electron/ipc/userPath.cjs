@@ -1,7 +1,14 @@
 const { ipcMain, app } = require("electron");
-
+const path = require("path");
 function registerPathIPC() {
-  ipcMain.handle("getPath", () => app.getPath("home"));
+  ipcMain.handle("getPath", () => {
+    return path.join(app.getPath("userData"), "data");
+  });
 }
 
-module.exports = { registerPathIPC }
+const getPath = (type = "userData") => {
+  return app.getPath(type)
+}
+
+
+module.exports = { getPath, registerPathIPC }

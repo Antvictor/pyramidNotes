@@ -52,6 +52,6 @@ class Database {
     }
 }
 
-const db = new Database(['notes', 'graphs']);
+const db = new Database(['notes']);
 
 export default db;

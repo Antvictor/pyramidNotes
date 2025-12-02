@@ -1,10 +1,10 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Sidebar from "./main/Sidebar";
+import Sidebar from "./pages/Sidebar";
 import Home from "./pages/Home";
 import About from "./pages/About";
 import Settings from "./pages/settings/Settings";
 import MindMap from "./pages/MindMap";
-import Node from "./main/note/Node"
+import Node from "./pages/note/Node"
 
 function App() {
   return (

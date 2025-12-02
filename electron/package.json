@@ -1,0 +1,19 @@
+{
+  "name": "pyramid_notes_app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "commonjs",
+  "main": "main.cjs",
+  "scripts": {
+    "dev": "electron .",
+    "build": "electron-builder",
+    "electron": "electron ."
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.4.6"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "electron": "^38.3.0"
+  }
+}
