@@ -21,6 +21,8 @@ import NodeCustom from "./note/NodeCustom";
 import db from "./db/db"
 import { table } from "@milkdown/crepe/feature/table";
 import ContextMenu from "./note/ContextMenu/ContextMenu";
+import OpenPrompt from "./commons/OpenPrompt";
+import { nanoid } from "nanoid";
 
 // 数据文件
 // import notesData from "../assets/data/data.json";
@@ -68,11 +70,12 @@ export default function MindMap() {
   // const flowWrapperRef = useRef(null);
   // 查询sqlite中的节点数据
   const [notesData, setNotesData] = useState(null);
+  const [visible, setVisible] = useState(false);
   const addNote = (note) => {
     setNotesData((prevData) => [...prevData, note]);
   };
   const deleteNode = (id) => {
-    setNodes(nds => nds.filter(n => n.id !== id));
+    setNotesData(nds => nds.filter(n => n.id !== id));
     setEdges(eds => eds.filter(e => e.source !== id && e.target !== id));
     db.notes.delete({"id":id});
   };
@@ -193,13 +196,17 @@ export default function MindMap() {
   const closeMenu = () => setMenu((m) => ({ ...m, show: false }));
 
   // 新增节点
-  const addNewNode = useCallback(
-    () => {
+  const addNewNode = () => {
+    setVisible(true);
+  }
+  const insertNode = useCallback(
+    (name) => {
       // const reactFlowBounds = event.currentTarget.getBoundingClientRect();
-      const id = `${nodes.length + 1}`;
+      setVisible(false);
+      const id = nanoid(12);
       const newNodeDb = {
         id: `${id}`,
-        name: `${id}`,
+        name: `${name}`,
         content: "",
         alias: "",
         top: "1",
@@ -209,7 +216,7 @@ export default function MindMap() {
       db.notes.insert(newNodeDb);
       addNote(newNodeDb);
     },
-    [nodes.length]
+    []
   );
 
   return (
@@ -250,6 +257,11 @@ export default function MindMap() {
           onCreateNode={addNewNode}
           onEditNode={(id) => console.log("修改节点：", id)}
           onDeleteNode={deleteNode}
+        />
+        <OpenPrompt
+          visible={visible}
+          onOk={insertNode}
+          onCancel={() => setVisible(false)}
         />
       </ReactFlowProvider>
     </div>
