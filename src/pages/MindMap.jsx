@@ -71,6 +71,8 @@ export default function MindMap() {
   // 查询sqlite中的节点数据
   const [notesData, setNotesData] = useState(null);
   const [visible, setVisible] = useState(false);
+  const [nodeAction, setNodeAction] = useState();
+  const [nodeId, setNodeId] = useState();
   const addNote = (note) => {
     setNotesData((prevData) => [...prevData, note]);
   };
@@ -198,12 +200,13 @@ export default function MindMap() {
   // 新增节点
   const addNewNode = () => {
     setVisible(true);
+    setNodeAction(() => insertNode);
   }
   const insertNode = useCallback(
-    (name) => {
+    (id, name) => {
       // const reactFlowBounds = event.currentTarget.getBoundingClientRect();
       setVisible(false);
-      const id = nanoid(12);
+      id ??= nanoid(12);
       const newNodeDb = {
         id: `${id}`,
         name: `${name}`,
@@ -217,6 +220,20 @@ export default function MindMap() {
       addNote(newNodeDb);
     },
     []
+  );
+  // 修改节点
+  const updateNode = (id) => {
+    setVisible(true);
+    setNodeId(id)
+    setNodeAction(() => editNode);
+  }
+  const editNode = useCallback(
+    (id,name) => {
+      // const reactFlowBounds = event.currentTarget.getBoundingClientRect();
+      setVisible(false);
+      db.notes.update({ id: id }, { name: name });
+      setNotesData(nds => nds.map(n => n.id === id ? { ...n, name: name } : n));
+    }
   );
 
   return (
@@ -255,12 +272,13 @@ export default function MindMap() {
           menu={menu}
           onClose={closeMenu}
           onCreateNode={addNewNode}
-          onEditNode={(id) => console.log("修改节点：", id)}
+          onEditNode={updateNode}
           onDeleteNode={deleteNode}
         />
         <OpenPrompt
           visible={visible}
-          onOk={insertNode}
+          id={nodeId}
+          onOk={nodeAction}
           onCancel={() => setVisible(false)}
         />
       </ReactFlowProvider>

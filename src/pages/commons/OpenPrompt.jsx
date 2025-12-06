@@ -1,7 +1,7 @@
 import { Modal, Input } from "antd";
 import { useEffect, useRef, useState } from "react";
 
-export default function OpenPrompt({ visible, onOk, onCancel }) {
+export default function OpenPrompt({ visible,id, onOk, onCancel }) {
   const [value, setValue] = useState("");
   const inputRef = useRef(null);
    useEffect(() => {
@@ -15,7 +15,7 @@ export default function OpenPrompt({ visible, onOk, onCancel }) {
     <Modal
       title="请输入节点名称"
       open={visible}
-      onOk={() => onOk(value)}
+      onOk={() => onOk(id,value)}
       onCancel={onCancel}
       footer={null}
     >
@@ -23,7 +23,7 @@ export default function OpenPrompt({ visible, onOk, onCancel }) {
         ref={inputRef}
         value={value}
         onChange={e => setValue(e.target.value)}
-        onPressEnter={() => onOk(value)}
+        onPressEnter={() => onOk(id,value)}
         placeholder="节点名称"
         autoFocus
         autoComplete="off" 
