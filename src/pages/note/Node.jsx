@@ -4,17 +4,17 @@ import Markdown from "./Markdown"; // 你自己的 Markdown 渲染组件
 
 
 const Note = () => {
-  const { name } = useParams(); // 路由传入的文件名
+  const { id } = useParams(); // 路由传入的文件名
   const [value, setValue] = useState("");
   const [filePath, setFilePath] = useState("");
 
   useEffect(() => {
-    if (!name) return;
+    if (!id) return;
 
     const loadFile = async () => {
       // 1. 获取 Electron userData 路径
       const basePath = await window.api.getPath();
-      const path = `${basePath}/${name}.md`;
+      const path = `${basePath}/${id}.md`;
       console.log("path:", path)
       setFilePath(path);
 
@@ -24,7 +24,7 @@ const Note = () => {
     }
 
     loadFile();
-  }, [name]);
+  }, [id]);
 
   const saveFile = async (content) => {
     console.log("saveFile content:", content);

@@ -13,10 +13,11 @@ export default function NodeCustom({ data }) {
         border: '1px solid #888',
         borderRadius: 4,
         cursor: 'pointer',
-        minWidth: 120, 
+        minWidth: 40, 
+        maxWidth: 100,
         textAlign: 'center',
       }}
-      onClick={() => navigate(`/note/${data.name}`)}
+      onClick={() => navigate(`/note/${data.id}`)}
     >
       {data.name}
       <Handle id='top' type="target" position={Position.Top} />
