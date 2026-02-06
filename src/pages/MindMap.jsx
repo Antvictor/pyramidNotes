@@ -168,7 +168,7 @@ export default function MindMap() {
     x: 0,
     y: 0,
     type: "",
-    nodeId: null
+    nodeId: "1"
   });
 
   // 右键空白区域
@@ -179,7 +179,7 @@ export default function MindMap() {
       x: e.clientX,
       y: e.clientY,
       type: "pane",
-      nodeId: null
+      nodeId: "1"
     });
   }, []);
 
@@ -198,21 +198,22 @@ export default function MindMap() {
   const closeMenu = () => setMenu((m) => ({ ...m, show: false }));
 
   // 新增节点
-  const addNewNode = () => {
+  const addNewNode = (id) => {
     setVisible(true);
+    setNodeId(id);
     setNodeAction(() => insertNode);
   }
   const insertNode = useCallback(
-    (id, name) => {
+    (parent, name) => {
       // const reactFlowBounds = event.currentTarget.getBoundingClientRect();
       setVisible(false);
-      id ??= nanoid(12);
+      const id = nanoid(12);
       const newNodeDb = {
         id: `${id}`,
         name: `${name}`,
         content: "",
         alias: "",
-        top: "1",
+        top: `${parent}`,
         left: ""
       }
       console.log("newNodeDb:", newNodeDb);
@@ -256,10 +257,10 @@ export default function MindMap() {
           fitView
           onPaneContextMenu={onPaneContextMenu}
           onNodeContextMenu={onNodeContextMenu}
-          nodesDraggable={true}
+          nodesDraggable={false} // ✅ 禁止节点拖动
           panOnScroll={false} // ✅ 禁止滚动拖动画布
           zoomOnScroll={false} // ✅ 禁止滚轮缩放
-          panOnDrag={false} // 🚫 禁止拖动画布
+          panOnDrag={true} // 🚫 禁止拖动画布
           attributionPosition={null}
           border="none"
           proOptions={{ hideAttribution: true }}

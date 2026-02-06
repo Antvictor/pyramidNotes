@@ -16,13 +16,16 @@ const ContextMenu = ({ menu, onClose, onCreateNode, onEditNode, onDeleteNode }) 
         }}
       >
         {menu.type === "pane" && (
-          <div className="menu-item" onClick={() => { onCreateNode(); onClose(); }}>
+          <div className="menu-item" onClick={() => { onCreateNode(menu.nodeId); onClose(); }}>
             ➕ 创建节点
           </div>
         )}
 
         {menu.type === "node" && (
           <>
+            <div className="menu-item" onClick={() => { onCreateNode(menu.nodeId); onClose(); }}>
+              ➕ 创建节点
+            </div>
             <div className="menu-item" onClick={() => { onEditNode(menu.nodeId); onClose(); }}>
               ✏️ 修改节点
             </div>
