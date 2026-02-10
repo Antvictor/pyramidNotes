@@ -19,7 +19,6 @@ import "reactflow/dist/style.css";
 // 自定义节点组件
 import NodeCustom from "./note/NodeCustom";
 import db from "./db/db"
-import { table } from "@milkdown/crepe/feature/table";
 import ContextMenu from "./note/ContextMenu/ContextMenu";
 import OpenPrompt from "./commons/OpenPrompt";
 import { nanoid } from "nanoid";
@@ -28,40 +27,75 @@ import { nanoid } from "nanoid";
 // import notesData from "../assets/data/data.json";
 
 const nodeTypes = { custom: NodeCustom };
-function layoutTree(
-  nodes,
-  rootId,
-  startX,
-  startY,
-  levelGap = 100,
-  siblingGap = 100
-) {
+
+/**
+ * 动态树布局（按子树宽度分配 X），避免分支多时互相遮盖。
+ *
+ * 思路：
+ * - 第 1 遍 DFS 计算每个节点的“子树宽度”（subtreeWidth）
+ * - 第 2 遍 DFS 按子树宽度给每个孩子分配不重叠的区间，并取区间中心作为孩子的 X
+ */
+function layoutTree(nodes, rootId, startX, startY, levelGap = 110) {
+  // 这些值越大，节点越不容易挤在一起（可以按 UI 再调）
+  const NODE_MIN_WIDTH = 80; // 估算的节点最小宽度（px）
+  const H_GAP = 36; // 同层兄弟子树之间的最小间距（px）
+
   const nodeMap = new Map();
   nodes.forEach((n) => nodeMap.set(n.id, { ...n, children: [] }));
   nodes.forEach((n) => {
-    if (n.top) nodeMap.get(n.top)?.children.push(nodeMap.get(n.id));
+    // top 表示“父节点 id”；根节点 top === "0"
+    if (n.top && n.top !== "0") nodeMap.get(n.top)?.children.push(nodeMap.get(n.id));
   });
 
-  const positions = new Map();
+  const widthMap = new Map(); // id -> subtreeWidth
+  const positions = new Map(); // id -> {x,y}
 
-  function dfs(node, depth, x) {
+  const getNodeWidth = (node) => {
+    // 基于文本长度粗略估算（避免长标题更容易挤）
+    const text = `${node?.name ?? ""}`;
+    const estimated = Math.min(220, NODE_MIN_WIDTH + text.length * 8);
+    return Math.max(NODE_MIN_WIDTH, estimated);
+  };
+
+  const calcWidth = (node) => {
+    const children = node.children || [];
+    const selfWidth = getNodeWidth(node);
+    if (!children.length) {
+      widthMap.set(node.id, selfWidth);
+      return selfWidth;
+    }
+    const childWidths = children.map(calcWidth);
+    const childrenTotal =
+      childWidths.reduce((sum, w) => sum + w, 0) + H_GAP * Math.max(0, children.length - 1);
+    const subtreeWidth = Math.max(selfWidth, childrenTotal);
+    widthMap.set(node.id, subtreeWidth);
+    return subtreeWidth;
+  };
+
+  const place = (node, depth, centerX) => {
     const y = startY + depth * levelGap;
-    positions.set(node.id, { x, y });
+    positions.set(node.id, { x: centerX, y });
 
     const children = node.children || [];
     if (!children.length) return;
 
-    // 水平分布子节点
-    const totalWidth = (children.length - 1) * siblingGap;
-    let startChildX = x - totalWidth / 2;
+    // 当前节点的子树宽度，决定孩子整体占用区间
+    const subtreeWidth = widthMap.get(node.id) ?? getNodeWidth(node);
+    let cursorLeft = centerX - subtreeWidth / 2;
 
-    children.forEach((child, index) => {
-      dfs(child, depth + 1, startChildX + index * siblingGap);
+    children.forEach((child) => {
+      const w = widthMap.get(child.id) ?? getNodeWidth(child);
+      const childCenterX = cursorLeft + w / 2;
+      place(child, depth + 1, childCenterX);
+      cursorLeft += w + H_GAP;
     });
-  }
+  };
 
   const rootNode = nodeMap.get(rootId);
-  if (rootNode) dfs(rootNode, 0, startX);
+  if (rootNode) {
+    calcWidth(rootNode);
+    place(rootNode, 0, startX);
+  }
 
   return positions;
 }
@@ -84,7 +118,6 @@ export default function MindMap() {
 
   useEffect(() => {
     db.notes.select().then((res) => {
-      console.log("notesData:", notesData);
       console.log("res:", res);
       if (!res || res.length === 0) {
         // 新建根节点
@@ -155,7 +188,7 @@ export default function MindMap() {
 
     setNodes(initNodes);
     setEdges(initEdges);
-  }, [notesData]);
+  }, [notesData, setEdges, setNodes]);
 
   // 添加连接
   const onConnect = useCallback(
@@ -234,7 +267,8 @@ export default function MindMap() {
       setVisible(false);
       db.notes.update({ id: id }, { name: name });
       setNotesData(nds => nds.map(n => n.id === id ? { ...n, name: name } : n));
-    }
+    },
+    [setNotesData]
   );
 
   return (
