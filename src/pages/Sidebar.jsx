@@ -5,12 +5,14 @@ const Sidebar = () => {
   const location = useLocation();
 
   const navStyle = {
-    width: "15px",
+    width: "56px",
+    minWidth: "56px",
     backgroundColor: "#f1f1f1",
     color: "#bfbfbfff",
-    padding: "20px",
+    padding: "16px 12px",
     display: "flex",
     flexDirection: "column",
+    alignItems: "center",
   };
 
   const linkStyle = (path) => ({
