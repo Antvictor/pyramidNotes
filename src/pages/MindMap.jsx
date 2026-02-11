@@ -290,6 +290,7 @@ export default function MindMap() {
           onConnect={onConnect}
           nodeTypes={memoNodeTypes}
           nodesConnectable={false}
+          defaultEdgeOptions={{ selectable: false }}
           fitView
           onPaneContextMenu={onPaneContextMenu}
           onNodeContextMenu={onNodeContextMenu}

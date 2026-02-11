@@ -20,10 +20,34 @@ export default function NodeCustom({ data }) {
       onClick={() => navigate(`/note/${data.id}`)}
     >
       {data.name}
-      <Handle id='top' type="target" position={Position.Top} />
-      <Handle id='left' type="target" position={Position.Left} />
-      <Handle id='bottom' type="source" position={Position.Bottom} />
-      <Handle id='right' type="source" position={Position.Right} />
+      <Handle
+        id="top"
+        type="target"
+        position={Position.Top}
+        isConnectable={false}
+        style={{ opacity: 0, pointerEvents: 'none' }}
+      />
+      <Handle
+        id="left"
+        type="target"
+        position={Position.Left}
+        isConnectable={false}
+        style={{ opacity: 0, pointerEvents: 'none' }}
+      />
+      <Handle
+        id="bottom"
+        type="source"
+        position={Position.Bottom}
+        isConnectable={false}
+        style={{ opacity: 0, pointerEvents: 'none' }}
+      />
+      <Handle
+        id="right"
+        type="source"
+        position={Position.Right}
+        isConnectable={false}
+        style={{ opacity: 0, pointerEvents: 'none' }}
+      />
     </div>
   )
 }
