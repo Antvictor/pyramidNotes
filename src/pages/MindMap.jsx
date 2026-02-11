@@ -13,6 +13,7 @@ import ReactFlow, {
   addEdge,
   useNodesState,
   useEdgesState,
+  NodeToolbar,
 } from "reactflow";
 import "reactflow/dist/style.css";
 
@@ -288,6 +289,7 @@ export default function MindMap() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           nodeTypes={memoNodeTypes}
+          nodesConnectable={false}
           fitView
           onPaneContextMenu={onPaneContextMenu}
           onNodeContextMenu={onNodeContextMenu}
@@ -299,9 +301,9 @@ export default function MindMap() {
           border="none"
           proOptions={{ hideAttribution: true }}
         >
+          <NodeToolbar/>
           <Background />
           <Controls />
-          {/* <MiniMap /> */}
         </ReactFlow>
         <ContextMenu
           menu={menu}
