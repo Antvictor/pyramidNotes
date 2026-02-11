@@ -38,8 +38,8 @@ const nodeTypes = { custom: NodeCustom };
  */
 function layoutTree(nodes, rootId, startX, startY, levelGap = 110) {
   // 这些值越大，节点越不容易挤在一起（可以按 UI 再调）
-  const NODE_MIN_WIDTH = 80; // 估算的节点最小宽度（px）
-  const H_GAP = 36; // 同层兄弟子树之间的最小间距（px）
+  const NODE_MIN_WIDTH = 20; // 估算的节点最小宽度（px）
+  const H_GAP = 20; // 同层兄弟子树之间的最小间距（px），原来 36，缩为约 1/3
 
   const nodeMap = new Map();
   nodes.forEach((n) => nodeMap.set(n.id, { ...n, children: [] }));
@@ -290,7 +290,7 @@ export default function MindMap() {
           onConnect={onConnect}
           nodeTypes={memoNodeTypes}
           nodesConnectable={false}
-          defaultEdgeOptions={{ selectable: false }}
+          defaultEdgeOptions={{type: 'smoothstep', selectable: false }}
           fitView
           onPaneContextMenu={onPaneContextMenu}
           onNodeContextMenu={onNodeContextMenu}
@@ -300,9 +300,10 @@ export default function MindMap() {
           panOnDrag={true} // 🚫 禁止拖动画布
           attributionPosition={null}
           border="none"
+          onEdgesDelete={() => {}}
+          deleteKeyCode={null}
           proOptions={{ hideAttribution: true }}
         >
-          <NodeToolbar/>
           <Background />
           <Controls />
         </ReactFlow>
