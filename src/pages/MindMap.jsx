@@ -5,7 +5,9 @@ import React, {
   useState,
   // useRef,
 } from "react";
-import ReactFlow, {
+import { NodeSearch } from "@/components/node-search";
+import {
+  ReactFlow,
   ReactFlowProvider,
   Background,
   Controls,
@@ -13,9 +15,10 @@ import ReactFlow, {
   addEdge,
   useNodesState,
   useEdgesState,
+  Panel,
   NodeToolbar,
-} from "reactflow";
-import "reactflow/dist/style.css";
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
 
 // 自定义节点组件
 import NodeCustom from "./note/NodeCustom";
@@ -114,7 +117,7 @@ export default function MindMap() {
   const deleteNode = (id) => {
     setNotesData(nds => nds.filter(n => n.id !== id));
     setEdges(eds => eds.filter(e => e.source !== id && e.target !== id));
-    db.notes.delete({"id":id});
+    db.notes.delete({ "id": id });
   };
 
   useEffect(() => {
@@ -160,7 +163,8 @@ export default function MindMap() {
     const initNodes = notesData.map((n) => ({
       id: n.id,
       type: "custom",
-      data: { name: n.name, ...n },
+      // NodeSearch 默认用 node.data.label 搜索，这里补上 label 字段
+      data: { name: n.name, label: n.name, ...n },
       // position: n.position || { x: Math.random() * 400, y: Math.random() * 400 },
       position: posMap.get(n.id),
     }));
@@ -263,7 +267,7 @@ export default function MindMap() {
     setNodeAction(() => editNode);
   }
   const editNode = useCallback(
-    (id,name) => {
+    (id, name) => {
       // const reactFlowBounds = event.currentTarget.getBoundingClientRect();
       setVisible(false);
       db.notes.update({ id: id }, { name: name });
@@ -290,20 +294,26 @@ export default function MindMap() {
           onConnect={onConnect}
           nodeTypes={memoNodeTypes}
           nodesConnectable={false}
-          defaultEdgeOptions={{type: 'smoothstep', selectable: false }}
+          defaultEdgeOptions={{ type: 'smoothstep', selectable: false }}
           fitView
           onPaneContextMenu={onPaneContextMenu}
           onNodeContextMenu={onNodeContextMenu}
           nodesDraggable={false} // ✅ 禁止节点拖动
           panOnScroll={false} // ✅ 禁止滚动拖动画布
-          zoomOnScroll={false} // ✅ 禁止滚轮缩放
+          zoomOnScroll={true} // ✅ 禁止滚轮缩放
           panOnDrag={true} // 🚫 禁止拖动画布
           attributionPosition={null}
           border="none"
-          onEdgesDelete={() => {}}
+          onEdgesDelete={() => { }}
           deleteKeyCode={null}
           proOptions={{ hideAttribution: true }}
         >
+          <Panel
+            className="flex gap-1 rounded-md bg-primary-foreground p-1 text-foreground"
+            position="top-left"
+          >
+            <NodeSearch />
+          </Panel>
           <Background />
           <Controls />
         </ReactFlow>

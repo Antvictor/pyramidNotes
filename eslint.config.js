@@ -27,6 +27,20 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+
+    // TS + TSX
+  {
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
+      parser: tsParser
+    },
+    plugins: {
+      '@typescript-eslint': tsPlugin
+    },
+    rules: {
+      ...tsPlugin.configs.recommended.rules
+    }
+  },
   {
     files: ['electron/**/*.js'],
     languageOptions: {
