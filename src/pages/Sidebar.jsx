@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { House,Settings,FileQuestionMark } from 'lucide-react';
+import { House, Settings, FileQuestionMark, Search } from 'lucide-react';
 
 const Sidebar = () => {
   const location = useLocation();
@@ -26,6 +26,9 @@ const Sidebar = () => {
     <div style={navStyle}>
       <Link to="/" style={linkStyle("/")}>
         <House />
+      </Link>
+      <Link to="/?search=1" style={linkStyle("/")}>
+        <Search />
       </Link>
       <Link to="/about" style={linkStyle("/about")}>
         <FileQuestionMark />

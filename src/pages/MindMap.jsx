@@ -5,7 +5,7 @@ import React, {
   useState,
   // useRef,
 } from "react";
-import { NodeSearch } from "@/components/node-search";
+import { NodeSearchDialog } from "@/components/node-search";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -15,7 +15,6 @@ import {
   addEdge,
   useNodesState,
   useEdgesState,
-  Panel,
   NodeToolbar,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -26,6 +25,7 @@ import db from "./db/db"
 import ContextMenu from "./note/ContextMenu/ContextMenu";
 import OpenPrompt from "./commons/OpenPrompt";
 import { nanoid } from "nanoid";
+import { useSearchParams, useNavigate } from "react-router-dom";
 
 // 数据文件
 // import notesData from "../assets/data/data.json";
@@ -41,8 +41,8 @@ const nodeTypes = { custom: NodeCustom };
  */
 function layoutTree(nodes, rootId, startX, startY, levelGap = 110) {
   // 这些值越大，节点越不容易挤在一起（可以按 UI 再调）
-  const NODE_MIN_WIDTH = 20; // 估算的节点最小宽度（px）
-  const H_GAP = 20; // 同层兄弟子树之间的最小间距（px），原来 36，缩为约 1/3
+  const NODE_MIN_WIDTH = 30; // 估算的节点最小宽度（px）
+  const H_GAP = 40; // 同层兄弟子树之间的最小间距（px），原来 36，缩为约 1/3
 
   const nodeMap = new Map();
   nodes.forEach((n) => nodeMap.set(n.id, { ...n, children: [] }));
@@ -111,6 +111,9 @@ export default function MindMap() {
   const [visible, setVisible] = useState(false);
   const [nodeAction, setNodeAction] = useState();
   const [nodeId, setNodeId] = useState();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const addNote = (note) => {
     setNotesData((prevData) => [...prevData, note]);
   };
@@ -139,6 +142,14 @@ export default function MindMap() {
     })
 
   }, []);
+
+  // 处理 URL 搜索参数，打开搜索对话框
+  useEffect(() => {
+    if (searchParams.get('search') === '1') {
+      setSearchOpen(true);
+    }
+  }, [searchParams]);
+
   // 节点和边状态
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -308,15 +319,19 @@ export default function MindMap() {
           deleteKeyCode={null}
           proOptions={{ hideAttribution: true }}
         >
-          <Panel
-            className="flex gap-1 rounded-md bg-primary-foreground p-1 text-foreground"
-            position="top-left"
-          >
-            <NodeSearch />
-          </Panel>
           <Background />
           <Controls />
         </ReactFlow>
+        <NodeSearchDialog
+          open={searchOpen}
+          onOpenChange={(open) => {
+            console.log("searchOpen:", open);
+            setSearchOpen(open);
+            if (!open) {
+              navigate('/');
+            }
+          }}
+        />
         <ContextMenu
           menu={menu}
           onClose={closeMenu}
