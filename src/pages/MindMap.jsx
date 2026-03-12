@@ -325,7 +325,6 @@ export default function MindMap() {
         <NodeSearchDialog
           open={searchOpen}
           onOpenChange={(open) => {
-            console.log("searchOpen:", open);
             setSearchOpen(open);
             if (!open) {
               navigate('/');

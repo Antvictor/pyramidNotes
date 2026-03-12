@@ -43,11 +43,15 @@ export function NodeSearchInternal({
   const defaultOnSearch = useCallback(
     (searchString: string) => {
       const nodes = getNodes();
-      return nodes.filter((node) =>
+      debugger;
+      console.log("searchString:", searchString);
+      const results = nodes.filter((node) => 
         (node.data.label as string)
           .toLowerCase()
           .includes(searchString.toLowerCase()),
       );
+      console.log("results:", results);
+      return results;
     },
     [getNodes],
   );
@@ -100,7 +104,8 @@ export function NodeSearchInternal({
             <CommandGroup heading="Nodes">
               {searchResults.map((node) => {
                 return (
-                  <CommandItem key={node.id} onSelect={() => onSelect(node)}>
+                  <CommandItem key={node.id}  value={node.data.label as string}
+                   onSelect={() => onSelect(node)}>
                     <span>{node.data.label as string}</span>
                   </CommandItem>
                 );
