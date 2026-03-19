@@ -7,10 +7,10 @@ const {initializeDatabase} = require('./db/db.cjs')
 
 
 app.whenReady().then(() => {
-  createWindow(), 
+  initializeDatabase(),
+  createWindow(),
   registerPathIPC(),
-  registerFileIPC(),
-  initializeDatabase()
+  registerFileIPC()
 })
 
 app.on('window-all-closed', () => {

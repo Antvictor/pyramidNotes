@@ -7,7 +7,8 @@
     "strict": true,
     "esModuleInterop": true,
     "lib": ["ESNext", "DOM"],
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "exactOptionalPropertyTypes": false
   },
   "include": ["src"]
 }

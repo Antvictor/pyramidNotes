@@ -29,7 +29,7 @@ const Note = () => {
   const saveFile = async (content) => {
     console.log("saveFile content:", content);
     if (filePath) {
-      await window.api.saveFile(filePath, content);
+      await window.api.saveFile(filePath, content, id);
     }
   }
 

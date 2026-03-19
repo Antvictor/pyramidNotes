@@ -43,6 +43,22 @@ class Table {
         return await window.api.dbQuery(sql, whereValues);
     }
 
+    /**
+     * 全文搜索 - 基于 FTS5 虚拟表
+     * @param {string} keyword - 搜索关键词
+     * @returns {Promise<Array>} 搜索结果，包含 id 和 content
+     */
+    async search(keyword) {
+        const sql = `
+            SELECT notes.id, notes.name, notes_fts.content
+            FROM notes_fts
+            JOIN notes ON notes_fts.rowid = notes.rowid
+            WHERE notes_fts.content MATCH ?
+        `;
+        // 使用 FTS5 语法，支持前缀匹配
+        const searchPattern = `${keyword}`;
+        return await window.api.dbQuery(sql, [searchPattern]);
+    }
 }
 class Database {
     constructor(tables = []) {
