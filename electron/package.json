@@ -4,6 +4,14 @@
   "version": "0.0.0",
   "type": "commonjs",
   "main": "main.cjs",
+  "build": {
+    "extraResources": [
+      {
+        "from": "sqlite-plugins",
+        "to": "sqlite-plugins"
+      }
+    ]
+  },
   "scripts": {
     "dev": "electron .",
     "build": "electron-builder",
