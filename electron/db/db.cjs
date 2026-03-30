@@ -34,22 +34,27 @@ function initializeDatabase() {
         );
     `);
 
-    // 创建 FTS5 全文搜索虚拟表（只索引 content 字段）
+    // 创建 FTS5 全文搜索虚拟表（使用 simple_tokenizer 支持中文分词）
+    // id 列使用 UNINDEXED 表示不参与搜索，只存储用于关联
     db.exec(`
-        CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(content);
+        CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
+            id UNINDEXED,
+            content,
+            tokenize='simple'
+        );
     `);
 
     // 创建触发器：插入时同步到 FTS 表
     db.exec(`
         CREATE TRIGGER IF NOT EXISTS notes_ai AFTER INSERT ON notes BEGIN
-            INSERT INTO notes_fts(rowid, content) VALUES (NEW.rowid, COALESCE(NEW.content, ''));
+            INSERT INTO notes_fts(rowid, id, content) VALUES (NEW.rowid, NEW.id, COALESCE(NEW.content, ''));
         END;
     `);
 
-    // 创建触发器：更新时同步到 FTS 表
+    // 创建触发器：更新时同步到 FTS 表（只更新 content，id 不变）
     db.exec(`
         CREATE TRIGGER IF NOT EXISTS notes_au AFTER UPDATE ON notes BEGIN
-            UPDATE notes_fts SET content = COALESCE(NEW.content, '') WHERE rowid = NEW.rowid;
+            UPDATE notes_fts SET content = COALESCE(NEW.content, '') WHERE id = NEW.id;
         END;
     `);
 
@@ -75,10 +80,11 @@ function initializeDatabase() {
         console.error('Sync existing files error:', err);
     }
 
-    // 为现有数据建立 FTS 索引
+    // 为现有数据建立 FTS 索引（先清空再重建，避免 rowid 冲突）
     db.exec(`
-        INSERT OR IGNORE INTO notes_fts(rowid, content)
-        SELECT rowid, COALESCE(content, '') FROM notes;
+        DELETE FROM notes_fts;
+        INSERT INTO notes_fts(rowid, id, content)
+        SELECT rowid, id, COALESCE(content, '') FROM notes;
     `);
 
     ipcMain.handle('dbQuery', (event, sql, params = []) => {
@@ -153,6 +159,14 @@ function initializeDatabase() {
         console.log('Load extension:', filePath);
 
         db.loadExtension(filePath);
+
+        // 打印 libsimple 提供的所有函数
+        const functions = db.prepare(`
+            SELECT name, type
+            FROM pragma_function_list
+            WHERE name LIKE 'simple%' OR name LIKE 'jieba%'
+        `).all();
+        console.log('libsimple functions:', JSON.stringify(functions, null, 2));
     }
 }
 

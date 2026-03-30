@@ -43,21 +43,27 @@ class Table {
         return await window.api.dbQuery(sql, whereValues);
     }
 
+
     /**
-     * 全文搜索 - 基于 FTS5 虚拟表
+     * 全文搜索 - 基于 FTS5 虚拟表和 libsimple 中文分词
      * @param {string} keyword - 搜索关键词
-     * @returns {Promise<Array>} 搜索结果，包含 id 和 content
+     * @returns {Promise<Array>} 搜索结果，包含 id、name、content
      */
     async search(keyword) {
         const sql = `
-            SELECT notes.id, notes.name, notes_fts.content
+            SELECT
+                n.id,
+                n.name,
+                simple_highlight(notes_fts, 1, '<mark>', '</mark>') as content
             FROM notes_fts
-            JOIN notes ON notes_fts.rowid = notes.rowid
-            WHERE notes_fts.content MATCH ?
+            JOIN notes n ON notes_fts.id = n.id
+            WHERE notes_fts MATCH simple_query(?)
         `;
-        // 使用 FTS5 语法，支持前缀匹配
-        const searchPattern = `${keyword}`;
-        return await window.api.dbQuery(sql, [searchPattern]);
+        console.log('[Search] SQL:', sql);
+        console.log('[Search] Keyword:', keyword);
+        const result = await window.api.dbQuery(sql, [keyword]);
+        console.log('[Search] Raw Result:', JSON.stringify(result, null, 2));
+        return result || [];
     }
 }
 class Database {

@@ -76,7 +76,7 @@ export function NodeSearchInternal({
       }
       try {
         const results = await db.notes.search(keyword.trim());
-        setFullTextSearchResults(results as FullTextSearchResult[]);
+        setFullTextSearchResults((results || []) as FullTextSearchResult[]);
       } catch (error) {
         console.error("Full text search error:", error);
         setFullTextSearchResults([]);
@@ -209,17 +209,19 @@ export function NodeSearchInternal({
               ) : (
                 <CommandGroup heading="全文搜索结果">
                   {fullTextSearchResults.map((result) => {
+                    const displayValue = result.name || result.id || "未命名节点";
                     return (
                       <CommandItem
                         key={result.id}
-                        value={result.name}
+                        value={result.id}
+                        keywords={[result.name, result.content]}
                         onSelect={() => onSelectFullTextResult(result)}
                       >
                         <div className="flex flex-col gap-1">
-                          <span className="font-medium">{result.name}</span>
+                          <span className="font-medium">{displayValue}</span>
                           {result.content && (
                             <span className="text-xs text-muted-foreground line-clamp-2">
-                              {result.content}
+                              <span dangerouslySetInnerHTML={{ __html: result.content }} />
                             </span>
                           )}
                         </div>
