@@ -26,6 +26,7 @@ import ContextMenu from "./note/ContextMenu/ContextMenu";
 import OpenPrompt from "./commons/OpenPrompt";
 import { nanoid } from "nanoid";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import yaml from "yaml";
 
 // 数据文件
 // import notesData from "../assets/data/data.json";
@@ -111,16 +112,19 @@ export default function MindMap() {
   const [visible, setVisible] = useState(false);
   const [nodeAction, setNodeAction] = useState();
   const [nodeId, setNodeId] = useState();
+  const [title, setTitle] = useState();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const addNote = (note) => {
     setNotesData((prevData) => [...prevData, note]);
   };
-  const deleteNode = (id) => {
+  const deleteNode = (id, title) => {
     setNotesData(nds => nds.filter(n => n.id !== id));
     setEdges(eds => eds.filter(e => e.source !== id && e.target !== id));
     db.notes.delete({ "id": id });
+    // 同时删除markdown文件
+    window.api.deleteFile(`${id}-${title}.md`);
   };
 
   useEffect(() => {
@@ -137,6 +141,8 @@ export default function MindMap() {
           left: "0"
         }
         db.notes.insert(rootNode);
+        // 同时新建markdown文件, 保存yaml数据，title;left;top等元信息
+        saveNode(rootNode);
         setNotesData([rootNode]);
       } else { setNotesData(res); }
     })
@@ -217,7 +223,8 @@ export default function MindMap() {
     x: 0,
     y: 0,
     type: "",
-    nodeId: "1"
+    nodeId: "1",
+    title: ""
   });
 
   // 右键空白区域
@@ -228,19 +235,22 @@ export default function MindMap() {
       x: e.clientX,
       y: e.clientY,
       type: "pane",
-      nodeId: "1"
+      nodeId: "1",
+      title: ""
     });
   }, []);
 
   // 右键节点
   const onNodeContextMenu = useCallback((e, node) => {
     e.preventDefault();
+    console.log("Right-clicked node:", node);
     setMenu({
       show: true,
       x: e.clientX,
       y: e.clientY,
       type: "node",
-      nodeId: node.id
+      nodeId: node.id,
+      title: node.data.name
     });
   }, []);
 
@@ -250,6 +260,7 @@ export default function MindMap() {
   const addNewNode = (id) => {
     setVisible(true);
     setNodeId(id);
+    setTitle("");
     setNodeAction(() => insertNode);
   }
   const insertNode = useCallback(
@@ -267,22 +278,33 @@ export default function MindMap() {
       }
       console.log("newNodeDb:", newNodeDb);
       db.notes.insert(newNodeDb);
+      saveNode(newNodeDb);
+      // 创建新节点的 markdown 文件, 把这两个合成一个方法
       addNote(newNodeDb);
     },
     []
   );
+  const saveNode = (node) => {
+    const yamlStr = yaml.stringify({ alias: "", title: node.name, left: "", top: "" });
+      const markdownContent = `---\n${yamlStr}---\n\n`;
+      window.api.saveFile(`${node.id}-${node.name}.md`, markdownContent, node.id);
+  }
   // 修改节点
-  const updateNode = (id) => {
+  const updateNode = (id, title) => {
     setVisible(true);
     setNodeId(id)
+    setTitle(title);
     setNodeAction(() => editNode);
   }
   const editNode = useCallback(
-    (id, name) => {
+    (id, name, orginName) => {
+      console.log("editNode id:", id, "name:", name, "orginName:", orginName);
       // const reactFlowBounds = event.currentTarget.getBoundingClientRect();
       setVisible(false);
       db.notes.update({ id: id }, { name: name });
       setNotesData(nds => nds.map(n => n.id === id ? { ...n, name: name } : n));
+      // 修改文件名称
+      window.api.renameFile(`${id}-${orginName}.md`, `${id}-${name}.md`);
     },
     [setNotesData]
   );
@@ -341,6 +363,7 @@ export default function MindMap() {
         <OpenPrompt
           visible={visible}
           id={nodeId}
+          title={title}
           onOk={nodeAction}
           onCancel={() => setVisible(false)}
         />

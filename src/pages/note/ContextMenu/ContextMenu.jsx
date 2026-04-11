@@ -23,13 +23,13 @@ const ContextMenu = ({ menu, onClose, onCreateNode, onEditNode, onDeleteNode }) 
 
         {menu.type === "node" && (
           <>
-            <div className="menu-item" onClick={() => { onCreateNode(menu.nodeId); onClose(); }}>
+            <div className="menu-item" onClick={() => { onCreateNode(menu.nodeId, menu.title); onClose(); }}>
               ➕ 创建节点
             </div>
-            <div className="menu-item" onClick={() => { onEditNode(menu.nodeId); onClose(); }}>
+            <div className="menu-item" onClick={() => { onEditNode(menu.nodeId, menu.title); onClose(); }}>
               ✏️ 修改节点
             </div>
-            <div className="menu-item" onClick={() => { onDeleteNode(menu.nodeId); onClose(); }}>
+            <div className="menu-item" onClick={() => { onDeleteNode(menu.nodeId, menu.title); onClose(); }}>
               🗑 删除节点
             </div>
           </>

@@ -28,6 +28,7 @@ export interface FullTextSearchResult {
   id: string;
   name: string;
   content: string;
+  snippets: string;
 }
 
 export interface NodeSearchProps {
@@ -219,11 +220,7 @@ export function NodeSearchInternal({
                       >
                         <div className="flex flex-col gap-1">
                           <span className="font-medium">{displayValue}</span>
-                          {result.content && (
-                            <span className="text-xs text-muted-foreground line-clamp-2">
-                              <span dangerouslySetInnerHTML={{ __html: result.content }} />
-                            </span>
-                          )}
+                          <span dangerouslySetInnerHTML={{ __html: result.snippets }} />
                         </div>
                       </CommandItem>
                     );

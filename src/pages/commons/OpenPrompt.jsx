@@ -1,15 +1,15 @@
 import { Modal, Input } from "antd";
 import { useEffect, useRef, useState } from "react";
 
-export default function OpenPrompt({ visible,id, onOk, onCancel }) {
+export default function OpenPrompt({ visible,id,title, onOk, onCancel }) {
   const [value, setValue] = useState("");
   const inputRef = useRef(null);
    useEffect(() => {
-    if (visible) setValue("");  // 每次打开都清空
+    setValue(title)
     setTimeout(() => {
       inputRef.current?.focus();
     }, 0);
-  }, [visible]);
+  }, [visible, title]);
 
   return (
     <Modal
@@ -23,7 +23,7 @@ export default function OpenPrompt({ visible,id, onOk, onCancel }) {
         ref={inputRef}
         value={value}
         onChange={e => setValue(e.target.value)}
-        onPressEnter={() => onOk(id,value)}
+        onPressEnter={() => onOk(id,value,title)}
         placeholder="节点名称"
         autoFocus
         autoComplete="off" 

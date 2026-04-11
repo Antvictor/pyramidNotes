@@ -16,8 +16,11 @@ class Table {
         let sql = `SELECT * FROM ${this.tableName}`;
         let values = [];
         if (whereClause) {
-            Object.keys(whereClause).map(k => `${k} = ?`).join(" AND ");
-            sql += ` WHERE ${whereClause}`;
+            const conditions = Object.keys(whereClause)
+                .map(k => `${k} = ?`)
+                .join(" AND ");
+
+            sql += ` WHERE ${conditions}`;
             values.push(...Object.values(whereClause));
         }
         if (orderBy) sql += ` ORDER BY ${orderBy}`;
@@ -45,9 +48,100 @@ class Table {
 
 
     /**
+     * 从带 <mark> 标签的内容中提取多个匹配片段
+     * @param {string} content - 带<mark>标签的内容
+     * @param {number} radius - 每个匹配点前后保留的字符数
+     * @param {number} maxSnippetLength - 最大 snippet 长度
+     * @returns {Array} snippet 数组
+     */
+    generateSnippets(html, options = {}) {
+        const {
+            context = 20,
+            maxLength = 200,
+            ellipsis = '...'
+        } = options;
+
+        if (!html) return '';
+
+        // 1️⃣ 找所有 <mark>...</mark>
+        const regex = /<mark>(.*?)<\/mark>/g;
+        let match;
+        const ranges = [];
+
+        while ((match = regex.exec(html)) !== null) {
+            ranges.push({
+                start: match.index,
+                end: match.index + match[0].length
+            });
+        }
+
+        if (ranges.length === 0) {
+            return html.slice(0, maxLength);
+        }
+
+        // 2️⃣ 扩展范围（前后 context）
+        const expanded = ranges.map(r => ({
+            start: Math.max(0, r.start - context),
+            end: Math.min(html.length, r.end + context)
+        }));
+
+        // 3️⃣ 合并重叠区间
+        expanded.sort((a, b) => a.start - b.start);
+
+        const merged = [];
+        for (const cur of expanded) {
+            if (!merged.length) {
+                merged.push(cur);
+            } else {
+                const last = merged[merged.length - 1];
+                if (cur.start <= last.end) {
+                    last.end = Math.max(last.end, cur.end);
+                } else {
+                    merged.push(cur);
+                }
+            }
+        }
+
+        // 4️⃣ 截取片段并拼接
+        let result = '';
+        for (const r of merged) {
+            let part = html.slice(r.start, r.end);
+
+            if (result.length > 0) {
+                result += ellipsis;
+            }
+
+            result += part;
+
+            if (result.length >= maxLength) break;
+        }
+
+        // 5️⃣ 最终长度裁剪
+        if (result.length > maxLength) {
+            result = result.slice(0, maxLength);
+        }
+        console.log('length:', result.length, 'content:', result);
+        result = this.fixHtml(result);
+        return result;
+    }
+    fixHtml(html) {
+        // 1️⃣ 修复未闭合 <mark>
+        const openMarks = (html.match(/<mark>/g) || []).length;
+        const closeMarks = (html.match(/<\/mark>/g) || []).length;
+
+        if (openMarks > closeMarks) {
+            html += '</mark>';
+        }
+
+        // 2️⃣ 去掉被截断的标签（比如 <br / 被截断）
+        html = html.replace(/<[^>]*$/, '');
+
+        return html;
+    }
+    /**
      * 全文搜索 - 基于 FTS5 虚拟表和 libsimple 中文分词
      * @param {string} keyword - 搜索关键词
-     * @returns {Promise<Array>} 搜索结果，包含 id、name、content
+     * @returns {Promise<Array>} 搜索结果，包含 id、name、snippets、firstSnippet
      */
     async search(keyword) {
         const sql = `
@@ -63,7 +157,15 @@ class Table {
         console.log('[Search] Keyword:', keyword);
         const result = await window.api.dbQuery(sql, [keyword]);
         console.log('[Search] Raw Result:', JSON.stringify(result, null, 2));
-        return result || [];
+
+        // 处理返回结果，生成 snippets
+        const processedResults = result.map(item => ({
+            ...item,
+            snippets: this.generateSnippets(item.content, {maxLength: 100})
+        }));
+        console.log('[Search] Raw Result:', JSON.stringify(processedResults, null, 2));
+
+        return processedResults;
     }
 }
 class Database {
