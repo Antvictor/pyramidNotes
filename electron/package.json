@@ -1,5 +1,5 @@
 {
-  "name": "pyramid_notes_app",
+  "name": "electron",
   "private": true,
   "version": "0.0.0",
   "type": "commonjs",
@@ -18,9 +18,13 @@
     "electron": "electron ."
   },
   "dependencies": {
-    "better-sqlite3": "^12.6.2"
+    "better-sqlite3": "^12.6.2",
+    "electron": "^38.8.6",
+    "gray-matter": "^4.0.3",
+    "yaml": "^2.8.3"
   },
   "devDependencies": {
-    "@eslint/js": "^9.36.0"
+    "@eslint/js": "^9.36.0",
+    "electron-rebuild": "^3.2.9"
   }
 }

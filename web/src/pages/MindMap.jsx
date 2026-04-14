@@ -129,6 +129,7 @@ export default function MindMap() {
 
   useEffect(() => {
     db.notes.select().then((res) => {
+      // 调用electron api，扫描数据目录下的markdown，并根据yaml头构建节点数据，然后存入sqlite; 最后从sqlite读取节点数据进行展示
       console.log("res:", res);
       if (!res || res.length === 0) {
         // 新建根节点
@@ -285,9 +286,9 @@ export default function MindMap() {
     []
   );
   const saveNode = (node) => {
-    const yamlStr = yaml.stringify({ alias: "", title: node.name, left: "", top: "" });
-      const markdownContent = `---\n${yamlStr}---\n\n`;
-      window.api.saveFile(`${node.id}-${node.name}.md`, markdownContent, node.id);
+    const yamlStr = { alias: "", title: node.name, left: node.left, top: node.top };
+    const markdownContent = "";
+      window.api.saveFile(`${node.id}-${node.name}.md`, yamlStr, markdownContent, node.id);
   }
   // 修改节点
   const updateNode = (id, title) => {
@@ -297,14 +298,15 @@ export default function MindMap() {
     setNodeAction(() => editNode);
   }
   const editNode = useCallback(
-    (id, name, orginName) => {
+    async (id, name, orginName) => {
       console.log("editNode id:", id, "name:", name, "orginName:", orginName);
       // const reactFlowBounds = event.currentTarget.getBoundingClientRect();
       setVisible(false);
       db.notes.update({ id: id }, { name: name });
       setNotesData(nds => nds.map(n => n.id === id ? { ...n, name: name } : n));
       // 修改文件名称
-      window.api.renameFile(`${id}-${orginName}.md`, `${id}-${name}.md`);
+      await window.api.renameFile(`${id}-${orginName}.md`, `${id}-${name}.md`);
+      await window.api.updateYaml(`${id}-${name}.md`, { title: name });
     },
     [setNotesData]
   );

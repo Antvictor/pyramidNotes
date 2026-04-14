@@ -25,7 +25,7 @@ function App() {
             <Route path="/" element={<MindMap />} />
             <Route path="/about" element={<About />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/note/:id" element={<Node />} />
+            <Route path="/note/:id/:name" element={<Node />} />
           </Routes>
         </div>
       </div>

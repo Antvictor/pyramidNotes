@@ -21,27 +21,24 @@ const Note = () => {
       setFileName(fileName);
 
       // 2. 打开文件
-      const content = await window.api.openFile(fileName);
-      const { data, content: markdownContent } = matter(content);
+      const { data: yamlData, content: markdownContent } = await window.api.openFile(fileName);
+      console.log("yamlData:", yamlData);
+      // const { data, content: markdownContent } = matter(content);
       setValue(markdownContent);
-      setYamlValue(data);
+      setYamlValue(yamlData);
     }
 
     loadFile();
-  }, [id]);
+  }, [id, name]);
 
   const saveFile = async (content) => {
     console.log("saveFile content:", content);
 
     if (fileName) {
-      await window.api.saveFile(fileName, buildMarkdown(yamlValue, content), id);
+      await window.api.saveFile(fileName, yamlValue, content, id);
     }
   }
 
-  const  buildMarkdown = (data, content) => {
-    const yamlStr = yaml.stringify(data);
-    return `---\n${yamlStr}---\n\n${content}`;
-  }
 
   return (
     // <StrictMode>

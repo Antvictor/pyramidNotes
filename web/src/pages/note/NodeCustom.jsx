@@ -17,7 +17,7 @@ export default function NodeCustom({ data }) {
         maxWidth: 100,
         textAlign: 'center',
       }}
-      onClick={() => navigate(`/note/${data.id}`)}
+      onClick={() => navigate(`/note/${data.id}/${data.name}`)}
     >
       {data.name}
       <Handle

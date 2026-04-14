@@ -1,0 +1,11 @@
+packages:
+  - electron
+  - web
+
+ignoredBuiltDependencies:
+  - esbuild
+  - msw
+
+onlyBuiltDependencies:
+  - better-sqlite3
+  - electron
