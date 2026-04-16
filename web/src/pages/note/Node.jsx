@@ -1,15 +1,18 @@
 import { useParams } from "react-router-dom";
 import { StrictMode, useEffect, useState } from "react";
-import matter from 'gray-matter';
-import yaml from 'yaml';
-import Markdown from "./Markdown"; // 你自己的 Markdown 渲染组件
+import MarkdownEditor from "../../core/editor/MarkdownEditor";
 
 
 const Note = () => {
-  const { id,name } = useParams(); // 路由传入的文件名
+  const { id, name } = useParams(); // 路由传入的文件名
   const [value, setValue] = useState("");
   const [yamlValue, setYamlValue] = useState("");
   const [fileName, setFileName] = useState("");
+  const [ready, setReady] = useState(false);
+  const [keys, setKeys] = useState([
+    { key: "Mod-b", action: "bold" },
+    { key: "Mod-i", action: "italic" },
+  ]);
 
   useEffect(() => {
     if (!id) return;
@@ -26,6 +29,7 @@ const Note = () => {
       // const { data, content: markdownContent } = matter(content);
       setValue(markdownContent);
       setYamlValue(yamlData);
+      setReady(true);
     }
 
     loadFile();
@@ -46,7 +50,15 @@ const Note = () => {
     //     <MilkdownEditor content={value} onChange={saveFile} />
     //   </MilkdownProvider>
     // </StrictMode>
-    <Markdown content={value} onChange={saveFile} />
+    // <Markdown content={value} onChange={saveFile} />
+    !ready ?
+      <div>loading...</div> :
+      <div style={{ 
+        width: "90vw",
+        height: "94vh", }}>
+        <MarkdownEditor content={value} onChange={saveFile} keyBindings={keys} />
+      </div>
+
   );
 };
 

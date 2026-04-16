@@ -288,7 +288,7 @@ export default function MindMap() {
   const saveNode = (node) => {
     const yamlStr = { alias: "", title: node.name, left: node.left, top: node.top };
     const markdownContent = "";
-      window.api.saveFile(`${node.id}-${node.name}.md`, yamlStr, markdownContent, node.id);
+    window.api.saveFile(`${node.id}-${node.name}.md`, yamlStr, markdownContent, node.id);
   }
   // 修改节点
   const updateNode = (id, title) => {
@@ -316,8 +316,12 @@ export default function MindMap() {
       style={{
         width: "90vw",
         height: "94vh",
+        // background: "#f0f0f0",
+        // overflow: "hidden",
+
+        // width: "100%",
+        // height: "100%",
         background: "#f0f0f0",
-        overflow: "hidden",
       }}
     >
       <ReactFlowProvider>

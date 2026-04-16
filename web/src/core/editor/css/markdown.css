@@ -1,0 +1,87 @@
+.md-preview {
+  line-height: 1.6;
+  white-space: normal;
+}
+
+.md-preview h1 {
+  font-size: 1.6em;
+  font-weight: bold;
+}
+
+.md-preview h2 {
+  font-size: 1.3em;
+  font-weight: bold;
+}
+
+.md-preview p {
+  margin: 6px 0;
+}
+
+.md-preview ul {
+  padding-left: 20px;
+}
+
+.md-preview code {
+  background: #eee;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+/* CodeMirror base */
+
+.md-preview h1 {
+  font-size: 1.6em;
+  font-weight: bold;
+}
+
+.md-preview h2 {
+  font-size: 1.3em;
+  font-weight: bold;
+}
+
+.cm-editor {
+  height: 100%;
+}
+
+/* block render 容器
+.cm-render-block {
+  display: block;
+  width: 100%;
+  line-height: 1.6;
+}
+
+/* markdown style 
+.cm-render-block h1 {
+  font-size: 1.6em;
+  font-weight: bold;
+}
+
+.cm-render-block h2 {
+  font-size: 1.3em;
+  font-weight: bold;
+}
+
+.cm-render-block p {
+  margin: 6px 0;
+}
+
+.cm-render-block ul {
+  padding-left: 20px;
+}
+
+.cm-render-block code {
+  background: #eee;
+  padding: 2px 4px;
+  border-radius: 4px;
+} */
+
+
+
+/* .cm-md-inline {
+  display: inline-block;
+  width: 100%;
+  white-space: normal;
+}
+
+.cm-editor {
+  background: transparent;
+} */

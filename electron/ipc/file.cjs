@@ -39,7 +39,8 @@ function registerFileIPC() {
 
     ipcMain.handle("saveFile", async (event, fileName, yamlData, content, nodeId) => {
         try {
-
+            console.log("saveFile called with:", { fileName, yamlData, content, nodeId });
+            
             await fs.writeFile(path.join(dataPath, fileName), buildMarkdown(yamlData, content), 'utf-8');
             // 同步更新 notes 表的 content 字段，触发 FTS 同步
             if (nodeId) {

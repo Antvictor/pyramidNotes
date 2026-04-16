@@ -11,15 +11,20 @@ function App() {
     <Router>
       <div style={{ display: "flex", height: "100vh" }}>
         {/* 左侧固定边栏 */}
-        <Sidebar />
+        <Sidebar style={{ width: 60 }} />
 
         {/* 右侧动态内容区 */}
         <div style={{
           flex: 1,
           padding: "20px",
-          overflowY: "auto",
+          // overflowY: "auto",
           width: "100%",
-          color: "#bfbfbfff"
+          color: "#bfbfbfff",
+
+          // flex: 1,
+          // height: "100%",        // ✅ 加这个
+          overflow: "hidden",    // ✅ 别用 auto
+          // padding: 0,            // ❗ 去掉 padding
         }}>
           <Routes>
             <Route path="/" element={<MindMap />} />
