@@ -4,12 +4,29 @@
 }
 
 .md-preview h1 {
-  font-size: 1.6em;
+  font-size: 2.0em;
   font-weight: bold;
 }
 
 .md-preview h2 {
-  font-size: 1.3em;
+  font-size: 1.8em !important;
+  font-weight: bold;
+}
+
+
+.md-preview h3 {
+  font-size: 1.6em !important;;
+  font-weight: bold;
+}
+
+
+.md-preview h4 {
+  font-size: 1.4em !important;;
+  font-weight: bold;
+}
+
+.md-preview h5 {
+  font-size: 1.2em !important;;
   font-weight: bold;
 }
 
