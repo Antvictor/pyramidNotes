@@ -286,7 +286,7 @@ export default function MindMap() {
     []
   );
   const saveNode = (node) => {
-    const yamlStr = { alias: "", title: node.name, left: node.left, top: node.top };
+    const yamlStr = { id: node.id, alias: "", title: node.name, left: node.left, top: node.top };
     const markdownContent = "";
     window.api.saveFile(`${node.id}-${node.name}.md`, yamlStr, markdownContent, node.id);
   }

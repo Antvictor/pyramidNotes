@@ -1,13 +1,15 @@
 const { ipcMain, app } = require("electron");
+const { test } = require("gray-matter");
 const path = require("path");
+
 function registerPathIPC() {
   ipcMain.handle("getPath", () => {
-    return path.join(app.getPath("userData"), "data");
+    return getPath("userData");
   });
 }
 
 const getPath = (type = "userData") => {
-  return app.getPath(type)
+  return path.join(app.getPath(type), "data");
 }
 
 
