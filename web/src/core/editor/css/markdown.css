@@ -39,7 +39,7 @@
 }
 
 .md-preview code {
-  background: #eee;
+  background: var(--bg-markdown);
   padding: 2px 4px;
   border-radius: 4px;
 }
@@ -86,7 +86,7 @@
 }
 
 .cm-render-block code {
-  background: #eee;
+  background: var(--bg-markdown);
   padding: 2px 4px;
   border-radius: 4px;
 } */

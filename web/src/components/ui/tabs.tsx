@@ -64,14 +64,14 @@ function TabsTrigger({
       className={cn(
         "relative inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md",
 
-        // ✅ 默认样式（固定白色）
-        "!bg-white text-black !border !border-gray-200",
+        // ✅ 默认样式
+        "!bg-[var(--bg-primary)] text-[var(--text-primary)] !border !border-gray-200",
 
         // ✅ hover
         "hover:bg-gray-100",
 
         // ✅ 选中态
-        "data-[state=active]:!bg-[#61dafb] data-[state=active]:!text-gray",
+        "data-[state=active]:!bg-[var(--link-color)] data-[state=active]:!text-white",
 
         // 其他保持
         "px-3 py-0.5 text-xs font-medium whitespace-nowrap transition-all",

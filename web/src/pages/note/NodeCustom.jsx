@@ -9,13 +9,14 @@ export default function NodeCustom({ data }) {
     <div
       style={{
         padding: 8,
-        background: '#fff',
-        border: '1px solid #888',
+        background: 'var(--bg-primary)',
+        border: '1px solid var(--border)',
         borderRadius: 4,
         cursor: 'pointer',
-        minWidth: 40, 
+        minWidth: 40,
         maxWidth: 100,
         textAlign: 'center',
+        color: 'var(--text-primary)',
       }}
       onClick={() => navigate(`/note/${data.id}/${data.name}`)}
     >
