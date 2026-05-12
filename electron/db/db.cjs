@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const { getBasePath } = require('../window/window.cjs');
+const { getPath } = require('../ipc/userPath.cjs');
 
 let db = null;
 
@@ -12,7 +13,7 @@ function getDb() {
 }
 
 function initializeDatabase() {
-    const dbPath = path.join(app.getPath('userData'), 'data', 'data');
+    const dbPath = path.join(getPath('userData'),  'data');
     console.log('Database path:', dbPath);
     if (!fs.existsSync(path.dirname(dbPath))) {
         fs.mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -64,21 +65,6 @@ function initializeDatabase() {
             DELETE FROM notes_fts WHERE rowid = OLD.rowid;
         END;
     `);
-
-    // 为现有数据建立索引（先同步现有文件内容到数据库）
-    const dataDir = path.join(app.getPath('userData'), 'data');
-    try {
-        if (fs.existsSync(dataDir)) {
-            const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.md'));
-            for (const file of files) {
-                const nodeId = file.replace('.md', '');
-                const content = fs.readFileSync(path.join(dataDir, file), 'utf-8');
-                db.prepare('UPDATE notes SET content = ? WHERE id = ?').run(content, nodeId);
-            }
-        }
-    } catch (err) {
-        console.error('Sync existing files error:', err);
-    }
 
     // 为现有数据建立 FTS 索引（先清空再重建，避免 rowid 冲突）
     db.exec(`

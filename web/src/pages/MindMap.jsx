@@ -196,6 +196,7 @@ export default function MindMap() {
           sourceHandle: "bottom",
           target: e.id,
           targetHandle: "top",
+          style: { stroke: 'var(--link-color)', strokeWidth: 2 },
         });
       };
       if (e.left) {
@@ -205,6 +206,7 @@ export default function MindMap() {
           sourceHandle: "right",
           target: e.id,
           targetHandle: "left",
+          style: { stroke: 'var(--link-color)', strokeWidth: 2 },
         });
       }
     });
@@ -286,7 +288,7 @@ export default function MindMap() {
     []
   );
   const saveNode = (node) => {
-    const yamlStr = { alias: "", title: node.name, left: node.left, top: node.top };
+    const yamlStr = { id: node.id, alias: "", title: node.name, left: node.left, top: node.top };
     const markdownContent = "";
     window.api.saveFile(`${node.id}-${node.name}.md`, yamlStr, markdownContent, node.id);
   }
@@ -316,12 +318,7 @@ export default function MindMap() {
       style={{
         width: "90vw",
         height: "94vh",
-        // background: "#f0f0f0",
-        // overflow: "hidden",
-
-        // width: "100%",
-        // height: "100%",
-        background: "#f0f0f0",
+        background: "var(--bg-primary)",
       }}
     >
       <ReactFlowProvider>
@@ -333,7 +330,7 @@ export default function MindMap() {
           onConnect={onConnect}
           nodeTypes={memoNodeTypes}
           nodesConnectable={false}
-          defaultEdgeOptions={{ type: 'smoothstep', selectable: false }}
+          defaultEdgeOptions={{ type: 'smoothstep', selectable: false, style: { stroke: 'var(--link-color)', strokeWidth: 2 } }}
           fitView
           onPaneContextMenu={onPaneContextMenu}
           onNodeContextMenu={onNodeContextMenu}

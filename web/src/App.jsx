@@ -19,7 +19,7 @@ function App() {
           padding: "20px",
           // overflowY: "auto",
           width: "100%",
-          color: "#bfbfbfff",
+          color: "var(--text-primary)",
 
           // flex: 1,
           // height: "100%",        // ✅ 加这个

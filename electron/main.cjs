@@ -4,13 +4,15 @@ const {registerFileIPC} = require('./ipc/file.cjs')
 const {registerPathIPC} = require('./ipc/userPath.cjs')
 const {createWindow} = require('./window/window.cjs')
 const {initializeDatabase} = require('./db/db.cjs')
+const { initNode } = require('./node/initNode')
 
 
-app.whenReady().then(() => {
-  initializeDatabase(),
-  createWindow(),
-  registerPathIPC(),
-  registerFileIPC()
+app.whenReady().then(async () => {
+  await initializeDatabase();
+  await initNode();
+  createWindow();
+  registerPathIPC();
+  registerFileIPC();
 })
 
 app.on('window-all-closed', () => {

@@ -6,8 +6,19 @@ const path = require("path");
 const matter = require('gray-matter');
 const yaml = require('yaml');
 
+const readFile =  async (fileName) => {
+     try {
+            const content = await fs.readFile(fileName, 'utf-8');
+            return await matter(content);
+        } catch (error) {
+            console.error("openFile error:", error)
+        }
+}
+
+
+
 function registerFileIPC() {
-    const dataPath = path.join(getPath(), "data/");
+    const dataPath = getPath();
     // todo 优化，路径不应该是前端传，应该是后端根据config来动态读取的，前端只需要传文件名称
 
     const buildMarkdown = (yamlData, content) => {
@@ -18,13 +29,7 @@ function registerFileIPC() {
     }
 
     ipcMain.handle("openFile", async (event, fileName) => {
-        try {
-            const content = await fs.readFile(path.join(dataPath, fileName), 'utf-8');
-            return await matter(content);
-        } catch (error) {
-            console.error("openFile error:", error)
-        }
-
+        return await readFile(path.join(dataPath, fileName));
     })
 
     ipcMain.handle("deleteFile", async (event, fileName) => {
@@ -90,4 +95,4 @@ function registerFileIPC() {
     });
 }
 
-module.exports = { registerFileIPC }
+module.exports = { registerFileIPC,readFile }
