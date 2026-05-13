@@ -1,7 +1,7 @@
 const { ipcMain, shell } = require("electron");
 const fs = require('fs/promises')
 const { getDb } = require('../db/db.cjs')
-const { getPath } = require('./userPath.cjs');
+const { getDataPath } = require('./userPath.cjs');
 const path = require("path");
 const matter = require('gray-matter');
 const yaml = require('yaml');
@@ -18,7 +18,7 @@ const readFile =  async (fileName) => {
 
 
 function registerFileIPC() {
-    const dataPath = getPath();
+    const dataPath = getDataPath();
     // todo 优化，路径不应该是前端传，应该是后端根据config来动态读取的，前端只需要传文件名称
 
     const buildMarkdown = (yamlData, content) => {

@@ -4,6 +4,7 @@ packages:
 
 ignoredBuiltDependencies:
   - esbuild
+  - lzma-native
   - msw
 
 onlyBuiltDependencies:

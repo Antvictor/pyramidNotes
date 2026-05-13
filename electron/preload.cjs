@@ -8,4 +8,7 @@ contextBridge.exposeInMainWorld('api', {
     updateYaml: (fileName, newYamlData) => ipcRenderer.invoke('updateYaml', fileName, newYamlData),
     getPath: () => ipcRenderer.invoke('getPath'),
     dbQuery: (sql, params) => ipcRenderer.invoke('dbQuery', sql, params),
+    getSettings: () => ipcRenderer.invoke('getSettings'),
+    saveSettings: (settings) => ipcRenderer.invoke('saveSettings', settings),
+    selectDirectory: () => ipcRenderer.invoke('selectDirectory'),
 })

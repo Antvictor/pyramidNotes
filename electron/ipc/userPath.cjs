@@ -1,16 +1,24 @@
 const { ipcMain, app } = require("electron");
-const { test } = require("gray-matter");
 const path = require("path");
+const { getCachedSettings } = require('../common/settings.cjs');
 
 function registerPathIPC() {
   ipcMain.handle("getPath", () => {
-    return getPath("userData");
+    return getDataPath();
   });
 }
 
-const getPath = (type = "userData") => {
+function getDataPath() {
+  const settings = getCachedSettings();
+  if (settings && settings.storagePath) {
+    return settings.storagePath;
+  }
+  return path.join(app.getPath('documents'), 'pyramidNotes');
+}
+
+function getPath(type = "userData") {
   return path.join(app.getPath(type), "data");
 }
 
 
-module.exports = { getPath, registerPathIPC }
+module.exports = { getPath, registerPathIPC, getDataPath }
