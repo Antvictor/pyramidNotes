@@ -24,6 +24,7 @@ import NodeCustom from "./note/NodeCustom";
 import db from "./db/db"
 import ContextMenu from "./note/ContextMenu/ContextMenu";
 import OpenPrompt from "./commons/OpenPrompt";
+import { PermissionDialog } from "@/components/ui/permission-dialog";
 import { nanoid } from "nanoid";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import yaml from "yaml";
@@ -114,17 +115,27 @@ export default function MindMap() {
   const [nodeId, setNodeId] = useState();
   const [title, setTitle] = useState();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [permissionError, setPermissionError] = useState(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const addNote = (note) => {
     setNotesData((prevData) => [...prevData, note]);
   };
+  const handleFileError = (result) => {
+    if (result && result.error) {
+      setPermissionError(result.originalError || result.error);
+      return true;
+    }
+    return false;
+  };
+
   const deleteNode = (id, title) => {
     setNotesData(nds => nds.filter(n => n.id !== id));
     setEdges(eds => eds.filter(e => e.source !== id && e.target !== id));
     db.notes.delete({ "id": id });
     // 同时删除markdown文件
-    window.api.deleteFile(`${id}-${title}.md`);
+    const result = window.api.deleteFile(`${id}-${title}.md`);
+    if (handleFileError(result)) return;
   };
 
   useEffect(() => {
@@ -287,10 +298,11 @@ export default function MindMap() {
     },
     []
   );
-  const saveNode = (node) => {
+  const saveNode = async (node) => {
     const yamlStr = { id: node.id, alias: "", title: node.name, left: node.left, top: node.top };
     const markdownContent = "";
-    window.api.saveFile(`${node.id}-${node.name}.md`, yamlStr, markdownContent, node.id);
+    const result = await window.api.saveFile(`${node.id}-${node.name}.md`, yamlStr, markdownContent, node.id);
+    if (handleFileError(result)) return;
   }
   // 修改节点
   const updateNode = (id, title) => {
@@ -307,18 +319,33 @@ export default function MindMap() {
       db.notes.update({ id: id }, { name: name });
       setNotesData(nds => nds.map(n => n.id === id ? { ...n, name: name } : n));
       // 修改文件名称
-      await window.api.renameFile(`${id}-${orginName}.md`, `${id}-${name}.md`);
-      await window.api.updateYaml(`${id}-${name}.md`, { title: name });
+      const renameResult = await window.api.renameFile(`${id}-${orginName}.md`, `${id}-${name}.md`);
+      if (handleFileError(renameResult)) return;
+
+      const yamlResult = await window.api.updateYaml(`${id}-${name}.md`, { title: name });
+      if (handleFileError(yamlResult)) return;
     },
     [setNotesData]
   );
+
+  const handleReSelectFolder = async () => {
+    setPermissionError(null);
+    const dir = await window.api.selectDirectory();
+    if (dir) {
+      await window.api.saveSettings({ storagePath: dir });
+    }
+  };
+
+  const handleOpenSystemSettings = async () => {
+    await window.api.openSystemSettings();
+  };
 
   return (
     <div
       style={{
         width: "90vw",
         height: "94vh",
-        background: "var(--bg-primary)",
+        background: "var(--background)",
       }}
     >
       <ReactFlowProvider>
@@ -369,6 +396,13 @@ export default function MindMap() {
           title={title}
           onOk={nodeAction}
           onCancel={() => setVisible(false)}
+        />
+        <PermissionDialog
+          open={!!permissionError}
+          errorMessage={permissionError}
+          onReSelectFolder={handleReSelectFolder}
+          onOpenSystemSettings={handleOpenSystemSettings}
+          onClose={() => setPermissionError(null)}
         />
       </ReactFlowProvider>
     </div>

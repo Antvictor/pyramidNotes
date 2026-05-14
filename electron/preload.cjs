@@ -11,4 +11,5 @@ contextBridge.exposeInMainWorld('api', {
     getSettings: () => ipcRenderer.invoke('getSettings'),
     saveSettings: (settings) => ipcRenderer.invoke('saveSettings', settings),
     selectDirectory: () => ipcRenderer.invoke('selectDirectory'),
+    openSystemSettings: () => ipcRenderer.invoke('openSystemSettings'),
 })

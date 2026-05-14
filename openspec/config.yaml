@@ -3,25 +3,18 @@ schema: spec-driven
 # Project context (optional)
 # This is shown to AI when creating artifacts.
 # Add your tech stack, conventions, style guides, domain knowledge, etc.
-context: |
-  Tech stack: TypeScript, React, Tailwind CSS, Electron, pnpm workspace
-  Project structure:
-    - web/ (frontend)
-    - electron/ (desktop client)
-    - openspec/ (change management)
-  Commit convention: conventional commits
-  Domain: notes application (pyramidNotes)
+# Example:
+#   context: |
+#     Tech stack: TypeScript, React, Node.js
+#     We use conventional commits
+#     Domain: e-commerce platform
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
-rules:
-  proposal:
-    - Keep proposals under 500 words
-    - Always include a "Non-goals" section
-  design:
-    - Include Goals/Non-Goals, Risks, and Open Questions sections
-  tasks:
-    - Break tasks into chunks of max 2 hours
-  specs:
-    - Use #### for scenario headers
-    - Use SHALL/MUST keywords for normative requirements
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours

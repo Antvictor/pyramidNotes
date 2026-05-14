@@ -7,7 +7,7 @@ const Sidebar = () => {
   const navStyle = {
     width: "56px",
     minWidth: "56px",
-    backgroundColor: "var(--bg-primary)",
+    backgroundColor: "var(--sidebar)",
     color: "var(--text-primary)",
     padding: "16px 12px",
     display: "flex",

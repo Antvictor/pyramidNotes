@@ -4,7 +4,15 @@
       "Bash(openspec new *)",
       "Bash(openspec status *)",
       "Bash(openspec instructions *)",
-      "Bash(openspec list *)"
+      "Bash(openspec list *)",
+      "Bash(npm run *)",
+      "Bash(npx tsc *)",
+      "Bash(tmux attach *)",
+      "Bash(node *)",
+      "Bash(pnpm why *)",
+      "Bash(openspec spec *)",
+      "Bash(openspec archive *)",
+      "Bash(openspec config *)"
     ]
   }
 }

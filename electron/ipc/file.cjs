@@ -1,26 +1,13 @@
 const { ipcMain, shell } = require("electron");
 const fs = require('fs/promises')
 const { getDb } = require('../db/db.cjs')
-const { getDataPath } = require('./userPath.cjs');
+const { resolveStoragePath, classifyError } = require('../common/utils/fileHelper.js');
+const { ERROR_CODES } = require('../common/utils/errorCodes.js');
 const path = require("path");
 const matter = require('gray-matter');
 const yaml = require('yaml');
 
-const readFile =  async (fileName) => {
-     try {
-            const content = await fs.readFile(fileName, 'utf-8');
-            return await matter(content);
-        } catch (error) {
-            console.error("openFile error:", error)
-        }
-}
-
-
-
 function registerFileIPC() {
-    const dataPath = getDataPath();
-    // todo 优化，路径不应该是前端传，应该是后端根据config来动态读取的，前端只需要传文件名称
-
     const buildMarkdown = (yamlData, content) => {
         const safeContent = typeof content === 'string' ? content : '';
         const safeYaml = typeof yamlData === 'object' ? yamlData : {};
@@ -29,23 +16,32 @@ function registerFileIPC() {
     }
 
     ipcMain.handle("openFile", async (event, fileName) => {
-        return await readFile(path.join(dataPath, fileName));
+        try {
+            const dataPath = resolveStoragePath();
+            const filePath = path.join(dataPath, fileName);
+            const content = await fs.readFile(filePath, 'utf-8');
+            return await matter(content);
+        } catch (error) {
+            console.error("openFile error:", error)
+            return { error: classifyError(error), originalError: error.message };
+        }
     })
 
     ipcMain.handle("deleteFile", async (event, fileName) => {
         try {
+            const dataPath = resolveStoragePath();
             return await shell.trashItem(path.join(dataPath, fileName));
         } catch (error) {
             console.error("deleteFile error:", error)
+            return { error: classifyError(error), originalError: error.message };
         }
-
     })
-
 
     ipcMain.handle("saveFile", async (event, fileName, yamlData, content, nodeId) => {
         try {
             console.log("saveFile called with:", { fileName, yamlData, content, nodeId });
-            
+            const dataPath = resolveStoragePath();
+
             await fs.writeFile(path.join(dataPath, fileName), buildMarkdown(yamlData, content), 'utf-8');
             // 同步更新 notes 表的 content 字段，触发 FTS 同步
             if (nodeId) {
@@ -56,22 +52,24 @@ function registerFileIPC() {
             return true;
         } catch (error) {
             console.error("saveFile error:", error)
-            return false;
+            return { error: classifyError(error), originalError: error.message };
         }
     })
 
     ipcMain.handle("renameFile", async (event, oldFileName, newFileName) => {
         try {
+            const dataPath = resolveStoragePath();
             await fs.rename(path.join(dataPath, oldFileName), path.join(dataPath, newFileName));
             return true;
         } catch (error) {
             console.error("renameFile error:", error)
-            return false;
+            return { error: classifyError(error), originalError: error.message };
         }
     })
 
     ipcMain.handle("updateYaml", async (event, fileName, newYamlData) => {
         try {
+            const dataPath = resolveStoragePath();
             const filePath = path.join(dataPath, fileName);
 
             const content = await fs.readFile(filePath, 'utf-8');
@@ -90,9 +88,9 @@ function registerFileIPC() {
             return true;
         } catch (error) {
             console.error("updateYaml error:", error)
-            return false;
+            return { error: classifyError(error), originalError: error.message };
         }
     });
 }
 
-module.exports = { registerFileIPC,readFile }
+module.exports = { registerFileIPC }

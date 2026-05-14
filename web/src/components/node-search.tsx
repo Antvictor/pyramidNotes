@@ -159,7 +159,7 @@ export function NodeSearchInternal({
   return (
     <>
       <Tabs value={activeTab} onValueChange={onTabChange} className="w-full border-0">
-        <TabsList className="grid grid-cols-2 bg-white border border-gray-200 p-0 rounded-md">
+        <TabsList className="grid grid-cols-2 bg-background border p-0 rounded-md">
           <TabsTrigger  value="node">节点搜索</TabsTrigger>
           <TabsTrigger value="fulltext">全文搜索</TabsTrigger>
         </TabsList>
