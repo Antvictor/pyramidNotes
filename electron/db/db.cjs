@@ -4,22 +4,58 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const { getBasePath } = require('../window/window.cjs');
-const { getPath } = require('../ipc/userPath.cjs');
 
 let db = null;
+let isInitialized = false;
 
 function getDb() {
     return db;
 }
 
-function initializeDatabase() {
-    const dbPath = path.join(getPath('userData'),  'data');
-    console.log('Database path:', dbPath);
-    if (!fs.existsSync(path.dirname(dbPath))) {
-        fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+function closeDatabase() {
+    if (db) {
+        try {
+            db.close();
+            console.log('Database closed successfully');
+        } catch (e) {
+            console.error('Error closing database:', e);
+        }
+        db = null;
     }
+    isInitialized = false;
+}
+
+function initializeDatabase(storagePath) {
+    // If already initialized, close first
+    if (isInitialized && db) {
+        closeDatabase();
+    }
+
+    // Use storagePath/.data as the database file location
+    const dbDir = storagePath;
+    const dbPath = path.join(dbDir, '.data');
+    console.log('Database path:', dbPath);
+
+    // Ensure storage path exists
+    if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+    }
+
     db = new Database(dbPath);
 
+    // Mark as initialized
+    isInitialized = true;
+
+    // Set hidden attribute on Windows
+    if (process.platform === 'win32') {
+        try {
+            const { execSync } = require('child_process');
+            // Use attrib command to set hidden attribute on the .data file
+            execSync(`attrib +H "${dbPath}"`, { windowsHide: true });
+        } catch (e) {
+            console.log('Could not set hidden attribute:', e);
+        }
+    }
 
     // 加载插件
     loadPlugins(db);
@@ -32,6 +68,18 @@ function initializeDatabase() {
             alias TEXT,
             top TEXT,
             left TEXT
+        );
+    `);
+
+    // 创建 deleted_notes 表用于软删除
+    db.exec(`
+        create table if not exists deleted_notes(
+            id TEXT primary key not null,
+            filename TEXT NOT NULL,
+            content TEXT,
+            yaml_data TEXT,
+            deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            original_path TEXT
         );
     `);
 
@@ -73,19 +121,23 @@ function initializeDatabase() {
         SELECT rowid, id, COALESCE(content, '') FROM notes;
     `);
 
-    ipcMain.handle('dbQuery', (event, sql, params = []) => {
-        try {
-            const stmt = db.prepare(sql);
-            if (sql.trim().toUpperCase().startsWith('SELECT')) {
-                return stmt.all(...params);
-            } else {
-                return stmt.run(...params);
+    // Register dbQuery handler only once
+    if (!initializeDatabase.handlersRegistered) {
+        ipcMain.handle('dbQuery', (event, sql, params = []) => {
+            try {
+                const stmt = db.prepare(sql);
+                if (sql.trim().toUpperCase().startsWith('SELECT')) {
+                    return stmt.all(...params);
+                } else {
+                    return stmt.run(...params);
+                }
+            } catch (err) {
+                console.error('DB Error:', err);
+                return null;
             }
-        } catch (err) {
-            console.error('DB Error:', err);
-            return null;
-        }
-    });
+        });
+        initializeDatabase.handlersRegistered = true;
+    }
 
     function loadPlugins(db) {
         db.pragma('journal_mode = WAL');
@@ -156,7 +208,7 @@ function initializeDatabase() {
     }
 }
 
-module.exports = { initializeDatabase, getDb }
+module.exports = { initializeDatabase, getDb, closeDatabase, isInitialized: () => isInitialized }
 
 
 

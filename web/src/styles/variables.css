@@ -54,6 +54,64 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Markdown Typography */
+  --font-size-h1: 2em;
+  --font-size-h2: 1.5em;
+  --font-size-h3: 1.25em;
+  --font-size-h4: 1em;
+  --font-size-h5: 0.875em;
+  --font-size-h6: 0.85em;
+
+  --font-weight-h1: 700;
+  --font-weight-h2: 600;
+  --font-weight-h3: 600;
+  --font-weight-h4: 500;
+  --font-weight-h5: 500;
+  --font-weight-h6: 500;
+
+  --line-height-heading: 1.25;
+  --line-height-body: 1.7;
+
+  --font-color-h1: oklch(0.645 0.246 16.439);
+  --font-color-h2: oklch(0.769 0.188 70.08);
+  --font-color-h3: oklch(0.696 0.17 162.48);
+  --font-color-h4: oklch(0.627 0.265 303.9);
+  --font-color-h5: oklch(0.627 0.265 303.9);
+  --font-color-h6: oklch(0.627 0.265 303.9);
+
+  /* Markdown Colors */
+  --color-heading: var(--foreground);
+  --color-text: var(--foreground);
+  --color-text-secondary: var(--muted-foreground);
+  --color-link: #3b82f6;
+  --color-link-hover: #2563eb;
+  --color-code-bg: var(--muted);
+  --color-code-text: var(--foreground);
+  --color-code-border: var(--border);
+  --color-blockquote-border: var(--primary);
+  --color-blockquote-bg: var(--muted);
+  --color-table-border: var(--border);
+  --color-table-header-bg: var(--muted);
+  --color-table-stripe-bg: oklch(0.98 0 0);
+
+  /* Markdown Spacing */
+  --spacing-heading-top: 1.5em;
+  --spacing-heading-bottom: 0.5em;
+  --spacing-paragraph: 1em;
+  --spacing-list-item: 0.5em;
+  --spacing-code-block: 1em;
+  --spacing-blockquote: 0.5em 1em;
+  --spacing-table-cell: 0.5em 1em;
+
+  /* Code Syntax Highlighting (Light) */
+  --syntax-keyword: #008000;
+  --syntax-string: #a31515;
+  --syntax-number: #098658;
+  --syntax-comment: #008000;
+  --syntax-function: #795e26;
+  --syntax-variable: #001080;
+  --syntax-operator: #000000;
 }
 
 @theme inline {

@@ -3,24 +3,42 @@ const path = require('path')
 const { registerFileIPC } = require('./ipc/file.cjs')
 const { registerPathIPC } = require('./ipc/userPath.cjs')
 const { createWindow } = require('./window/window.cjs')
-const { initializeDatabase } = require('./db/db.cjs')
-const { initNode } = require('./node/initNode')
+const { initializeDatabase, closeDatabase } = require('./db/db.cjs')
+const { initNode } = require('./nodes/initNode')
 const { loadSettings, getCachedSettings } = require('./common/settings.cjs')
 const { registerSettingsIPC } = require('./ipc/settings.cjs')
 
 
 app.whenReady().then(async () => {
   try {
-    await initializeDatabase();
-    await initNode();
-
-    // Load settings before creating window
+    // Load settings first so we have storagePath for DB initialization
     const settings = await loadSettings();
+
+    // Initialize DB at storagePath location (not userData)
+    await initializeDatabase(settings.storagePath);
+
+    // Now initNode can use correct storagePath via cached settings
+    await initNode();
 
     createWindow(settings);
     registerPathIPC();
     registerFileIPC();
     registerSettingsIPC();
+
+    // Handler to reload database when storagePath changes
+    ipcMain.handle('reloadDatabase', async (event, newStoragePath) => {
+      try {
+        console.log('Reloading database to:', newStoragePath);
+        closeDatabase();
+        await initializeDatabase(newStoragePath);
+        await initNode();
+        console.log('Database reloaded successfully');
+        return true;
+      } catch (err) {
+        console.error('Failed to reload database:', err);
+        return false;
+      }
+    });
 
     // 打开系统设置页面（用于权限授予）
     ipcMain.handle('openSystemSettings', async () => {

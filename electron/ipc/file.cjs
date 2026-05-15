@@ -27,10 +27,41 @@ function registerFileIPC() {
         }
     })
 
-    ipcMain.handle("deleteFile", async (event, fileName) => {
+    ipcMain.handle("deleteFile", async (event, fileName, nodeId) => {
         try {
             const dataPath = resolveStoragePath();
-            return await shell.trashItem(path.join(dataPath, fileName));
+            const filePath = path.join(dataPath, fileName);
+
+            // Read file content before trashing for soft delete
+            let fileContent = null;
+            let noteData = null;
+            try {
+                const content = await fs.readFile(filePath, 'utf-8');
+                const parsed = matter(content);
+
+                // Get existing note data from DB if nodeId provided
+                const db = getDb();
+                if (nodeId) {
+                    noteData = db.prepare('SELECT * FROM notes WHERE id = ?').get(nodeId);
+                }
+
+                // Insert into deleted_notes for potential recovery
+                db.prepare(`
+                    INSERT INTO deleted_notes (id, filename, content, yaml_data, original_path)
+                    VALUES (?, ?, ?, ?, ?)
+                `).run(
+                    nodeId || `deleted-${Date.now()}`,
+                    fileName,
+                    content,
+                    JSON.stringify(parsed.data || {}),
+                    filePath
+                );
+            } catch (readError) {
+                console.log('Could not read file for soft delete:', readError.message);
+            }
+
+            // Move file to trash (existing behavior)
+            return await shell.trashItem(filePath);
         } catch (error) {
             console.error("deleteFile error:", error)
             return { error: classifyError(error), originalError: error.message };

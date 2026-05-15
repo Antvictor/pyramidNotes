@@ -1,6 +1,9 @@
 const { app } = require('electron');
-const fs = require('fs/promises');
+const fs = require('fs');
 const path = require('path');
+
+// Use fs.promises for async operations
+const fsPromises = require('fs').promises;
 
 const DEFAULT_SETTINGS = {
   theme: 'system',
@@ -19,9 +22,10 @@ async function loadSettings() {
   const settingsPath = getSettingsPath();
 
   try {
-    const data = await fs.readFile(settingsPath, 'utf-8');
+    const data = await fsPromises.readFile(settingsPath, 'utf-8');
     const parsed = JSON.parse(data);
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    cachedSettings = { ...DEFAULT_SETTINGS, ...parsed };
+    return cachedSettings;
   } catch (error) {
     if (error.code === 'ENOENT') {
       await saveSettings(DEFAULT_SETTINGS);
@@ -35,7 +39,12 @@ async function loadSettings() {
 async function saveSettings(settings) {
   const settingsPath = getSettingsPath();
   try {
-    await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+    // Ensure parent directory exists before writing
+    const dir = path.dirname(settingsPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    await fsPromises.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
     cachedSettings = settings;
     return true;
   } catch (error) {

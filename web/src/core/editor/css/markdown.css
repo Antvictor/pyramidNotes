@@ -1,104 +1,199 @@
+/* Markdown Content Styles - Core Editor
+ * Uses CSS variables from variables.css for consistent theming
+ * Class names (.md-preview, .cm-md-inline) cannot change - required by third-party library parsing
+ */
+
 .md-preview {
   line-height: 1.6;
   white-space: normal;
 }
 
 .md-preview h1 {
-  font-size: 2.0em;
-  font-weight: bold;
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-h1);
+  line-height: var(--line-height-heading);
+  margin-top: var(--spacing-heading-top);
+  margin-bottom: var(--spacing-heading-bottom);
+  color: var(--font-color-h1);
 }
 
 .md-preview h2 {
-  font-size: 1.8em !important;
-  font-weight: bold;
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-h2);
+  line-height: var(--line-height-heading);
+  margin-top: var(--spacing-heading-top);
+  margin-bottom: var(--spacing-heading-bottom);
+  color: var(--font-color-h2);
+  /* border-left: 4px solid var(--color-blockquote-border); */
+  padding-left: 0.5em;
 }
-
 
 .md-preview h3 {
-  font-size: 1.6em !important;;
-  font-weight: bold;
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-h3);
+  line-height: var(--line-height-heading);
+  margin-top: var(--spacing-heading-top);
+  margin-bottom: var(--spacing-heading-bottom);
+  color: var(--font-color-h3);
 }
 
-
 .md-preview h4 {
-  font-size: 1.4em !important;;
-  font-weight: bold;
+  font-size: var(--font-size-h4);
+  font-weight: var(--font-weight-h4);
+  line-height: var(--line-height-heading);
+  margin-top: calc(var(--spacing-heading-top) * 0.75);
+  margin-bottom: calc(var(--spacing-heading-bottom) * 0.75);
+  color: var(--font-color-h4);
 }
 
 .md-preview h5 {
-  font-size: 1.2em !important;;
-  font-weight: bold;
+  font-size: var(--font-size-h5);
+  font-weight: var(--font-weight-h5);
+  line-height: var(--line-height-heading);
+  margin-top: calc(var(--spacing-heading-top) * 0.5);
+  margin-bottom: calc(var(--spacing-heading-bottom) * 0.5);
+  color: var(--font-color-h5);
+}
+
+.md-preview h6 {
+  font-size: var(--font-size-h6);
+  font-weight: var(--font-weight-h6);
+  line-height: var(--line-height-heading);
+  margin-top: calc(var(--spacing-heading-top) * 0.5);
+  margin-bottom: calc(var(--spacing-heading-bottom) * 0.5);
+  color: var(--font-color-h6);
 }
 
 .md-preview p {
-  margin: 6px 0;
+  margin: var(--spacing-paragraph) 0;
+  line-height: var(--line-height-body);
+  color: var(--color-text);
 }
 
-.md-preview ul {
-  padding-left: 20px;
+.md-preview ul,
+.md-preview ol {
+  margin: var(--spacing-list-item) 0;
+  padding-left: 1.5em;
+  line-height: var(--line-height-body);
 }
 
-.md-preview code {
-  background: var(--bg-markdown);
-  padding: 2px 4px;
+.md-preview ul > li {
+  list-style-type: disc;
+}
+
+.md-preview ul ul > li {
+  list-style-type: circle;
+}
+
+.md-preview ol > li {
+  list-style-type: decimal;
+}
+
+.md-preview code:not(pre code) {
+  background: var(--color-code-bg);
+  color: var(--color-code-text);
+  padding: 0.2em 0.4em;
   border-radius: 4px;
+  font-family: var(--font-family-mono, 'Fira Code', 'Consolas', monospace);
+  font-size: 0.9em;
+  border: 1px solid var(--color-code-border);
 }
+
+.md-preview pre {
+  background: var(--color-code-bg);
+  border: 1px solid var(--color-code-border);
+  border-radius: var(--radius);
+  padding: var(--spacing-code-block);
+  margin: 1em 0;
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+.md-preview pre code {
+  background: transparent;
+  color: var(--color-text);
+  padding: 0;
+  border: none;
+  font-family: var(--font-family-mono, 'Fira Code', 'Consolas', monospace);
+  font-size: 0.875em;
+}
+
+.md-preview blockquote {
+  margin: 1em 0;
+  padding: var(--spacing-blockquote);
+  background: var(--color-blockquote-bg);
+  border-left: 4px solid var(--color-blockquote-border);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-style: italic;
+  color: var(--color-text-secondary);
+}
+
+.md-preview blockquote p {
+  margin: 0.5em 0;
+}
+
+.md-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 0.9em;
+}
+
+.md-preview th {
+  background: var(--color-table-header-bg);
+  font-weight: var(--font-weight-h4);
+  text-align: left;
+  padding: var(--spacing-table-cell);
+  border: 1px solid var(--color-table-border);
+}
+
+.md-preview td {
+  padding: var(--spacing-table-cell);
+  border: 1px solid var(--color-table-border);
+}
+
+.md-preview tr:nth-child(even) {
+  background: var(--color-table-stripe-bg);
+}
+
+.md-preview hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2em 0;
+}
+
+.md-preview img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  margin: 1em 0;
+}
+
+.md-preview strong {
+  font-weight: 600;
+}
+
+.md-preview em {
+  font-style: italic;
+}
+
+.md-preview a {
+  color: var(--color-link);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.md-preview a:hover {
+  color: var(--color-link-hover);
+  text-decoration: underline;
+}
+
+.md-preview input[type="checkbox"] {
+  margin-right: 0.5em;
+  accent-color: var(--primary);
+}
+
 /* CodeMirror base */
-
-.md-preview h1 {
-  font-size: 1.6em;
-  font-weight: bold;
-}
-
-.md-preview h2 {
-  font-size: 1.3em;
-  font-weight: bold;
-}
-
 .cm-editor {
   height: 100%;
 }
-
-/* block render 容器
-.cm-render-block {
-  display: block;
-  width: 100%;
-  line-height: 1.6;
-}
-
-/* markdown style 
-.cm-render-block h1 {
-  font-size: 1.6em;
-  font-weight: bold;
-}
-
-.cm-render-block h2 {
-  font-size: 1.3em;
-  font-weight: bold;
-}
-
-.cm-render-block p {
-  margin: 6px 0;
-}
-
-.cm-render-block ul {
-  padding-left: 20px;
-}
-
-.cm-render-block code {
-  background: var(--bg-markdown);
-  padding: 2px 4px;
-  border-radius: 4px;
-} */
-
-
-
-/* .cm-md-inline {
-  display: inline-block;
-  width: 100%;
-  white-space: normal;
-}
-
-.cm-editor {
-  background: transparent;
-} */

@@ -12,7 +12,18 @@
       "Bash(pnpm why *)",
       "Bash(openspec spec *)",
       "Bash(openspec archive *)",
-      "Bash(openspec config *)"
+      "Bash(openspec config *)",
+      "Bash(grep *)",
+      "Bash(pnpm rebuild *)",
+      "Bash(npm rebuild *)",
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(pnpm build *)",
+      "Bash(npm list *)",
+      "Bash(node-gyp rebuild *)",
+      "Bash(pnpm install *)",
+      "Bash(pnpm store *)",
+      "Bash(npm --version)",
+      "Bash(DEBUG=* pnpm rebuild better-sqlite3)"
     ]
   }
 }

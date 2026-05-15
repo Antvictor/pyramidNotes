@@ -1,5 +1,237 @@
- .ͼ4 .cm-content {
-     width: 10% !important;
-     white-space: normal !important;
-     word-break: break-word !important;
- }
+/* Markdown Content Styles */
+
+/* Headings */
+.cm-md-inline h1,
+.prose h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-h1);
+  line-height: var(--line-height-heading);
+  margin-top: var(--spacing-heading-top);
+  margin-bottom: var(--spacing-heading-bottom);
+  color: var(--font-color-h1);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3em;
+}
+
+.cm-md-inline h2,
+.prose h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-h2);
+  line-height: var(--line-height-heading);
+  margin-top: var(--spacing-heading-top);
+  margin-bottom: var(--spacing-heading-bottom);
+  color: var(--font-color-h2);
+  border-left: 4px solid var(--color-blockquote-border);
+  padding-left: 0.5em;
+}
+
+.cm-md-inline h3,
+.prose h3 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-h3);
+  line-height: var(--line-height-heading);
+  margin-top: var(--spacing-heading-top);
+  margin-bottom: var(--spacing-heading-bottom);
+  color: var(--font-color-h3);
+  padding-left: 0.75em;
+}
+
+.cm-md-inline h4,
+.prose h4 {
+  font-size: var(--font-size-h4);
+  font-weight: var(--font-weight-h4);
+  line-height: var(--line-height-heading);
+  margin-top: calc(var(--spacing-heading-top) * 0.75);
+  margin-bottom: calc(var(--spacing-heading-bottom) * 0.75);
+  color: var(--font-color-h4);
+  padding-left: 0.9em;
+}
+
+.cm-md-inline h5,
+.prose h5 {
+  font-size: var(--font-size-h5);
+  font-weight: var(--font-weight-h5);
+  line-height: var(--line-height-heading);
+  margin-top: calc(var(--spacing-heading-top) * 0.5);
+  margin-bottom: calc(var(--spacing-heading-bottom) * 0.5);
+  color: var(--font-color-h5);
+  padding-left: 0.9em;
+}
+
+.cm-md-inline h6,
+.prose h6 {
+  font-size: var(--font-size-h6);
+  font-weight: var(--font-weight-h6);
+  line-height: var(--line-height-heading);
+  margin-top: calc(var(--spacing-heading-top) * 0.5);
+  margin-bottom: calc(var(--spacing-heading-bottom) * 0.5);
+  color: var(--font-color-h6);
+  padding-left: 0.9em;
+}
+
+/* Paragraphs */
+.cm-md-inline p,
+.prose p {
+  margin: var(--spacing-paragraph) 0;
+  line-height: var(--line-height-body);
+  color: var(--color-text);
+}
+
+/* Links */
+.cm-md-inline a,
+.prose a {
+  color: var(--color-link);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.cm-md-inline a:hover,
+.prose a:hover {
+  color: var(--color-link-hover);
+  text-decoration: underline;
+}
+
+/* Inline Code */
+.cm-md-inline code:not(pre code),
+.prose code:not(pre code) {
+  background: var(--color-code-bg);
+  color: var(--color-code-text);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-family: var(--font-family-mono, 'Fira Code', 'Consolas', monospace);
+  font-size: 0.9em;
+  border: 1px solid var(--color-code-border);
+}
+
+/* Code Blocks */
+.cm-md-inline pre,
+.prose pre {
+  background: var(--color-code-bg);
+  border: 1px solid var(--color-code-border);
+  border-radius: var(--radius);
+  padding: var(--spacing-code-block);
+  margin: 1em 0;
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+.cm-md-inline pre code,
+.prose pre code {
+  background: transparent;
+  color: var(--color-text);
+  padding: 0;
+  border: none;
+  font-family: var(--font-family-mono, 'Fira Code', 'Consolas', monospace);
+  font-size: 0.875em;
+}
+
+/* Lists */
+.cm-md-inline ul,
+.prose ul,
+.cm-md-inline ol,
+.prose ol {
+  margin: var(--spacing-list-item) 0;
+  padding-left: 1.5em;
+  line-height: var(--line-height-body);
+}
+
+.cm-md-inline li,
+.prose li {
+  margin: 0.25em 0;
+}
+
+.cm-md-inline ul > li,
+.prose ul > li {
+  list-style-type: disc;
+}
+
+.cm-md-inline ul ul > li,
+.prose ul ul > li {
+  list-style-type: circle;
+}
+
+.cm-md-inline ol > li,
+.prose ol > li {
+  list-style-type: decimal;
+}
+
+/* Blockquotes */
+.cm-md-inline blockquote,
+.prose blockquote {
+  margin: 1em 0;
+  padding: var(--spacing-blockquote);
+  background: var(--color-blockquote-bg);
+  border-left: 4px solid var(--color-blockquote-border);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-style: italic;
+  color: var(--color-text-secondary);
+}
+
+.cm-md-inline blockquote p,
+.prose blockquote p {
+  margin: 0.5em 0;
+}
+
+/* Tables */
+.cm-md-inline table,
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 0.9em;
+}
+
+.cm-md-inline th,
+.prose th {
+  background: var(--color-table-header-bg);
+  font-weight: var(--font-weight-h4);
+  text-align: left;
+  padding: var(--spacing-table-cell);
+  border: 1px solid var(--color-table-border);
+}
+
+.cm-md-inline td,
+.prose td {
+  padding: var(--spacing-table-cell);
+  border: 1px solid var(--color-table-border);
+}
+
+.cm-md-inline tr:nth-child(even),
+.prose tr:nth-child(even) {
+  background: var(--color-table-stripe-bg);
+}
+
+/* Horizontal Rule */
+.cm-md-inline hr,
+.prose hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2em 0;
+}
+
+/* Images */
+.cm-md-inline img,
+.prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  margin: 1em 0;
+}
+
+/* Strong & Emphasis */
+.cm-md-inline strong,
+.prose strong {
+  font-weight: 600;
+}
+
+.cm-md-inline em,
+.prose em {
+  font-style: italic;
+}
+
+/* Task Lists (if supported) */
+.cm-md-inline input[type="checkbox"],
+.prose input[type="checkbox"] {
+  margin-right: 0.5em;
+  accent-color: var(--primary);
+}

@@ -1,8 +1,9 @@
+// 不用了，老版本，现在使用MarkdownEditor
 import { useEffect, useRef } from "react";
 import { Crepe } from "@milkdown/crepe";
 import "@milkdown/crepe/theme/common/style.css";
 import "@milkdown/crepe/theme/frame.css";
-import "./markdown.css";
+// import "./markdown.css";
 
 const Markdown = ({ content = "", onChange }) => {
     const ref = useRef(null);

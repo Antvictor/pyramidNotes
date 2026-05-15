@@ -161,6 +161,22 @@ export default function MindMap() {
 
   }, []);
 
+  // Listen for settings changes (storagePath change)
+  useEffect(() => {
+    if (window.api.onSettingsChanged) {
+      window.api.onSettingsChanged((newSettings) => {
+        console.log("Settings changed, reloading notes for storagePath:", newSettings.storagePath);
+        // Re-query the database to get notes from new storage path
+        db.notes.select().then((res) => {
+          console.log("Reloaded notes:", res);
+          if (res && res.length > 0) {
+            setNotesData(res);
+          }
+        });
+      });
+    }
+  }, []);
+
   // 处理 URL 搜索参数，打开搜索对话框
   useEffect(() => {
     if (searchParams.get('search') === '1') {
@@ -175,7 +191,7 @@ export default function MindMap() {
   // memo化 nodeTypes 避免每次渲染都创建
   const memoNodeTypes = useMemo(() => nodeTypes, []);
 
-  // 初始化节点和边
+  // 添加连接
   useEffect(() => {
     if (!notesData) return;
     //     if (!flowWrapperRef.current) return;

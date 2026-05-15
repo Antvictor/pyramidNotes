@@ -1,5 +1,7 @@
-const { ipcMain, dialog } = require('electron');
+const { ipcMain, dialog, BrowserWindow } = require('electron');
 const { loadSettings, saveSettings, getCachedSettings, setCachedSettings, DEFAULT_SETTINGS } = require('../common/settings.cjs');
+const { closeDatabase, initializeDatabase } = require('../db/db.cjs');
+const { initNode } = require('../nodes/initNode');
 
 function registerSettingsIPC() {
   ipcMain.handle('getSettings', async () => {
@@ -9,7 +11,32 @@ function registerSettingsIPC() {
   ipcMain.handle('saveSettings', async (event, newSettings) => {
     const currentSettings = getCachedSettings() || DEFAULT_SETTINGS;
     const mergedSettings = { ...currentSettings, ...newSettings };
-    return await saveSettings(mergedSettings);
+
+    // Check if storagePath changed
+    const oldStoragePath = currentSettings.storagePath;
+    const storagePathChanged = newSettings.storagePath && newSettings.storagePath !== oldStoragePath;
+
+    const result = await saveSettings(mergedSettings);
+
+    // If storagePath changed, close old DB, re-init at new path, and re-scan
+    if (result && storagePathChanged) {
+      try {
+        console.log('Storage path changed from', oldStoragePath, 'to', mergedSettings.storagePath);
+        closeDatabase();
+        await initializeDatabase(mergedSettings.storagePath);
+        await initNode();
+        console.log('Database reloaded for new storage path');
+      } catch (err) {
+        console.error('Failed to reload database:', err);
+      }
+
+      // Notify all windows about the change
+      BrowserWindow.getAllWindows().forEach(win => {
+        win.webContents.send('settings-changed', mergedSettings);
+      });
+    }
+
+    return result;
   });
 
   ipcMain.handle('selectDirectory', async () => {

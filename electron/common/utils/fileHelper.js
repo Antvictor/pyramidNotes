@@ -10,11 +10,35 @@ const DEFAULT_STORAGE_PATH = path.join(app.getPath('documents'), 'pyramidNotes')
 /**
  * 动态获取当前设置的存储路径
  * 每次调用都从缓存设置中读取，确保返回最新路径
+ * 如果配置的路径不存在，则创建该目录
+ * 如果配置的路径是文件而非目录，则回退到默认路径
  */
 function resolveStoragePath() {
   const settings = getCachedSettings();
-  if (settings && settings.storagePath) {
-    return settings.storagePath;
+  const configuredPath = settings?.storagePath;
+
+  if (configuredPath) {
+    try {
+      const stats = require('fs').statSync(configuredPath);
+      if (stats.isDirectory()) {
+        // 确保目录存在
+        require('fs').mkdirSync(configuredPath, { recursive: true });
+        return configuredPath;
+      } else {
+        // 路径是文件而非目录，使用默认路径
+        console.error(`Configured storage path is a file, not directory: ${configuredPath}`);
+        return DEFAULT_STORAGE_PATH;
+      }
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        // 目录不存在，创建它
+        require('fs').mkdirSync(configuredPath, { recursive: true });
+        return configuredPath;
+      }
+      // 其他错误，使用默认路径
+      console.error(`Error accessing storage path: ${error.message}`);
+      return DEFAULT_STORAGE_PATH;
+    }
   }
   return DEFAULT_STORAGE_PATH;
 }
