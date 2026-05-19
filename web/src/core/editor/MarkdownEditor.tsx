@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { createEditor } from "./core/createEditor.js";
 import { EditorView } from "@codemirror/view";
 import { type KeyBindingConfig } from "./core/keymap.js";
-import "./css/markdown.css";
+import "./css/index.css";
 interface Props {
     content: string;
     onChange: (v: string) => void;

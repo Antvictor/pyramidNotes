@@ -1,13 +1,17 @@
-/* Markdown Content Styles - Core Editor
- * Uses CSS variables from variables.css for consistent theming
- * Class names (.md-preview, .cm-md-inline) cannot change - required by third-party library parsing
- */
+/* Markdown Editor CSS - Modular Index */
 
-/* ===========================================
- * Syntax Tree Decoration Styles (New)
- * =========================================== */
+@import './heading/variables.css';
+@import './heading/styles.css';
+@import './list/variables.css';
+@import './list/styles.css';
+@import './code-block/variables.css';
+@import './code-block/styles.css';
+@import './blockquote/variables.css';
+@import './blockquote/styles.css';
+@import './inline-code/variables.css';
+@import './inline-code/styles.css';
 
-/* Syntax hiding - invisible but takes up space */
+/* Syntax hiding (shared across all modules) */
 .md-syntax,
 .md-heading-mark,
 .md-blockquote-mark,
@@ -17,130 +21,8 @@
     background: transparent !important;
 }
 
-/* Heading content styling */
-.md-heading-content {
-    display: inline;
-}
-
-.md-heading-content.md-h1 {
-    font-size: var(--font-size-h1);
-    font-weight: var(--font-weight-h1);
-    line-height: var(--line-height-heading);
-    color: var(--font-color-h1);
-}
-
-.md-heading-content.md-h2 {
-    font-size: var(--font-size-h2);
-    font-weight: var(--font-weight-h2);
-    line-height: var(--line-height-heading);
-    color: var(--font-color-h2);
-}
-
-.md-heading-content.md-h3 {
-    font-size: var(--font-size-h3);
-    font-weight: var(--font-weight-h3);
-    line-height: var(--line-height-heading);
-    color: var(--font-color-h3);
-}
-
-.md-heading-content.md-h4 {
-    font-size: var(--font-size-h4);
-    font-weight: var(--font-weight-h4);
-    color: var(--font-color-h4);
-}
-
-.md-heading-content.md-h5 {
-    font-size: var(--font-size-h5);
-    font-weight: var(--font-weight-h5);
-    color: var(--font-color-h5);
-}
-
-.md-heading-content.md-h6 {
-    font-size: var(--font-size-h6);
-    font-weight: var(--font-weight-h6);
-    color: var(--font-color-h6);
-}
-
-/* Blockquote content styling */
-.md-blockquote-content {
-    display: block;
-    background: var(--color-blockquote-bg);
-    border-left: 4px solid var(--color-blockquote-border);
-    padding-left: 0.5em;
-    padding-right: 0.5em;
-    font-style: italic;
-    color: var(--color-text-secondary);
-}
-
-/* List item content styling */
-.md-list-item-content {
-    display: list-item;
-    list-style-position: outside;
-    padding-left: 0.25em;
-    margin-left: 0.5em;
-}
-
-/* Unordered list - show disc marker */
-.md-list-item-content:not(.md-list-ordered) {
-    list-style-type: disc;
-}
-
-/* Ordered list - show 1. 2. 3. numbering */
-.md-list-item-content.md-list-ordered {
-    list-style-type: none;
-    counter-increment: list-item;
-}
-
-.md-list-item-content.md-list-ordered::before {
-    content: counter(list-item) ". ";
-    list-style-type: none;
-}
-
-/* Reset counter for each ordered list group */
-.md-list-item-content.md-list-ordered {
-    counter-reset: none;
-}
-
-/* Nested list styles */
-.md-list-item-content.md-list-nested-1 {
-    list-style-type: circle;
-}
-
-.md-list-item-content.md-list-nested-2 {
-    list-style-type: square;
-}
-
-/* Inline code content */
-.md-inline-code-content {
-    display: inline;
-    background: var(--color-code-bg);
-    color: var(--color-code-text);
-    padding: 0.2em 0.4em;
-    border-radius: 4px;
-    font-family: var(--font-family-mono, 'Fira Code', 'Consolas', monospace);
-    font-size: 0.9em;
-    border: 1px solid var(--color-code-border);
-}
-
-/* Code block content */
-.md-code-block-content {
-    display: block !important;
-    background: var(--color-code-bg) !important;
-    border: 1px solid var(--color-code-border) !important;
-    border-radius: var(--radius) !important;
-    margin: 0 !important;
-    padding: var(--spacing-code-block) !important;
-    font-family: var(--font-family-mono, 'Fira Code', 'Consolas', monospace) !important;
-    font-size: 0.875em !important;
-    white-space: pre !important;
-    overflow-x: auto !important;
-    line-height: 1.4 !important;
-    /* Remove spacing between lines to appear as one block */
-    box-sizing: border-box;
-}
-
 /* ===========================================
- * Old Widget-based Preview Styles (Legacy)
+ * Legacy Widget-based Preview Styles
  * =========================================== */
 
 .md-preview {
@@ -164,8 +46,6 @@
   margin-top: var(--spacing-heading-top);
   margin-bottom: var(--spacing-heading-bottom);
   color: var(--font-color-h2);
-  /* border-left: 4px solid var(--color-blockquote-border); */
-  /* padding-left: 0.5em; */
 }
 
 .md-preview h3 {
@@ -175,7 +55,6 @@
   margin-top: var(--spacing-heading-top);
   margin-bottom: var(--spacing-heading-bottom);
   color: var(--font-color-h3);
-  /* padding-left: 0.9em; */
 }
 
 .md-preview h4 {
@@ -185,7 +64,6 @@
   margin-top: calc(var(--spacing-heading-top) * 0.75);
   margin-bottom: calc(var(--spacing-heading-bottom) * 0.75);
   color: var(--font-color-h4);
-  /* padding-left: 1.75em; */
 }
 
 .md-preview h5 {
@@ -195,7 +73,6 @@
   margin-top: calc(var(--spacing-heading-top) * 0.5);
   margin-bottom: calc(var(--spacing-heading-bottom) * 0.5);
   color: var(--font-color-h5);
-  /* padding-left: 2.75em; */
 }
 
 .md-preview h6 {
@@ -205,7 +82,6 @@
   margin-top: calc(var(--spacing-heading-top) * 0.5);
   margin-bottom: calc(var(--spacing-heading-bottom) * 0.5);
   color: var(--font-color-h6);
-  /* padding-left: 3em; */
 }
 
 .md-preview p {

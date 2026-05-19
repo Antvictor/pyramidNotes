@@ -100,21 +100,22 @@ export function markdownDecorationPlugin() {
                             return;
                         }
 
-                        // Handle fenced code blocks - hide ``` markers
+                        // Handle fenced code blocks - fence markers provide visual borders
                         if (name === FENCED_CODE) {
                             const firstNewline = text.indexOf("\n");
                             const lastNewline = text.lastIndexOf("\n");
 
-                            // Only apply styling to the content between fences (not the fences themselves)
                             if (firstNewline > 0 && lastNewline > firstNewline) {
                                 const contentStart = from + firstNewline + 1;
                                 const contentEnd = from + lastNewline;
+
+                                // Hide fence markers
                                 decorations.push({ from, to: contentStart, class: "md-syntax" });
                                 decorations.push({ from: contentEnd, to, class: "md-syntax" });
-                                // Apply code block style only to the content, not fences
+
+                                // Apply styling to content between fences
                                 decorations.push({ from: contentStart, to: contentEnd, class: "md-code-block-content" });
                             } else {
-                                // Fallback: just hide the entire thing as syntax
                                 decorations.push({ from, to, class: "md-syntax" });
                             }
                             return { skip: true };

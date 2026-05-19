@@ -23,7 +23,9 @@
       "Bash(pnpm install *)",
       "Bash(pnpm store *)",
       "Bash(npm --version)",
-      "Bash(DEBUG=* pnpm rebuild better-sqlite3)"
+      "Bash(DEBUG=* pnpm rebuild better-sqlite3)",
+      "Bash(pnpm add *)",
+      "Bash(git add *)"
     ]
   }
 }

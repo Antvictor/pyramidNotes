@@ -1,0 +1,27 @@
+/* Heading Variables */
+:root {
+    --font-size-h1: 2em;
+    --font-size-h2: 1.5em;
+    --font-size-h3: 1.25em;
+    --font-size-h4: 1em;
+    --font-size-h5: .875em;
+    --font-size-h6: .85em;
+
+    --font-weight-h1: 700;
+    --font-weight-h2: 600;
+    --font-weight-h3: 600;
+    --font-weight-h4: 500;
+    --font-weight-h5: 500;
+    --font-weight-h6: 500;
+
+    --font-color-h1: var(--color-heading);
+    --font-color-h2: var(--color-heading);
+    --font-color-h3: var(--color-heading);
+    --font-color-h4: var(--color-heading);
+    --font-color-h5: var(--color-heading);
+    --font-color-h6: var(--color-heading);
+
+    --line-height-heading: 1.25;
+    --spacing-heading-top: 1em;
+    --spacing-heading-bottom: 0.5em;
+}

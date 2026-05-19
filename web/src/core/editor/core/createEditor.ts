@@ -7,7 +7,9 @@ import { tags } from "@lezer/highlight";
 
 import { markdownDecorationPlugin } from "./plugins/markdownDecoration.js";
 import { cursorSyntaxIndicator } from "./plugins/cursorSyntax.js";
-import { autoList } from "./plugins/autoList.js";
+import { autoContinue } from "./plugins/autoContinue.js";
+import { initListStrategy } from "./plugins/autoList.js";
+import { initBlockquoteStrategy } from "./plugins/autoBlockquote.js";
 import { cleanPaste } from "./plugins/paste.js";
 import { createKeymap, type KeyBindingConfig } from "./keymap.js";
 
@@ -82,7 +84,13 @@ export function createEditor(
 
             markdownDecorationPlugin(),
             onSyntaxChange ? cursorSyntaxIndicator(onSyntaxChange) : [],
-            autoList,
+            // Initialize auto-continue strategies
+            (() => {
+                initListStrategy();
+                initBlockquoteStrategy();
+                return [];
+            })(),
+            autoContinue,
             cleanPaste,
             lightTheme,
             keymapCompartment.of(createKeymap(keyBindings)),
