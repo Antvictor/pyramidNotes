@@ -1,20 +1,38 @@
 // core/createEditor.ts
 import { EditorState, Compartment } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
-import { markdown } from "@codemirror/lang-markdown";
 import { history, historyKeymap, defaultKeymap } from "@codemirror/commands";
-import { oneDark } from "@codemirror/theme-one-dark";
+import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
+import { tags } from "@lezer/highlight";
 
-import { livePreviewPlugin } from "./plugins/livePreview.js";
+import { markdownDecorationPlugin } from "./plugins/markdownDecoration.js";
+import { cursorSyntaxIndicator } from "./plugins/cursorSyntax.js";
 import { autoList } from "./plugins/autoList.js";
 import { cleanPaste } from "./plugins/paste.js";
 import { createKeymap, type KeyBindingConfig } from "./keymap.js";
+
+const markdownHighlightStyle = HighlightStyle.define([
+    { tag: tags.heading1, fontSize: "1.5em", fontWeight: "bold" },
+    { tag: tags.heading2, fontSize: "1.3em", fontWeight: "bold" },
+    { tag: tags.heading3, fontSize: "1.1em", fontWeight: "bold" },
+    { tag: tags.heading4, fontSize: "1em", fontWeight: "bold" },
+    { tag: tags.heading5, fontSize: "0.9em", fontWeight: "bold" },
+    { tag: tags.heading6, fontSize: "0.85em", fontWeight: "bold" },
+    { tag: tags.strong, fontWeight: "bold" },
+    { tag: tags.emphasis, fontStyle: "italic" },
+    { tag: tags.link, color: "var(--color-link)" },
+    { tag: tags.url, color: "var(--color-link)" },
+    { tag: tags.monospace, fontFamily: "monospace", backgroundColor: "var(--color-code-bg)" },
+    { tag: tags.quote, color: "var(--color-text-secondary)", fontStyle: "italic" },
+    { tag: tags.list, color: "var(--color-text-secondary)" },
+]);
 
 export function createEditor(
     el: HTMLElement,
     content: string,
     onChange: (v: string) => void,
-    keyBindings: KeyBindingConfig[]
+    keyBindings: KeyBindingConfig[],
+    onSyntaxChange?: (syntax: string) => void
 ) {
     const keymapCompartment = new Compartment();
     const lightTheme = EditorView.theme({
@@ -34,17 +52,14 @@ export function createEditor(
             backgroundColor: "var(--background) !important",
         },
 
-        // 关键：选区颜色
         ".cm-selectionBackground": {
             backgroundColor: "rgba(0, 120, 255, 0.25) !important",
         },
 
-        // 可选：当前行
         ".cm-activeLine": {
             backgroundColor: "rgba(0, 0, 0, 0.05) !important",
         },
 
-        // 可选：匹配高亮
         ".cm-selectionMatch": {
             backgroundColor: "rgba(255, 230, 0, 0.3) !important",
         },
@@ -55,10 +70,8 @@ export function createEditor(
     const state = EditorState.create({
         doc: content,
         extensions: [
-            markdown(),
             history(),
-            // oneDark,
-
+            syntaxHighlighting(markdownHighlightStyle),
             EditorView.lineWrapping,
 
             EditorView.updateListener.of((v) => {
@@ -67,7 +80,8 @@ export function createEditor(
                 }
             }),
 
-            livePreviewPlugin(),
+            markdownDecorationPlugin(),
+            onSyntaxChange ? cursorSyntaxIndicator(onSyntaxChange) : [],
             autoList,
             cleanPaste,
             lightTheme,
