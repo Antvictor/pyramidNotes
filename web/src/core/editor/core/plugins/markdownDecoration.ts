@@ -8,7 +8,7 @@ import { RangeSetBuilder } from "@codemirror/state";
 import { parser as markdownParser } from "@lezer/markdown";
 import { wrapCodeBlocks, unwrapCodeBlocks } from "./codeBlockWrapper";
 
-// Node type names from @lezer/markdown
+// Node type names
 const HEADING_NODE_NAMES = new Set([
     "ATXHeading1", "ATXHeading2", "ATXHeading3",
     "ATXHeading4", "ATXHeading5", "ATXHeading6",
@@ -17,6 +17,7 @@ const HEADING_NODE_NAMES = new Set([
 const BLOCKQUOTE = "Blockquote";
 const LIST_ITEM = "ListItem";
 const FENCED_CODE = "FencedCode";
+const INLINE_CODE = "InlineCode";
 
 function getHeadingLevel(nodeName: string): number {
     if (nodeName === "ATXHeading1" || nodeName === "SetextHeading1") return 1;
@@ -41,22 +42,18 @@ export function markdownDecorationPlugin() {
             update(update: ViewUpdate) {
                 if (update.docChanged || update.selectionSet || update.viewportChanged) {
                     this.decorations = this.build(update.view);
-                    // Always unwrap before rewrap to prevent accumulation
                     unwrapCodeBlocks(update.view);
                     wrapCodeBlocks(update.view);
                 }
             }
 
             build(view: EditorView): any {
-                // Collect decorations first, then sort
                 const decorations: Array<{ from: number; to: number; class: string }> = [];
                 const doc = view.state.doc.toString();
                 const cursor = view.state.selection.main.head;
 
-                // Parse the document using Lezer markdown parser
                 const tree = markdownParser.parse(doc);
 
-                // Iterate and collect decorations
                 tree.iterate({
                     enter(node) {
                         const from = node.from;
@@ -64,22 +61,47 @@ export function markdownDecorationPlugin() {
                         const name = node.name;
                         const text = doc.slice(from, to);
 
-                        // Skip nodes that contain the cursor (show source for editing line)
-                        if (cursor >= from && cursor <= to) return;
+                        // ===========================================
+                        // 行级元素：需要光标检测
+                        // ===========================================
 
-                        // Handle headings - mark # as invisible, add heading style to content
+                        // 行内代码：光标在反引号位置时显示源码
+                        if (name === INLINE_CODE) {
+                            const cursorAtOpen = cursor === from;
+                            const cursorAtClose = cursor === to;
+                            const cursorJustAfterOpen = cursor === from + 1;
+                            const cursorJustBeforeClose = cursor === to - 1;
+
+                            if (cursorAtOpen || cursorAtClose || cursorJustAfterOpen || cursorJustBeforeClose) {
+                                return; // 跳过 - 光标在反引号位置，显示源码
+                            }
+                            decorations.push({ from, to: from + 1, class: "md-syntax" });
+                            decorations.push({ from: to - 1, to, class: "md-syntax" });
+                            decorations.push({ from, to, class: "md-inline-code-content" });
+                            return;
+                        }
+
+                        // 标题：光标在该标题行时显示源码
                         if (HEADING_NODE_NAMES.has(name)) {
-                            const level = getHeadingLevel(name);
+                            const nodeLine = view.state.doc.lineAt(from);
+                            const cursorLine = view.state.doc.lineAt(cursor);
+                            if (nodeLine.number === cursorLine.number) {
+                                return; // 跳过 - 光标在此标题行，显示源码
+                            }
                             const markMatch = text.match(/^(#{1,6}\s)/);
                             if (markMatch) {
                                 const markLength = markMatch[1].length;
                                 decorations.push({ from, to: from + markLength, class: "md-syntax" });
                             }
-                            decorations.push({ from, to, class: `md-heading-content md-h${level}` });
+                            decorations.push({ from, to, class: `md-heading-content md-h${getHeadingLevel(name)}` });
                             return;
                         }
 
-                        // Handle blockquotes - hide > marker
+                        // ===========================================
+                        // 块级元素：不需要光标检测，始终应用样式
+                        // ===========================================
+
+                        // 引用块
                         if (name === BLOCKQUOTE) {
                             const markMatch = text.match(/^(>\s*)/);
                             if (markMatch) {
@@ -87,25 +109,28 @@ export function markdownDecorationPlugin() {
                                 decorations.push({ from, to: from + markLength, class: "md-syntax" });
                             }
                             decorations.push({ from, to, class: "md-blockquote-content" });
-                            // Skip children - don't process Paragraphs inside the blockquote separately
                             return { skip: true };
                         }
 
-                        // Handle list items - hide marker
+                        // 列表项
                         if (name === LIST_ITEM) {
-                            const markMatch = text.match(/^(\s*[+\-*]|\s*\d+\.|\s*\d+\))\s/);
+                            // BUG FIX: [+\-*] makes - a range operator; put - first: [-+*]
+                            const markMatch = text.match(/^(\s*[-+*]|\s*\d+\.|\s*\d+\))\s/);
+                            const isOrdered = text.match(/^\s*\d+[.)]\s/);
                             if (markMatch) {
                                 const markLength = markMatch[1].length;
-                                decorations.push({ from, to: from + markLength, class: "md-syntax" });
+                                // Only apply md-syntax hiding to unordered list markers
+                                // For ordered lists, keep numbers visible as source text
+                                if (!isOrdered) {
+                                    decorations.push({ from, to: from + markLength, class: "md-syntax" });
+                                }
                             }
-                            // Detect if ordered (1. or 1)) or unordered (+ - *)
-                            const isOrdered = text.match(/^\s*\d+[.)]/);
                             const listClass = isOrdered ? "md-list-item-content md-list-ordered" : "md-list-item-content";
                             decorations.push({ from, to, class: listClass });
                             return;
                         }
 
-                        // Handle fenced code blocks - fence markers provide visual borders
+                        // 代码块：始终显示```
                         if (name === FENCED_CODE) {
                             const firstNewline = text.indexOf("\n");
                             const lastNewline = text.lastIndexOf("\n");
@@ -114,35 +139,24 @@ export function markdownDecorationPlugin() {
                                 const contentStart = from + firstNewline + 1;
                                 const contentEnd = from + lastNewline;
 
-                                // Hide fence markers with fence-start/fence-end classes for CSS targeting
-                                decorations.push({ from, to: contentStart, class: "md-syntax md-fence-start" });
-                                decorations.push({ from: contentEnd, to, class: "md-syntax md-fence-end" });
-
-                                // Apply styling to content between fences
+                                // 始终显示围栏标记，不使用 md-syntax 隐藏
+                                decorations.push({ from, to: contentStart, class: "md-fence-start" });
+                                decorations.push({ from: contentEnd, to, class: "md-fence-end" });
+                                // 内容区样式
                                 decorations.push({ from: contentStart, to: contentEnd, class: "md-code-block-content" });
                             } else {
-                                decorations.push({ from, to, class: "md-syntax md-fence-start md-fence-end" });
+                                decorations.push({ from, to, class: "md-fence-start md-fence-end" });
                             }
                             return { skip: true };
-                        }
-
-                        // Handle inline code
-                        if (name === "InlineCode") {
-                            decorations.push({ from, to: from + 1, class: "md-syntax" });
-                            decorations.push({ from: to - 1, to, class: "md-syntax" });
-                            decorations.push({ from, to, class: "md-inline-code-content" });
-                            return;
                         }
                     }
                 });
 
-                // Sort decorations by from position (and to for tie-breaking)
                 decorations.sort((a, b) => {
                     if (a.from !== b.from) return a.from - b.from;
                     return a.to - b.to;
                 });
 
-                // Build decorations in sorted order
                 const builder = new RangeSetBuilder<Decoration>();
                 for (const dec of decorations) {
                     builder.add(dec.from, dec.to, Decoration.mark({ class: dec.class }));

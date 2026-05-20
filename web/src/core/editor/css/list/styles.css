@@ -18,14 +18,9 @@
     margin-left: 0.15em;
 }
 
+/* Ordered list - numbers come from source text, no ::before needed */
 .md-list-item-content.md-list-ordered {
     list-style: none;
-}
-
-.md-list-item-content.md-list-ordered::before {
-    content: counter(list-item) ". ";
-    margin-right: 0.2em;
-    color: var(--foreground);
 }
 
 /* Nested list styles */

@@ -54,10 +54,9 @@ export function wrapCodeBlocks(view: EditorView): void {
     }
 
     // Clean up first
-    const markedLines = Array.from(dom.querySelectorAll('.cm-line.in-code-block'));
+    const markedLines = dom.querySelectorAll('.cm-line.in-code-block');
     for (const line of markedLines) {
         line.classList.remove('in-code-block');
-        (line as HTMLElement).style.background = '';
     }
 
     // Find ranges from doc
@@ -86,7 +85,8 @@ function applyCodeBlockStylesWithRetry(view: EditorView, ranges: CodeBlockRange[
                 if (index >= 0 && index < cmLines.length) {
                     const el = cmLines[index] as HTMLElement;
                     el.classList.add('in-code-block');
-                    el.style.background = 'rgb(180, 180, 180)';
+                    // 如果 CSS 变量无效，使用内联样式作为后备
+                    el.style.background = 'var(--color-code-bg, rgb(180, 180, 180))';
                 } else {
                     console.warn(`[applyCodeBlockStyles] OUT OF BOUNDS: lineNum=${lineNum}, index=${index}, cmLines.length=${cmLines.length}`);
                 }
@@ -117,9 +117,8 @@ function applyCodeBlockStylesWithRetry(view: EditorView, ranges: CodeBlockRange[
 export function unwrapCodeBlocks(view: EditorView): void {
     const dom = view.dom;
 
-    const markedLines = Array.from(dom.querySelectorAll('.cm-line.in-code-block'));
+    const markedLines = dom.querySelectorAll('.cm-line.in-code-block');
     for (const line of markedLines) {
         line.classList.remove('in-code-block');
-        (line as HTMLElement).style.background = '';
     }
 }
