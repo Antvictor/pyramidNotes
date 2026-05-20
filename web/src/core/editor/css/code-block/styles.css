@@ -1,13 +1,13 @@
 /* Code Block Styles - CSS-only approach with class marking */
 
-/* Lines marked with 'in-code-block' get the background */
+/* Lines marked with 'in-code-block' get the background - use !important to debug */
 .cm-line.in-code-block {
-    background: var(--color-code-bg);
+    background: var(--color-code-bg) !important;
 }
 
 /* Fence lines get subtle distinction */
 .cm-line.in-code-block {
-    border-left: 3px solid var(--color-code-border);
+    border-left: 3px solid var(--color-code-border) !important;
 }
 
 /* Empty code block lines */

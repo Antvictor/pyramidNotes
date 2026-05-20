@@ -2,13 +2,7 @@ import type { EditorView } from "@codemirror/view";
 
 /**
  * Modulo-based code block wrapper using CSS classes.
- *
- * DOES NOT move DOM elements. Instead:
- * 1. Mark code block lines with 'in-code-block' class (background: transparent)
- * 2. Use :before pseudo-element on parent to show the background
- * 3. Or use CSS variables with fallback
- *
- * This avoids DOM manipulation issues with CodeMirror's DOMObserver.
+ * Handles case where DOM lines aren't ready yet.
  */
 
 function countFences(text: string): number {
@@ -16,93 +10,116 @@ function countFences(text: string): number {
     return matches ? matches.length : 0;
 }
 
-export function wrapCodeBlocks(view: EditorView): void {
-    // Clean up previous state first
-    unwrapCodeBlocks(view);
+interface CodeBlockRange {
+    start: number;
+    end: number;
+}
 
-    const dom = view.dom;
-    const allLines = dom.querySelectorAll('.cm-line');
-
-    let inCodeBlock = false;
-    let fenceCount = 0;
-    let codeBlockStartIndex = -1;
-    let codeBlockEndIndex = -1;
-
-    interface CodeBlockRange {
-        start: number;
-        end: number;
-    }
+function findCodeBlockRanges(doc: import("@codemirror/state").Document): CodeBlockRange[] {
     const ranges: CodeBlockRange[] = [];
+    let fenceCount = 0;
+    let codeBlockStartLine = -1;
 
-    // First pass: identify ranges without modifying DOM
-    for (let i = 0; i < allLines.length; i++) {
-        const line = allLines[i];
-        const text = line.textContent || '';
-        const fenceCountInLine = countFences(text);
+    for (let lineNum = 1; lineNum <= doc.lines; lineNum++) {
+        const line = doc.line(lineNum);
+        const fenceCountInLine = countFences(line.text);
 
         if (fenceCountInLine > 0) {
             fenceCount += fenceCountInLine;
 
             if (fenceCount % 2 === 1) {
-                // Odd: start code block
-                inCodeBlock = true;
-                codeBlockStartIndex = i;
+                codeBlockStartLine = lineNum;
             } else {
-                // Even: end code block
-                codeBlockEndIndex = i;
-                if (codeBlockStartIndex !== -1) {
-                    ranges.push({ start: codeBlockStartIndex, end: codeBlockEndIndex });
+                if (codeBlockStartLine !== -1) {
+                    ranges.push({ start: codeBlockStartLine, end: lineNum });
                 }
-                inCodeBlock = false;
-                fenceCount = 0;
-                codeBlockStartIndex = -1;
-                codeBlockEndIndex = -1;
+                codeBlockStartLine = -1;
             }
         }
     }
 
-    // Second pass: mark lines with classes
-    for (let i = 0; i < allLines.length; i++) {
-        // Check if this line is within any range
+    return ranges;
+}
+
+let pendingRetry: number | null = null;
+
+export function wrapCodeBlocks(view: EditorView): void {
+    const doc = view.state.doc;
+    const dom = view.dom;
+
+    // Cancel any pending retry to avoid stale callbacks
+    if (pendingRetry !== null) {
+        cancelAnimationFrame(pendingRetry);
+        pendingRetry = null;
+    }
+
+    // Clean up first
+    const markedLines = Array.from(dom.querySelectorAll('.cm-line.in-code-block'));
+    for (const line of markedLines) {
+        line.classList.remove('in-code-block');
+        (line as HTMLElement).style.background = '';
+    }
+
+    // Find ranges from doc
+    const ranges = findCodeBlockRanges(doc);
+
+    if (ranges.length === 0) return;
+
+    // Apply styles, with retry if DOM not ready
+    applyCodeBlockStylesWithRetry(view, ranges);
+}
+
+function applyCodeBlockStylesWithRetry(view: EditorView, ranges: CodeBlockRange[]): void {
+    const dom = view.dom;
+
+    function apply(): boolean {
+        const cmLines = dom.querySelectorAll('.cm-line');
+
+        if (cmLines.length === 0) {
+            console.warn('[applyCodeBlockStyles] cmLines is 0, will retry');
+            return false;
+        }
+
         for (const range of ranges) {
-            if (i >= range.start && i <= range.end) {
-                allLines[i].classList.add('in-code-block');
-                break;
+            for (let lineNum = range.start; lineNum <= range.end; lineNum++) {
+                const index = lineNum - 1;
+                if (index >= 0 && index < cmLines.length) {
+                    const el = cmLines[index] as HTMLElement;
+                    el.classList.add('in-code-block');
+                    el.style.background = 'rgb(180, 180, 180)';
+                } else {
+                    console.warn(`[applyCodeBlockStyles] OUT OF BOUNDS: lineNum=${lineNum}, index=${index}, cmLines.length=${cmLines.length}`);
+                }
             }
         }
+        return true;
     }
 
-    // Add wrapper div at the document level (not wrapping individual lines)
-    // This wrapper will provide the background color
-    const existingWrapper = dom.querySelector('.md-code-block-container');
-    if (existingWrapper) {
-        existingWrapper.remove();
-    }
-
-    if (ranges.length > 0) {
-        const container = document.createElement('div');
-        container.className = 'md-code-block-container';
-
-        // We'll use CSS to highlight code block regions
-        // For now, just add a marker class to the editor
-        dom.classList.add('has-code-blocks');
+    if (!apply()) {
+        let retryCount = 0;
+        function retry() {
+            retryCount++;
+            if (retryCount >= 5) {
+                console.warn('[applyCodeBlockStyles] giving up after 5 retries');
+                return;
+            }
+            requestAnimationFrame(() => {
+                // Use fresh view reference to get current document state
+                if (!apply()) {
+                    retry();
+                }
+            });
+        }
+        retry();
     }
 }
 
 export function unwrapCodeBlocks(view: EditorView): void {
     const dom = view.dom;
 
-    // Remove class markers
-    const markedLines = dom.querySelectorAll('.cm-line.in-code-block');
+    const markedLines = Array.from(dom.querySelectorAll('.cm-line.in-code-block'));
     for (const line of markedLines) {
         line.classList.remove('in-code-block');
+        (line as HTMLElement).style.background = '';
     }
-
-    // Remove container
-    const container = dom.querySelector('.md-code-block-container');
-    if (container) {
-        container.remove();
-    }
-
-    dom.classList.remove('has-code-blocks');
 }

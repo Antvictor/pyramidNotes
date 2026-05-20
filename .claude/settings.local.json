@@ -25,7 +25,9 @@
       "Bash(npm --version)",
       "Bash(DEBUG=* pnpm rebuild better-sqlite3)",
       "Bash(pnpm add *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(xargs ls *)",
+      "Bash(git commit *)"
     ]
   }
 }
