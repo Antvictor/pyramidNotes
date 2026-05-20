@@ -1,31 +1,34 @@
-## 1. Create CodeBlockWidget Class
+## 1. Implement Modulo-based Code Block Wrapper
 
-- [ ] 1.1 Create `src/core/editor/core/plugins/codeBlock.ts`
-- [ ] 1.2 Implement `CodeBlockWidget extends WidgetType`
-- [ ] 1.3 Implement `toDOM()` method returning wrapper DOM
-- [ ] 1.4 Implement `eq()` method for content comparison
-- [ ] 1.5 Implement `coords` method for positioning
+- [x] 1.1 Create `codeBlockWrapper.ts` with modulo-based logic
+- [x] 1.2 Implement `countFences(text: string): number` - count ``` in line
+- [x] 1.3 Implement `wrapCodeBlocks(view)` using fenceCount tracking
+- [x] 1.4 Implement `unwrapCodeBlocks(view)` to clean up wrappers
+- [x] 1.5 Ensure first ``` starts wrapper, second ``` ends it
 
-## 2. Update markdownDecoration.ts
+## 2. Integrate with markdownDecoration.ts
 
-- [ ] 2.1 Import CodeBlockWidget
-- [ ] 2.2 Replace mark decoration with widget decoration for FencedCode
-- [ ] 2.3 Remove old mark-based code block handling
+- [x] 2.1 Import and call wrapCodeBlocks after decorations applied
+- [x] 2.2 Trigger on docChanged, selectionSet, viewportChanged
+- [x] 2.3 Always unwrap before rewrap to prevent accumulation
 
 ## 3. Update CSS Styles
 
-- [ ] 3.1 Simplify code-block/styles.css (remove fence mark classes)
-- [ ] 3.2 Add `.md-code-block-wrapper` styles
-- [ ] 3.3 Verify fence and content styling still works
+- [x] 3.1 Update wrapper styles for background/border
+- [x] 3.2 Simplified (fence visibility handled by wrapper) - no :has() needed
+- [x] 3.3 Ensure empty line (br) inherits wrapper background
 
 ## 4. Test and Verify
 
-- [ ] 4.1 Test multi-line code block with empty line
-- [ ] 4.2 Test single-line code block
-- [ ] 4.3 Verify empty lines have correct background
-- [ ] 4.4 Verify visual borders are continuous
+- [ ] 4.1 Test basic code block - wrapper applied correctly
+- [ ] 4.2 Test code block with empty line - background extends
+- [ ] 4.3 Test multiple code blocks - each wrapped independently
+- [ ] 4.4 Test fence visibility when cursor on fence line
+- [ ] 4.5 Test code block with other blocks inside (> quote, - list)
+- [ ] 4.6 Test deleting one fence - code block style disappears
+- [ ] 4.7 Verify cursor movement doesn't affect wrapper stability
 
 ## 5. Build and Archive
 
-- [ ] 5.1 Build and verify
+- [x] 5.1 Build and verify (passed)
 - [ ] 5.2 Archive change

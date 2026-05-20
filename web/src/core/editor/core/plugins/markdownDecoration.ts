@@ -6,6 +6,7 @@ import {
 } from "@codemirror/view";
 import { RangeSetBuilder } from "@codemirror/state";
 import { parser as markdownParser } from "@lezer/markdown";
+import { wrapCodeBlocks, unwrapCodeBlocks } from "./codeBlockWrapper";
 
 // Node type names from @lezer/markdown
 const HEADING_NODE_NAMES = new Set([
@@ -34,11 +35,15 @@ export function markdownDecorationPlugin() {
 
             constructor(view: EditorView) {
                 this.decorations = this.build(view);
+                wrapCodeBlocks(view);
             }
 
             update(update: ViewUpdate) {
                 if (update.docChanged || update.selectionSet || update.viewportChanged) {
                     this.decorations = this.build(update.view);
+                    // Always unwrap before rewrap to prevent accumulation
+                    unwrapCodeBlocks(update.view);
+                    wrapCodeBlocks(update.view);
                 }
             }
 
@@ -109,14 +114,14 @@ export function markdownDecorationPlugin() {
                                 const contentStart = from + firstNewline + 1;
                                 const contentEnd = from + lastNewline;
 
-                                // Hide fence markers
-                                decorations.push({ from, to: contentStart, class: "md-syntax" });
-                                decorations.push({ from: contentEnd, to, class: "md-syntax" });
+                                // Hide fence markers with fence-start/fence-end classes for CSS targeting
+                                decorations.push({ from, to: contentStart, class: "md-syntax md-fence-start" });
+                                decorations.push({ from: contentEnd, to, class: "md-syntax md-fence-end" });
 
                                 // Apply styling to content between fences
                                 decorations.push({ from: contentStart, to: contentEnd, class: "md-code-block-content" });
                             } else {
-                                decorations.push({ from, to, class: "md-syntax" });
+                                decorations.push({ from, to, class: "md-syntax md-fence-start md-fence-end" });
                             }
                             return { skip: true };
                         }

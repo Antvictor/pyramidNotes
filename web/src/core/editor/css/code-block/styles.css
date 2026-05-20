@@ -1,58 +1,22 @@
-/* Code Block Styles */
+/* Code Block Styles - CSS-only approach with class marking */
 
-/* Fence markers styled as code block edges */
-.md-fence-start {
-    display: block !important;
-    background: var(--color-code-bg) !important;
-    border: 1px solid var(--color-code-border) !important;
-    border-bottom: none !important;
-    border-radius: var(--radius) var(--radius) 0 0 !important;
-    padding: 0.25em var(--spacing-code-block) !important;
-    font-family: var(--font-family-mono, 'Fira Code', 'Consolas', monospace) !important;
-    font-size: 0.875em !important;
-    box-sizing: border-box !important;
+/* Lines marked with 'in-code-block' get the background */
+.cm-line.in-code-block {
+    background: var(--color-code-bg);
+}
+
+/* Fence lines get subtle distinction */
+.cm-line.in-code-block {
+    border-left: 3px solid var(--color-code-border);
+}
+
+/* Empty code block lines */
+.cm-line.in-code-block:empty {
     min-height: 1.4em;
 }
 
-.md-fence-end {
-    display: block !important;
-    background: var(--color-code-bg) !important;
-    border: 1px solid var(--color-code-border) !important;
-    border-top: none !important;
-    border-radius: 0 0 var(--radius) var(--radius) !important;
-    padding: 0.25em var(--spacing-code-block) !important;
-    font-family: var(--font-family-mono, 'Fira Code', 'Consolas', monospace) !important;
-    font-size: 0.875em !important;
-    box-sizing: border-box !important;
-    min-height: 1.4em;
-}
-
-/* Code block content lines */
+/* Code block content styling */
 .md-code-block-content {
-    display: block !important;
-    background: var(--color-code-bg) !important;
-    padding: 0 var(--spacing-code-block) !important;
-    font-family: var(--font-family-mono, 'Fira Code', 'Consolas', monospace) !important;
-    font-size: 0.875em !important;
-    white-space: pre !important;
-    overflow-x: auto !important;
-    line-height: 1.4 !important;
-    box-sizing: border-box !important;
-    margin: 0 !important;
-    /* No border - fence markers provide visual borders */
-}
-
-/* Ensure cm-line wrappers in code blocks have matching background */
-.cm-line:has(.md-fence-start),
-.cm-line:has(.md-fence-end),
-.cm-line:has(.md-code-block-content) {
-    background: var(--color-code-bg) !important;
-}
-
-/* Handle empty lines (br without content) between code lines */
-.md-code-block-content ~ .cm-line:empty,
-.md-code-block-content ~ br + .cm-line {
-    background: var(--color-code-bg) !important;
-    display: block;
-    min-height: 1.4em;
+    font-family: var(--font-family-mono, 'Fira Code', 'Consolas', monospace);
+    font-size: 0.875em;
 }
