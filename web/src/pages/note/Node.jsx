@@ -1,36 +1,30 @@
 import { useParams } from "react-router-dom";
-import { StrictMode, useEffect, useState } from "react";
-import MarkdownEditor from "../../core/editor/MarkdownEditor";
-
+import { useEffect, useState } from "react";
+import DocEditor from "../../core/editor/doc-editor";
+import { ProsemirrorAdapterProvider } from '@prosemirror-adapter/react';
 
 const Note = () => {
-  const { id, name } = useParams(); // 路由传入的文件名
+  const { id, name } = useParams();
   const [value, setValue] = useState("");
   const [yamlValue, setYamlValue] = useState("");
   const [fileName, setFileName] = useState("");
   const [ready, setReady] = useState(false);
-  const [keys, setKeys] = useState([
-    { key: "Mod-b", action: "bold" },
-    { key: "Mod-i", action: "italic" },
-  ]);
 
   useEffect(() => {
     if (!id) return;
 
     const loadFile = async () => {
-      // 1. 获取 Electron userData 路径
       const fileName = `${id}-${name}.md`;
-      console.log("fileName:", fileName)
+      console.log("fileName:", fileName);
       setFileName(fileName);
 
-      // 2. 打开文件
-      const { data: yamlData, content: markdownContent } = await window.api.openFile(fileName);
+      const { data: yamlData, content: markdownContent } =
+        await window.api.openFile(fileName);
       console.log("yamlData:", yamlData);
-      // const { data, content: markdownContent } = matter(content);
       setValue(markdownContent);
       setYamlValue(yamlData);
       setReady(true);
-    }
+    };
 
     loadFile();
   }, [id, name]);
@@ -41,24 +35,18 @@ const Note = () => {
     if (fileName) {
       await window.api.saveFile(fileName, yamlValue, content, id);
     }
+  };
+
+  if (!ready) {
+    return <div>loading...</div>;
   }
 
-
   return (
-    // <StrictMode>
-    //   <MilkdownProvider>
-    //     <MilkdownEditor content={value} onChange={saveFile} />
-    //   </MilkdownProvider>
-    // </StrictMode>
-    // <Markdown content={value} onChange={saveFile} />
-    !ready ?
-      <div>loading...</div> :
-      <div style={{ 
-        width: "90vw",
-        height: "94vh", }}>
-        <MarkdownEditor content={value} onChange={saveFile} keyBindings={keys} />
-      </div>
-
+    <div className="mx-8 pt-24 pb-10 md:mx-24 md:pb-24 lg:mx-40 xl:mx-80 2xl:mx-auto 2xl:max-w-4xl">
+      <ProsemirrorAdapterProvider>
+        <DocEditor  content={value} />
+      </ProsemirrorAdapterProvider>
+    </div>
   );
 };
 
