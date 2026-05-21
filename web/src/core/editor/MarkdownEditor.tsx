@@ -1,59 +1,82 @@
-// MarkdownEditor.tsx
-import { useEffect, useRef } from "react";
-import { createEditor } from "./core/createEditor.js";
-import { EditorView } from "@codemirror/view";
-import { type KeyBindingConfig } from "./core/keymap.js";
-import "./css/index.css";
-interface Props {
+// MilkdownEditor.tsx
+import { useEffect, useRef, useState } from 'react';
+import '@milkdown/theme-nord/style.css';
+
+interface MilkdownEditorProps {
     content: string;
     onChange: (v: string) => void;
-    keyBindings: KeyBindingConfig[];
+    keyBindings?: any[];
 }
 
-export default function MarkdownEditor({
-    content,
-    onChange,
-    keyBindings,
-}: Props) {
+export default function MilkdownEditor({ content, onChange }: MilkdownEditorProps) {
     const ref = useRef<HTMLDivElement>(null);
     const editorRef = useRef<any>(null);
-    const viewRef = useRef<EditorView | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!ref.current) return;
 
-        const editor = createEditor(
-            ref.current,
-            content, // ❗不要用 content
-            onChange,
-            keyBindings
-        );
+        // Dynamically import Crepe to avoid TypeScript resolution issues
+        import('@milkdown/crepe').then((mod: any) => {
+            const Crepe = mod.Crepe;
+            const CrepeFeature = mod.CrepeFeature;
 
-        editorRef.current = editor;
+            if (!Crepe) {
+                setError('Crepe not found in @milkdown/crepe');
+                setLoading(false);
+                return;
+            }
 
-        return () => editor.view.destroy();
+            const crepeConfig = {
+                features: {
+                    [CrepeFeature.CodeMirror]: true,
+                    [CrepeFeature.ListItem]: true,
+                    [CrepeFeature.LinkTooltip]: true,
+                    [CrepeFeature.Cursor]: true,
+                    [CrepeFeature.ImageBlock]: false,
+                    [CrepeFeature.BlockEdit]: false,
+                    [CrepeFeature.Toolbar]: false,
+                    [CrepeFeature.Placeholder]: true,
+                    [CrepeFeature.Table]: true,
+                    [CrepeFeature.Latex]: false,
+                    [CrepeFeature.TopBar]: false,
+                    [CrepeFeature.AI]: false,
+                },
+            };
+
+            const editor = new Crepe({
+                ...crepeConfig,
+                root: ref.current,
+            });
+
+            editor.on((api: any) => {
+                api.markdown((_ctx: any, markdown: string) => {
+                    onChange(markdown);
+                });
+            });
+
+            editor.create()
+                .then(() => {
+                    setLoading(false);
+                    editorRef.current = editor;
+                })
+                .catch((err: Error) => {
+                    setError(err.message);
+                    setLoading(false);
+                });
+        });
+
+        return () => {
+            if (editorRef.current) {
+                editorRef.current.destroy();
+            }
+        };
     }, []);
 
-    useEffect(() => {
-        editorRef.current?.updateKeymap(keyBindings);
-    }, [keyBindings]);
+    if (error) {
+        return <div style={{ color: 'red', padding: '20px' }}>Error: {error}</div>;
+    }
 
-    // useEffect(() => {
-    //     const view = editorRef.current?.view; // ❗改这里
-    //     if (!view) return;
-
-    //     const current = view.state.doc.toString();
-
-    //     if (current === content) return;
-
-    //     view.dispatch({
-    //         changes: {
-    //             from: 0,
-    //             to: current.length,
-    //             insert: content || "",
-    //         },
-    //     });
-    // }, [content]);
-
-    return <div ref={ref} style={{ height: "100%", width: "100%" }} />;
+    return <div ref={ref} data-crepe-root />;
 }

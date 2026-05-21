@@ -27,7 +27,10 @@
       "Bash(pnpm add *)",
       "Bash(git add *)",
       "Bash(xargs ls *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "WebSearch",
+      "WebFetch(domain:milkdown.dev)",
+      "Bash(pnpm tsc *)"
     ]
   }
 }
