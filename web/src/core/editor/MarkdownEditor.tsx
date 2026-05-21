@@ -1,5 +1,6 @@
 // MilkdownEditor.tsx
 import { useEffect, useRef, useState } from 'react';
+import { listener, listenerCtx } from '@milkdown/plugin-listener';
 import '@milkdown/theme-nord/style.css';
 
 interface MilkdownEditorProps {
@@ -50,8 +51,10 @@ export default function MilkdownEditor({ content, onChange }: MilkdownEditorProp
                 root: ref.current,
             });
 
-            editor.on((api: any) => {
-                api.markdown((_ctx: any, markdown: string) => {
+            // Use listenerCtx to listen for markdown changes
+            editor.action((ctx: any) => {
+                const listenerManager = ctx.get(listenerCtx);
+                listenerManager.markdownUpdated((_: any, markdown: string) => {
                     onChange(markdown);
                 });
             });
