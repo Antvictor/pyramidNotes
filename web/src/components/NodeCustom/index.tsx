@@ -18,7 +18,7 @@ export default function NodeCustom({ data }) {
         textAlign: 'center',
         color: 'var(--text-primary)',
       }}
-      onClick={() => router.push(`/note/${data.id}`)}
+      onClick={() => router.push(`/note/${data.id}-${data.name}.md`)}
     >
       {data.name}
       <Handle

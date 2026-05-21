@@ -238,7 +238,8 @@ export default function MindMap() {
 
   const handleNodeClick = useCallback(
     (_: any, node: any) => {
-      router.push(`/note/${node.id}`)
+      const fileName = `${node.id}-${node.data.name}.md`
+      router.push(`/note/${fileName}`)
     },
     [router]
   )

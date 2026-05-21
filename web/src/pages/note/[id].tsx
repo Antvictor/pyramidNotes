@@ -1,6 +1,6 @@
 import { ProsemirrorAdapterProvider } from '@prosemirror-adapter/react'
 import { useRouter } from 'next/router'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import DocEditor from '@/components/doc-editor'
 
 export default function NotePage() {
@@ -17,25 +17,23 @@ export default function NotePage() {
 
     const loadFile = async () => {
       try {
+        // id is already in format "nodeId-nodeName.md" from the navigation
+        const actualFileName = id.endsWith('.md') ? id : `${id}.md`
+        setFileName(actualFileName)
+
+        // Extract node name for display if needed
+        if (id.includes('-')) {
+          const parts = id.split('-')
+          const namePart = parts.slice(1).join('-').replace('.md', '')
+          setNodeName(namePart)
+        }
+
         // The IPC returns { data: yamlData, content: markdownContent }
-        const result = await window.api.openFile(id)
+        const result = await window.api.openFile(actualFileName)
         if (result) {
           const { data, content: markdownContent } = result
           setYamlValue(data || {})
           setContent(markdownContent || '')
-
-          // Extract node name from id (format: "nodeId-nodeName.md")
-          // The id passed to router is actually the filename from MindMap
-          if (typeof id === 'string' && id.includes('-')) {
-            const parts = id.split('-')
-            const nodeId = parts[0]
-            const namePart = parts.slice(1).join('-').replace('.md', '')
-            setNodeName(namePart)
-            setFileName(`${nodeId}-${namePart}.md`)
-          } else {
-            setFileName(id)
-          }
-
           setReady(true)
         }
       } catch (error) {
@@ -46,14 +44,15 @@ export default function NotePage() {
     loadFile()
   }, [id])
 
-  const handleChange = async (markdownContent: string) => {
+  const handleChange = useCallback(async (markdownContent: string) => {
     if (!fileName || !id) return
     try {
+      console.log('Saving file:', { fileName, contentLength: markdownContent.length })
       await window.api.saveFile(fileName, yamlValue, markdownContent, id)
     } catch (error) {
       console.error('Failed to save file:', error)
     }
-  }
+  }, [fileName, id, yamlValue])
 
   if (!ready) {
     return (

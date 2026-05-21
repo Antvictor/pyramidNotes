@@ -41,7 +41,11 @@
       "Bash(cp /tmp/milkdown-website/src/utils/title.ts /Users/exccedy/project/AntVictor/app/pyramidNotes/web/src/utils/title.ts)",
       "Bash(cp /tmp/milkdown-website/src/utils/types.ts /Users/exccedy/project/AntVictor/app/pyramidNotes/web/src/utils/types.ts)",
       "Bash(pnpm next *)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(openspec done:*)",
+      "Bash(openspec mark:*)",
+      "Bash(openspec change:*)",
+      "Bash(cat:*)"
     ]
   }
 }
