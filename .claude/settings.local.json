@@ -40,7 +40,8 @@
       "Bash(cp /tmp/milkdown-website/src/utils/share.ts /Users/exccedy/project/AntVictor/app/pyramidNotes/web/src/utils/share.ts)",
       "Bash(cp /tmp/milkdown-website/src/utils/title.ts /Users/exccedy/project/AntVictor/app/pyramidNotes/web/src/utils/title.ts)",
       "Bash(cp /tmp/milkdown-website/src/utils/types.ts /Users/exccedy/project/AntVictor/app/pyramidNotes/web/src/utils/types.ts)",
-      "Bash(pnpm next *)"
+      "Bash(pnpm next *)",
+      "Bash(git:*)"
     ]
   }
 }

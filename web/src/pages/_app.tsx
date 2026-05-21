@@ -10,16 +10,19 @@ import '@milkdown/crepe/theme/common/style.css'
 import type { AppProps } from 'next/app'
 import Sidebar from '@/components/Sidebar'
 import { LayoutProvider } from '@/providers'
+import { ReactFlowProvider } from '@xyflow/react'
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
     <LayoutProvider>
-      <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-        <Sidebar style={{ width: 60 }} />
-        <main style={{ flex: 1, overflow: 'auto' }}>
-          <Component {...pageProps} />
-        </main>
-      </div>
+      <ReactFlowProvider>
+        <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+          <Sidebar style={{ width: 60 }} />
+          <main style={{ flex: 1, overflow: 'auto' }}>
+            <Component {...pageProps} />
+          </main>
+        </div>
+      </ReactFlowProvider>
     </LayoutProvider>
   )
 }

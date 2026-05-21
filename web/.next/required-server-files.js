@@ -103,7 +103,7 @@ self.__SERVER_FILES_MANIFEST={
         "transform": "lodash/{{member}}"
       }
     },
-    "outputFileTracingRoot": "/Users/exccedy/project/AntVictor/app/pyramidNotes",
+    "outputFileTracingRoot": "/Users/antvictor/All/learn/apps/pyramidNotes",
     "cacheComponents": false,
     "cacheLife": {
       "default": {
@@ -165,7 +165,7 @@ self.__SERVER_FILES_MANIFEST={
       "proxyPrefetch": "flexible",
       "optimisticClientCache": true,
       "manualClientBasePath": false,
-      "cpus": 15,
+      "cpus": 9,
       "memoryBasedWorkersCount": false,
       "imgOptConcurrency": null,
       "imgOptTimeoutInSeconds": 7,
@@ -303,11 +303,11 @@ self.__SERVER_FILES_MANIFEST={
     "bundlePagesRouterDependencies": false,
     "configFileName": "next.config.mjs",
     "turbopack": {
-      "root": "/Users/exccedy/project/AntVictor/app/pyramidNotes"
+      "root": "/Users/antvictor/All/learn/apps/pyramidNotes"
     },
     "distDirRoot": ".next"
   },
-  "appDir": "/Users/exccedy/project/AntVictor/app/pyramidNotes/web",
+  "appDir": "/Users/antvictor/All/learn/apps/pyramidNotes/web",
   "relativeAppDir": "web",
   "files": [
     ".next/routes-manifest.json",

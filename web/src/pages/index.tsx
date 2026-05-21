@@ -245,8 +245,7 @@ export default function MindMap() {
 
   return (
     <div style={{ width: '90vw', height: '94vh', background: 'var(--background)' }}>
-      <ReactFlowProvider>
-        <ReactFlow
+      <ReactFlow
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
@@ -285,7 +284,6 @@ export default function MindMap() {
           onOk={nodeAction}
           onCancel={() => setVisible(false)}
         />
-      </ReactFlowProvider>
-    </div>
+      </div>
   )
 }
