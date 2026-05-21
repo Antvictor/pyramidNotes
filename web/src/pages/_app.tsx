@@ -8,7 +8,6 @@ import '@/styles/dark.css'
 import '@/components/ContextMenu/style.css'
 import '@milkdown/crepe/theme/common/style.css'
 import type { AppProps } from 'next/app'
-import Header from '@/components/header'
 import Sidebar from '@/components/Sidebar'
 import { LayoutProvider } from '@/providers'
 
@@ -17,12 +16,9 @@ export default function App({ Component, pageProps }: AppProps) {
     <LayoutProvider>
       <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
         <Sidebar style={{ width: 60 }} />
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <Header />
-          <main style={{ flex: 1, marginTop: 72, overflow: 'auto' }}>
-            <Component {...pageProps} />
-          </main>
-        </div>
+        <main style={{ flex: 1, overflow: 'auto' }}>
+          <Component {...pageProps} />
+        </main>
       </div>
     </LayoutProvider>
   )

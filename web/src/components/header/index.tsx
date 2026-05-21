@@ -1,9 +1,15 @@
 import type { FC } from 'react'
+import { useEffect, useState } from 'react'
 import { useSetDarkMode, useDarkMode } from '@/providers'
 
 const Header: FC = () => {
   const darkMode = useDarkMode()
   const setDarkMode = useSetDarkMode()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   return (
     <header className="fixed left-0 right-0 top-0 z-50 flex h-[72px] items-center justify-end border-b border-[var(--border)] bg-[var(--background)] px-4">
@@ -12,7 +18,7 @@ const Header: FC = () => {
         className="rounded-lg p-2 hover:bg-[var(--hover)]"
         aria-label="Toggle dark mode"
       >
-        {darkMode ? '☀️' : '🌙'}
+        {mounted ? (darkMode ? '☀️' : '🌙') : '🌙'}
       </button>
     </header>
   )

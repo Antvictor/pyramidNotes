@@ -1,10 +1,10 @@
 import React from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { useNavigate } from 'react-router-dom'
+import { useRouter } from 'next/router'
 
 export default function NodeCustom({ data }) {
-  console.log(data);
-  const navigate = useNavigate()
+  console.log(data)
+  const router = useRouter()
   return (
     <div
       style={{
@@ -18,7 +18,7 @@ export default function NodeCustom({ data }) {
         textAlign: 'center',
         color: 'var(--text-primary)',
       }}
-      onClick={() => navigate(`/note/${data.id}/${data.name}`)}
+      onClick={() => router.push(`/note/${data.id}`)}
     >
       {data.name}
       <Handle
