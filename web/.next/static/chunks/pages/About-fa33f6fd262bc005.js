@@ -1,0 +1,1 @@
+(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[9919],{2886:(_,n,u)=>{"use strict";u.r(n),u.d(n,{default:()=>r});var e=u(9715);function r(){return(0,e.jsx)("h1",{children:"这是一个以金字塔为导向，通过思维导图关联节点的笔记工具"})}},8723:(_,n,u)=>{(window.__NEXT_P=window.__NEXT_P||[]).push(["/About",function(){return u(2886)}])}},_=>{_.O(0,[636,6593,8792],()=>_(_.s=8723)),_N_E=_.O()}]);

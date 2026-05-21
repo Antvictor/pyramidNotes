@@ -21,7 +21,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import db from "@/pages/db/db.js";
+import db from '@/lib/db';
 
 // 全文搜索结果类型
 export interface FullTextSearchResult {

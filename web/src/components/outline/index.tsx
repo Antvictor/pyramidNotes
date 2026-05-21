@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 
-import { useLinkClass } from '@/hooks'
+import { useLinkClass } from '../../hooks/useLinkClass'
 
 type OutlineItem = { text: string; level: number; id: string }
 

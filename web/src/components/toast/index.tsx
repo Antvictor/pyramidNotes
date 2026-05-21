@@ -10,7 +10,7 @@ import {
   useState,
 } from 'react'
 
-import { useLinkClass } from '@/hooks'
+import { useLinkClass } from '../../hooks/useLinkClass'
 
 type ToastType = 'success' | 'fail' | 'warning' | 'info'
 

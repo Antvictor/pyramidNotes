@@ -1,0 +1,1 @@
+(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[9445],{4110:(_,e,n)=>{"use strict";n.r(e),n.d(e,{default:()=>u});var s=n(9715);let u=()=>(0,s.jsx)("h1",{children:"欢迎来到首页"})},6433:(_,e,n)=>{(window.__NEXT_P=window.__NEXT_P||[]).push(["/Home",function(){return n(4110)}])}},_=>{_.O(0,[636,6593,8792],()=>_(_.s=6433)),_N_E=_.O()}]);

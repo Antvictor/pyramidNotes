@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import DocEditor from "../../core/editor/doc-editor";
+import DocEditor from "@/components/doc-editor";
 import { ProsemirrorAdapterProvider } from '@prosemirror-adapter/react';
 
 const Note = () => {

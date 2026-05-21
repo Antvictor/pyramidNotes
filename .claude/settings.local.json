@@ -30,7 +30,17 @@
       "Bash(git commit *)",
       "WebSearch",
       "WebFetch(domain:milkdown.dev)",
-      "Bash(pnpm tsc *)"
+      "Bash(pnpm tsc *)",
+      "Bash(cp /tmp/milkdown-website/src/providers/DarkModeProvider.tsx src/providers/DarkModeProvider.tsx)",
+      "Bash(cp /tmp/milkdown-website/src/providers/DocSearchProvider.tsx src/providers/DocSearchProvider.tsx)",
+      "Bash(cp /tmp/milkdown-website/src/providers/SidePanelStateProvider.tsx src/providers/SidePanelStateProvider.tsx)",
+      "Bash(cp /tmp/milkdown-website/src/providers/index.tsx src/providers/index.tsx)",
+      "Bash(cp /tmp/milkdown-website/src/utils/compose.tsx /Users/exccedy/project/AntVictor/app/pyramidNotes/web/src/utils/compose.tsx)",
+      "Bash(cp /tmp/milkdown-website/src/utils/date.ts /Users/exccedy/project/AntVictor/app/pyramidNotes/web/src/utils/date.ts)",
+      "Bash(cp /tmp/milkdown-website/src/utils/share.ts /Users/exccedy/project/AntVictor/app/pyramidNotes/web/src/utils/share.ts)",
+      "Bash(cp /tmp/milkdown-website/src/utils/title.ts /Users/exccedy/project/AntVictor/app/pyramidNotes/web/src/utils/title.ts)",
+      "Bash(cp /tmp/milkdown-website/src/utils/types.ts /Users/exccedy/project/AntVictor/app/pyramidNotes/web/src/utils/types.ts)",
+      "Bash(pnpm next *)"
     ]
   }
 }

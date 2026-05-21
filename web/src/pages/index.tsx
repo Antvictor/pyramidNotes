@@ -11,9 +11,9 @@ import {
   useEdgesState,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import NodeCustom from './note/NodeCustom'
-import db from './db/db'
-import ContextMenu from './note/ContextMenu/ContextMenu'
+import NodeCustom from '@/components/NodeCustom'
+import db from '@/lib/db'
+import ContextMenu from '@/components/ContextMenu'
 import OpenPrompt from './commons/OpenPrompt'
 import { nanoid } from 'nanoid'
 

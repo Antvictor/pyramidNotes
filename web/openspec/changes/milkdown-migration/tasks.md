@@ -8,7 +8,7 @@
 ## 2. Basic Crepe Editor
 
 - [x] 2.1 Basic Crepe editor setup with features configuration
-- [ ] 2.2 Connect onChange callback to editor markdown changes
+- [x] 2.2 Connect onChange callback to editor markdown changes
 
 ## 3. Code Block with Prism Highlighting
 

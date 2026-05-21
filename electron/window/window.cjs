@@ -15,7 +15,7 @@ function createWindow() {
     win.loadFile(path.join(__dirname, "../dist/index.html"));
   } else {
     // 开发环境：加载 Vite dev server
-    win.loadURL("http://localhost:5173");
+    win.loadURL("http://localhost:3000");
     win.webContents.openDevTools();
   }
 
