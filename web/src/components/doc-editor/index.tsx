@@ -3,22 +3,23 @@ import { editorViewCtx, editorViewOptionsCtx } from '@milkdown/kit/core'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
 import { outline } from '@milkdown/kit/utils'
 import { eclipse } from '@uiw/codemirror-theme-eclipse'
-import { FC, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
-import Outline from '@/components/outline'
 import { useDarkMode } from '@/providers'
-
-import { useToast } from '../toast'
-import { Button } from './Button'
 import { iframePlugin } from './iframePlugin'
 
-const Doc: FC<{ content: string; url: string }> = ({ content, url }) => {
+interface DocEditorProps {
+  content: string
+  onChange?: (content: string) => void
+  url?: string
+}
+
+export default function DocEditor({ content, onChange, url }: DocEditorProps) {
   const [outlines, setOutlines] = useState<
     { text: string; level: number; id: string }[]
   >([])
   const darkMode = useDarkMode()
   const divRef = useRef<HTMLDivElement>(null)
-  const toast = useToast()
   const loading = useRef(false)
 
   useEffect(() => {
@@ -34,11 +35,6 @@ const Doc: FC<{ content: string; url: string }> = ({ content, url }) => {
       featureConfigs: {
         [Crepe.Feature.CodeMirror]: {
           theme: darkMode ? undefined : eclipse,
-        },
-        [Crepe.Feature.LinkTooltip]: {
-          onCopyLink: () => {
-            toast('Link copied', 'success')
-          },
         },
       },
     })
@@ -57,10 +53,13 @@ const Doc: FC<{ content: string; url: string }> = ({ content, url }) => {
           .mounted((ctx) => {
             setOutlines(outline()(ctx))
           })
-          .markdownUpdated((ctx) => {
+          .markdownUpdated((ctx, markdown) => {
             const view = ctx.get(editorViewCtx)
-            console.log(ctx.state?.doc)
-	    if (view.state?.doc) setOutlines(outline()(ctx))
+            if (view.state?.doc) setOutlines(outline()(ctx))
+            // Call onChange when content changes
+            if (onChange && markdown) {
+              onChange(markdown)
+            }
           })
       })
       .use(iframePlugin)
@@ -74,19 +73,11 @@ const Doc: FC<{ content: string; url: string }> = ({ content, url }) => {
       if (loading.current) return
       crepe.destroy()
     }
-  }, [content, darkMode, toast])
+  }, [content, darkMode, onChange])
 
   return (
     <>
       <div className="crepe crepe-doc" ref={divRef} />
-      <div className="fixed inset-y-32 right-20 hidden flex-col gap-4 overflow-y-auto xl:flex xl:w-60 2xl:right-[calc(50vw-28rem-15rem)]">
-        <a className="float-right" href={url} target="_blank">
-          <Button primary text="Edit on github" icon="edit" />
-        </a>
-        <Outline items={outlines} />
-      </div>
     </>
   )
 }
-
-export default Doc
