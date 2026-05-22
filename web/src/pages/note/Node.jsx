@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { StrictMode, useEffect, useState } from "react";
-import MarkdownEditor from "../../core/editor/MarkdownEditor";
+import TipTapEditor from "../../core/editor/TipTapEditor";
 
 
 const Note = () => {
@@ -56,7 +56,7 @@ const Note = () => {
       <div style={{ 
         width: "90vw",
         height: "94vh", }}>
-        <MarkdownEditor content={value} onChange={saveFile} keyBindings={keys} />
+        <TipTapEditor content={value} onChange={saveFile} keyBindings={keys} />
       </div>
 
   );
