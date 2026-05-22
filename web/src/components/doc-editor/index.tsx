@@ -1,7 +1,7 @@
 import { Crepe } from '@milkdown/crepe'
 import { editorViewCtx, editorViewOptionsCtx } from '@milkdown/kit/core'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
-import { outline } from '@milkdown/kit/utils'
+import { outline, getMarkdown } from '@milkdown/kit/utils'
 import { eclipse } from '@uiw/codemirror-theme-eclipse'
 import { useEffect, useRef, useState, useCallback } from 'react'
 
@@ -81,6 +81,9 @@ export default function DocEditor({ content, onChange, url }: DocEditorProps) {
               setOutlines(outline()(ctx))
             }
           })
+          .updated((ctx, doc) => {
+             console.log('Document updated, current content :', doc.content)
+          })
           .markdownUpdated((ctx, markdown) => {
             const view = ctx.get(editorViewCtx)
             if (view.state?.doc && mountedRef.current) {
@@ -88,7 +91,8 @@ export default function DocEditor({ content, onChange, url }: DocEditorProps) {
             }
             // Call onChange when content changes
             if (handleChangeRef.current && markdown) {
-              handleChangeRef.current(markdown)
+              console.log('Content changed, calling onChange :', markdown)
+              handleChangeRef.current(markdown);
             }
           })
       })

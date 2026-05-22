@@ -47,7 +47,7 @@ export default function NotePage() {
   const handleChange = useCallback(async (markdownContent: string) => {
     if (!fileName || !id) return
     try {
-      console.log('Saving file:', { fileName, contentLength: markdownContent.length })
+      console.log('Saving file:', { fileName, content: markdownContent })
       await window.api.saveFile(fileName, yamlValue, markdownContent, id)
     } catch (error) {
       console.error('Failed to save file:', error)
