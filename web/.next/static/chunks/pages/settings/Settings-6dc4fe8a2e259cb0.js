@@ -1,1 +1,0 @@
-(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[6185],{6061:(_,n,s)=>{(window.__NEXT_P=window.__NEXT_P||[]).push(["/settings/Settings",function(){return s(8501)}])}},_=>{_.O(0,[882,636,6593,8792],()=>_(_.s=6061)),_N_E=_.O()}]);
