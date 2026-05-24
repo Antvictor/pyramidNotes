@@ -27,7 +27,11 @@
       "Bash(pnpm add *)",
       "Bash(git add *)",
       "Bash(xargs ls *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(ls:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(timeout 10 pnpm dev)",
+      "Bash(node -e \"require\\(''./src/pages/settings/ShortcutsModal.jsx''\\)\")"
     ]
   }
 }

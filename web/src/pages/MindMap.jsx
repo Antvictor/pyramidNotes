@@ -3,7 +3,7 @@ import React, {
   useMemo,
   useEffect,
   useState,
-  // useRef,
+  useRef,
 } from "react";
 import { NodeSearchDialog } from "@/components/node-search";
 import {
@@ -106,7 +106,7 @@ function layoutTree(nodes, rootId, startX, startY, levelGap = 110) {
   return positions;
 }
 
-export default function MindMap() {
+export default function MindMap({ setSelectedNode, clearSelectedNode }) {
   // const flowWrapperRef = useRef(null);
   // 查询sqlite中的节点数据
   const [notesData, setNotesData] = useState(null);
@@ -118,6 +118,10 @@ export default function MindMap() {
   const [permissionError, setPermissionError] = useState(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  const clickTimerRef = useRef(null);
+  const lastClickRef = useRef(null);
+
   const addNote = (note) => {
     setNotesData((prevData) => [...prevData, note]);
   };
@@ -385,6 +389,35 @@ export default function MindMap() {
           border="none"
           onEdgesDelete={() => { }}
           deleteKeyCode={null}
+          onNodeClick={(e, node) => {
+            if (lastClickRef.current === node.id) {
+              if (clickTimerRef.current) {
+                clearTimeout(clickTimerRef.current);
+              }
+
+              lastClickRef.current = null;
+
+              console.log("Double click");
+              navigate(`/note/${node.id}/${node.data.name}`);
+              return;
+            }
+
+            // 第一次点击
+            lastClickRef.current = node.id;
+
+            clickTimerRef.current = setTimeout(() => {
+              console.log("Single click");
+              setSelectedNode({
+                id: node.id,
+                name: node.data.name,
+              });
+
+              lastClickRef.current = null;
+            }, 250);
+          }}
+          onPaneClick={() => {
+            clearSelectedNode();
+          }}
           proOptions={{ hideAttribution: true }}
         >
           <Background />

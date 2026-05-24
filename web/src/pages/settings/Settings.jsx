@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Folder, HelpCircle, ChevronDown } from "lucide-react";
+import { Folder, HelpCircle, ChevronDown, Keyboard } from "lucide-react";
+import ShortcutsModal from "./ShortcutsModal";
 
-const Settings = () => {
+const Settings = ({ shortcuts }) => {
   const [settings, setSettings] = useState({
     theme: "system",
     storagePath: "",
@@ -10,6 +11,7 @@ const Settings = () => {
   });
   const [version, setVersion] = useState("");
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+  const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -279,6 +281,28 @@ const Settings = () => {
             </button>
           </div>
 
+          <div style={rowStyle}>
+            <span style={labelStyle}>快捷键</span>
+            <button
+              onClick={() => setShortcutsModalOpen(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                padding: "6px 10px",
+                borderRadius: 6,
+                border: "1px solid var(--border)",
+                background: "var(--bg-primary)",
+                color: "var(--text-primary)",
+                cursor: "pointer",
+                fontSize: 13,
+              }}
+            >
+              <Keyboard size={14} />
+              配置
+            </button>
+          </div>
+
           <div style={{ ...rowStyle, borderBottom: "none" }}>
             <span style={labelStyle}>Language</span>
             <div style={{ position: "relative" }}>
@@ -347,6 +371,10 @@ const Settings = () => {
             </div>
           </div>
         </div>
+        <ShortcutsModal
+          open={shortcutsModalOpen}
+          onOpenChange={setShortcutsModalOpen}
+        />
       </div>
     </div>
   );

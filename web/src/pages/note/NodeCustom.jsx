@@ -1,24 +1,26 @@
 import React from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { useNavigate } from 'react-router-dom'
+import { useSelectedNode } from '../../contexts/SelectedNodeContext'
 
 export default function NodeCustom({ data }) {
-  console.log(data);
-  const navigate = useNavigate()
+  const { selectedNode } = useSelectedNode()
+
+  const isSelected = selectedNode && selectedNode.id === data.id
+
   return (
     <div
       style={{
         padding: 8,
         background: 'var(--bg-primary)',
-        border: '1px solid var(--border)',
+        border: isSelected ? '2px solid var(--link-color)' : '1px solid var(--border)',
         borderRadius: 4,
         cursor: 'pointer',
         minWidth: 40,
         maxWidth: 100,
         textAlign: 'center',
         color: 'var(--text-primary)',
+        transition: 'border-color 0.2s, border-width 0.2s',
       }}
-      onClick={() => navigate(`/note/${data.id}/${data.name}`)}
     >
       {data.name}
       <Handle

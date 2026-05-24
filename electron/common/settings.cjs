@@ -10,6 +10,23 @@ const DEFAULT_SETTINGS = {
   storagePath: path.join(app.getPath('documents'), 'pyramidNotes'),
   autoUpdate: true,
   language: 'en',
+  shortcuts: {
+    node: {
+      newNode: 'Ctrl+N',
+      renameNode: 'F2',
+      deleteNode: 'Delete',
+    },
+    note: {
+      bold: 'Ctrl+B',
+      italic: 'Ctrl+I',
+      heading1: 'Ctrl+1',
+      heading2: 'Ctrl+2',
+    },
+    global: {
+      search: 'Ctrl+K',
+      backToMap: 'Escape',
+    },
+  },
 };
 
 let cachedSettings = null;
