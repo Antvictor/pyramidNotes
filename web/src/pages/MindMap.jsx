@@ -25,6 +25,7 @@ import db from "./db/db"
 import ContextMenu from "./note/ContextMenu/ContextMenu";
 import OpenPrompt from "./commons/OpenPrompt";
 import { PermissionDialog } from "@/components/ui/permission-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { nanoid } from "nanoid";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import yaml from "yaml";
@@ -106,7 +107,27 @@ function layoutTree(nodes, rootId, startX, startY, levelGap = 110) {
   return positions;
 }
 
-export default function MindMap({ setSelectedNode, clearSelectedNode }) {
+function matchKey(shortcutStr, e) {
+  if (!shortcutStr) return false;
+  const isMod = e.ctrlKey || e.metaKey;
+  const isShift = e.shiftKey;
+  const parts = shortcutStr.split('+');
+  const modifiers = parts.slice(0, -1);
+  const key = parts[parts.length - 1];
+  const modStateMatch =
+    (modifiers.includes('Ctrl') || !isMod) &&
+    (modifiers.includes('Shift') || !isShift);
+  const keyMatch =
+    key === 'Escape' ? e.key === 'Escape' :
+    key === 'Delete' ? e.key === 'Delete' :
+    key === 'Enter' ? e.key === 'Enter' :
+    key === 'Backspace' ? e.key === 'Backspace' :
+    key.startsWith('F') ? e.key === key :
+    e.key.toLowerCase() === key.toLowerCase();
+  return keyMatch && modStateMatch;
+}
+
+export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNode, shortcuts }) {
   // const flowWrapperRef = useRef(null);
   // 查询sqlite中的节点数据
   const [notesData, setNotesData] = useState(null);
@@ -115,12 +136,41 @@ export default function MindMap({ setSelectedNode, clearSelectedNode }) {
   const [nodeId, setNodeId] = useState();
   const [title, setTitle] = useState();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [permissionError, setPermissionError] = useState(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const clickTimerRef = useRef(null);
   const lastClickRef = useRef(null);
+
+  // 节点快捷键处理
+  useEffect(() => {
+    if (!shortcuts) return;
+    const handler = (e) => {
+      if (!selectedNode || !shortcuts) return;
+      // Ctrl+N - 新建节点
+      if (matchKey(shortcuts.node?.newNode, e)) {
+        e.preventDefault();
+        addNewNode(selectedNode.id);
+        return;
+      }
+      // F2 - 修改节点
+      if (matchKey(shortcuts.node?.renameNode, e)) {
+        e.preventDefault();
+        updateNode(selectedNode.id, selectedNode.name);
+        return;
+      }
+      // Delete - 删除节点
+      if (matchKey(shortcuts.node?.deleteNode, e)) {
+        e.preventDefault();
+        setDeleteTarget({ id: selectedNode.id, name: selectedNode.name });
+        return;
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [shortcuts, selectedNode]);
 
   const addNote = (note) => {
     setNotesData((prevData) => [...prevData, note]);
@@ -141,6 +191,14 @@ export default function MindMap({ setSelectedNode, clearSelectedNode }) {
     const result = window.api.deleteFile(`${id}-${title}.md`);
     if (handleFileError(result)) return;
   };
+
+  const confirmDelete = useCallback(() => {
+    if (deleteTarget) {
+      deleteNode(deleteTarget.id, deleteTarget.name);
+      clearSelectedNode();
+      setDeleteTarget(null);
+    }
+  }, [deleteTarget, clearSelectedNode]);
 
   useEffect(() => {
     db.notes.select().then((res) => {
@@ -452,6 +510,15 @@ export default function MindMap({ setSelectedNode, clearSelectedNode }) {
           onReSelectFolder={handleReSelectFolder}
           onOpenSystemSettings={handleOpenSystemSettings}
           onClose={() => setPermissionError(null)}
+        />
+        <ConfirmDialog
+          open={!!deleteTarget}
+          title="确认删除"
+          message={`确定要删除节点 "${deleteTarget?.name}" 吗？此操作不可撤销。`}
+          confirmText="删除"
+          destructive
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteTarget(null)}
         />
       </ReactFlowProvider>
     </div>
