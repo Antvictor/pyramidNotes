@@ -26,6 +26,7 @@ import ContextMenu from "./note/ContextMenu/ContextMenu";
 import OpenPrompt from "./commons/OpenPrompt";
 import { PermissionDialog } from "@/components/ui/permission-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DeleteNodeDialog } from "@/components/ui/delete-node-dialog";
 import { nanoid } from "nanoid";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import yaml from "yaml";
@@ -149,6 +150,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     if (!shortcuts) return;
     const handler = (e) => {
       if (!selectedNode || !shortcuts) return;
+      if (visible) return;
       // Ctrl+N - 新建节点
       if (matchKey(shortcuts.node?.newNode, e)) {
         e.preventDefault();
@@ -164,13 +166,18 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       // Delete - 删除节点
       if (matchKey(shortcuts.node?.deleteNode, e)) {
         e.preventDefault();
-        setDeleteTarget({ id: selectedNode.id, name: selectedNode.name });
+        const childCount = db.notes.count().where({ top: selectedNode.id }).run();
+        if (childCount === 0) {
+          deleteNode(selectedNode.id, selectedNode.name);
+        } else {
+          setDeleteTarget({ id: selectedNode.id, name: selectedNode.name, childCount });
+        }
         return;
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [shortcuts, selectedNode]);
+  }, [shortcuts, selectedNode, visible]);
 
   const addNote = (note) => {
     setNotesData((prevData) => [...prevData, note]);
@@ -511,13 +518,22 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           onOpenSystemSettings={handleOpenSystemSettings}
           onClose={() => setPermissionError(null)}
         />
-        <ConfirmDialog
+        <DeleteNodeDialog
           open={!!deleteTarget}
-          title="确认删除"
-          message={`确定要删除节点 "${deleteTarget?.name}" 吗？此操作不可撤销。`}
-          confirmText="删除"
-          destructive
-          onConfirm={confirmDelete}
+          nodeName={deleteTarget?.name}
+          childCount={deleteTarget?.childCount || 0}
+          onDeleteEntireTree={() => {
+            // TODO: implement in next task
+            console.log("delete entire tree:", deleteTarget);
+            setDeleteTarget(null);
+            clearSelectedNode();
+          }}
+          onDeleteParentOnly={() => {
+            // TODO: implement in next task
+            console.log("delete parent only:", deleteTarget);
+            setDeleteTarget(null);
+            clearSelectedNode();
+          }}
           onCancel={() => setDeleteTarget(null)}
         />
       </ReactFlowProvider>
