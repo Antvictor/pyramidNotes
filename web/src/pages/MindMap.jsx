@@ -170,7 +170,8 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
         if (childCount === 0) {
           deleteNode(selectedNode.id, selectedNode.name);
         } else {
-          setDeleteTarget({ id: selectedNode.id, name: selectedNode.name, childCount });
+          const currentNode = db.notes.select().where({ id: selectedNode.id }).run()[0];
+          setDeleteTarget({ id: selectedNode.id, name: selectedNode.name, childCount, grandParentId: currentNode?.top || null });
         }
         return;
       }
@@ -221,6 +222,20 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     allIds.forEach(nodeId => {
       db.notes.delete({ "id": nodeId });
     });
+  };
+
+  // 将子节点提升到祖父节点下
+  const promoteChildren = (parentId, grandParentId) => {
+    // 更新所有直接子节点的 top 为 grandParentId
+    db.notes.update({ top: parentId }, { top: grandParentId });
+
+    // 更新 notesData 状态
+    setNotesData(nds => nds.map(n => {
+      if (n.top === parentId) {
+        return { ...n, top: grandParentId };
+      }
+      return n;
+    }));
   };
 
   const deleteNode = (id, title) => {
@@ -561,8 +576,9 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
             clearSelectedNode();
           }}
           onDeleteParentOnly={() => {
-            // TODO: implement in next task
-            console.log("delete parent only:", deleteTarget);
+            const grandParentId = deleteTarget.grandParentId;
+            promoteChildren(deleteTarget.id, grandParentId);
+            deleteNode(deleteTarget.id, deleteTarget.name);
             setDeleteTarget(null);
             clearSelectedNode();
           }}
