@@ -90,7 +90,27 @@ function registerFileIPC() {
     ipcMain.handle("renameFile", async (event, oldFileName, newFileName) => {
         try {
             const dataPath = resolveStoragePath();
-            await fs.rename(path.join(dataPath, oldFileName), path.join(dataPath, newFileName));
+            const oldPath = path.join(dataPath, oldFileName);
+            const newPath = path.join(dataPath, newFileName);
+            console.log("renameFile:", { dataPath, oldPath, newPath });
+
+            // 检查源文件是否存在
+            try {
+                await fs.access(oldPath);
+                console.log("源文件存在:", oldPath);
+            } catch (e) {
+                console.error("源文件不存在:", oldPath, e.message);
+            }
+
+            // 检查目标文件是否已存在
+            try {
+                await fs.access(newPath);
+                console.log("目标文件已存在:", newPath);
+            } catch (e) {
+                console.log("目标文件不存在:", newPath);
+            }
+
+            await fs.rename(oldPath, newPath);
             return true;
         } catch (error) {
             console.error("renameFile error:", error)
@@ -102,6 +122,7 @@ function registerFileIPC() {
         try {
             const dataPath = resolveStoragePath();
             const filePath = path.join(dataPath, fileName);
+            console.log("updateYaml:", { dataPath, filePath });
 
             const content = await fs.readFile(filePath, 'utf-8');
             const parsed = matter(content);
@@ -113,9 +134,7 @@ function registerFileIPC() {
             };
 
             const newMd = buildMarkdown(mergedYaml, parsed.content);
-
             await fs.writeFile(filePath, newMd, 'utf-8');
-
             return true;
         } catch (error) {
             console.error("updateYaml error:", error)
