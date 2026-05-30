@@ -190,6 +190,39 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     return false;
   };
 
+  // 递归获取所有后代节点 ID
+  const getAllDescendantIds = (nodeId) => {
+    const descendantIds = [nodeId];
+    const directChildren = db.notes.select().where({ top: nodeId }).run();
+    for (const child of directChildren) {
+      descendantIds.push(...getAllDescendantIds(child.id));
+    }
+    return descendantIds;
+  };
+
+  // 删除整个子树
+  const deleteEntireTree = (id, title) => {
+    const allIds = getAllDescendantIds(id);
+
+    // 从 UI 中删除所有节点
+    setNotesData(nds => nds.filter(n => !allIds.includes(n.id)));
+    setEdges(eds => eds.filter(e => !allIds.includes(e.source) && !allIds.includes(e.target)));
+
+    // 删除所有相关文件
+    allIds.forEach(nodeId => {
+      const node = db.notes.select().where({ id: nodeId }).run()[0];
+      if (node) {
+        const result = window.api.deleteFile(`${nodeId}-${node.name}.md`);
+        if (handleFileError(result)) return;
+      }
+    });
+
+    // 从数据库中删除所有记录
+    allIds.forEach(nodeId => {
+      db.notes.delete({ "id": nodeId });
+    });
+  };
+
   const deleteNode = (id, title) => {
     setNotesData(nds => nds.filter(n => n.id !== id));
     setEdges(eds => eds.filter(e => e.source !== id && e.target !== id));
@@ -523,8 +556,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           nodeName={deleteTarget?.name}
           childCount={deleteTarget?.childCount || 0}
           onDeleteEntireTree={() => {
-            // TODO: implement in next task
-            console.log("delete entire tree:", deleteTarget);
+            deleteEntireTree(deleteTarget.id, deleteTarget.name);
             setDeleteTarget(null);
             clearSelectedNode();
           }}
