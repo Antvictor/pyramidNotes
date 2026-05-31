@@ -154,25 +154,19 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       // Ctrl+N - 新建节点
       if (matchKey(shortcuts.node?.newNode, e)) {
         e.preventDefault();
-        addNewNode(selectedNode?.id || "1");  // Use root "1" if no node selected
+        requestCreateNode(selectedNode?.id || "1");
         return;
       }
       // F2 - 修改节点
       if (matchKey(shortcuts.node?.renameNode, e)) {
         e.preventDefault();
-        updateNode(selectedNode.id, selectedNode.name);
+        requestEditNode(selectedNode.id, selectedNode.name);
         return;
       }
       // Delete - 删除节点
       if (matchKey(shortcuts.node?.deleteNode, e)) {
         e.preventDefault();
-        const childCount = db.notes.count().where({ top: selectedNode.id }).run();
-        if (childCount === 0) {
-          deleteNode(selectedNode.id, selectedNode.name);
-        } else {
-          const currentNode = db.notes.select().where({ id: selectedNode.id }).run()[0];
-          setDeleteTarget({ id: selectedNode.id, name: selectedNode.name, childCount, grandParentId: currentNode?.top || null });
-        }
+        requestDeleteNode(selectedNode.id, selectedNode.name);
         return;
       }
     };
@@ -573,9 +567,9 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
         <ContextMenu
           menu={menu}
           onClose={closeMenu}
-          onCreateNode={addNewNode}
-          onEditNode={updateNode}
-          onDeleteNode={deleteNode}
+          requestCreateNode={requestCreateNode}
+          requestEditNode={requestEditNode}
+          requestDeleteNode={requestDeleteNode}
         />
         <OpenPrompt
           visible={visible}
