@@ -149,21 +149,23 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   useEffect(() => {
     if (!shortcuts) return;
     const handler = (e) => {
-      if (!selectedNode || !shortcuts) return;
+      if (!shortcuts) return;
       if (visible) return;
-      // Ctrl+N - 新建节点
+      // Ctrl+N - 新建节点 (no guard needed - works without selection)
       if (matchKey(shortcuts.node?.newNode, e)) {
         e.preventDefault();
         requestCreateNode(selectedNode?.id || "1");
         return;
       }
-      // F2 - 修改节点
+      // F2 - 修改节点 (requires selection)
+      if (!selectedNode) return;
       if (matchKey(shortcuts.node?.renameNode, e)) {
         e.preventDefault();
         requestEditNode(selectedNode.id, selectedNode.name);
         return;
       }
-      // Delete - 删除节点
+      // Delete - 删除节点 (requires selection)
+      if (!selectedNode) return;
       if (matchKey(shortcuts.node?.deleteNode, e)) {
         e.preventDefault();
         requestDeleteNode(selectedNode.id, selectedNode.name);
