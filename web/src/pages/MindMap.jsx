@@ -248,12 +248,12 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   // This ensures consistent behavior and permission checks
 
   // Request delete node - unified entry point with child count check
-  const requestDeleteNode = (nodeId, nodeName) => {
-    const childCount = db.notes.count().where({ top: nodeId }).run();
+  const requestDeleteNode = async (nodeId, nodeName) => {
+    const childCount = await db.notes.count({ top: nodeId });
     if (childCount === 0) {
       _internalDeleteNode(nodeId, nodeName);
     } else {
-      const currentNode = db.notes.select().where({ id: nodeId }).run()[0];
+      const currentNode = (await db.notes.select({ id: nodeId }))[0];
       setDeleteTarget({ id: nodeId, name: nodeName, childCount, grandParentId: currentNode?.top || null });
     }
   };
