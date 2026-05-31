@@ -28,6 +28,11 @@ class Table {
         return await window.api.dbQuery(sql, values);
     }
 
+    async count(whereClause = {}) {
+        const results = await this.select(whereClause);
+        return results.length;
+    }
+
     async update(where, data) {
         const setKeys = Object.keys(data).map(k => `${k} = ?`).join(',');
         const setValues = Object.values(data);
