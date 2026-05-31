@@ -13,6 +13,7 @@
 .selection-ring {
   animation: pulse 2s ease-in-out infinite;
   pointer-events: none;
+  z-index: 9999;
 }
 
 /* BubbleTooltip fadeIn animation */
@@ -29,4 +30,29 @@
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
   }
+}
+
+/* Tutorial mask - blocks user interaction during user-action phase */
+.tutorial-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000 !important;
+  background: rgba(128, 128, 128, 0.5) !important;
+  pointer-events: all !important;
+  overflow: hidden;
+}
+
+/* 确保 BubbleTooltip 在遮罩之上且可点击 */
+.bubble-tooltip {
+  pointer-events: all !important;
+  position: fixed !important;
+  z-index: 10001 !important;
+}
+
+/* Button within BubbleTooltip must be clickable */
+.bubble-tooltip button {
+  pointer-events: all !important;
 }

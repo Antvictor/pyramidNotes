@@ -22,9 +22,10 @@ export default function BubbleTooltip({ step, phase, onNext, onSkip }) {
         borderRadius: 12,
         padding: '16px 24px',
         boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-        zIndex: 9999,
+        zIndex: 10001,
         minWidth: 280,
         maxWidth: 400,
+        pointerEvents: 'all',
       }}
     >
       <div style={{ marginBottom: 16 }}>

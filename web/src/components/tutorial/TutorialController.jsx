@@ -60,7 +60,7 @@ export default function TutorialController({ children }) {
 
     if (currentStep.autoAction) {
       setState(s => ({ ...s, phase: 'auto' }));
-      await executeAutoAction(currentStep.autoAction);
+      await executeAutoAction(currentStep.autoAction, currentStep.target);
 
       if (currentStep.requiredAction) {
         setState(s => ({ ...s, phase: 'user-action' }));
@@ -96,6 +96,9 @@ export default function TutorialController({ children }) {
 
   if (!state.isActive) return children;
 
+  // 在 user-action 阶段，需要阻止用户与页面交互
+  const isBlocking = state.phase === 'user-action';
+
   return (
     <>
       {children}
@@ -105,6 +108,19 @@ export default function TutorialController({ children }) {
         phase={state.phase}
         onNext={handleNext}
         onSkip={handleSkip}
+      />
+      <div
+        className="tutorial-mask"
+        style={{
+          background: 'rgba(128, 128, 128, 0.5)',
+          zIndex: 10000,
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          pointerEvents: 'all'
+        }}
       />
     </>
   );

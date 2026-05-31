@@ -3,12 +3,12 @@
  * 这是新手教程（冒泡引导）系统的一部分
  */
 
-export async function executeAutoAction(autoAction) {
+export async function executeAutoAction(autoAction, target) {
   if (!autoAction) return { success: false, reason: 'no autoAction' };
 
   switch (autoAction.type) {
     case 'contextmenu':
-      return executeContextmenu(autoAction.target);
+      return executeContextmenu(target || autoAction.target);
     case 'navigate':
       return executeNavigate(autoAction.path);
     case 'open-directory-dialog':

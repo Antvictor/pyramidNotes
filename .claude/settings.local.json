@@ -44,7 +44,9 @@
       "Bash(mv /Users/antvictor/All/learn/apps/pyramidNotes/docs/superpowers/plans/2026-05-30-delete-node-with-children.md /Users/antvictor/All/learn/apps/pyramidNotes/docs/superpowers/plans/completed/)",
       "Bash(mv /Users/antvictor/All/learn/apps/pyramidNotes/docs/superpowers/plans/2026-05-31-unify-node-operations.md /Users/antvictor/All/learn/apps/pyramidNotes/docs/superpowers/plans/completed/)",
       "Bash(mv /Users/antvictor/All/learn/apps/pyramidNotes/docs/superpowers/plans/2026-05-31-fix-ctrl-n-no-selection.md /Users/antvictor/All/learn/apps/pyramidNotes/docs/superpowers/plans/completed/)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(find /Users/antvictor/All/learn/apps/pyramidNotes/node_modules/@xyflow -name *.css)",
+      "Bash(find /Users/antvictor/All/learn/apps/pyramidNotes/node_modules -name *.css)"
     ]
   }
 }
