@@ -7,6 +7,7 @@ import Settings from "./pages/settings/Settings";
 import MindMap from "./pages/MindMap";
 import Node from "./pages/note/Node"
 import { SelectedNodeProvider } from "./contexts/SelectedNodeContext";
+import TutorialController from "./components/tutorial/TutorialController";
 import useShortcuts from "./hooks/useShortcuts";
 
 function AppContent() {
@@ -72,27 +73,29 @@ function AppContent() {
           color: "var(--text-primary)",
           overflow: "hidden",
         }}>
-          <Routes>
-            <Route path="/" element={
-              <MindMapWrapper
-                selectedNode={selectedNode}
-                setSelectedNode={setSelectedNode}
-                clearSelectedNode={clearSelectedNode}
-                shortcuts={shortcuts}
-                searchOpen={searchOpen}
-                setSearchOpen={setSearchOpen}
-              />
-            } />
-            <Route path="/about" element={<About />} />
-            <Route path="/settings" element={<Settings shortcuts={shortcuts} />} />
-            <Route path="/note/:id/:name" element={
-              <NodeWrapper
-                selectedNode={selectedNode}
-                setSelectedNode={setSelectedNode}
-                shortcuts={shortcuts}
-              />
-            } />
-          </Routes>
+          <TutorialController>
+            <Routes>
+              <Route path="/" element={
+                <MindMapWrapper
+                  selectedNode={selectedNode}
+                  setSelectedNode={setSelectedNode}
+                  clearSelectedNode={clearSelectedNode}
+                  shortcuts={shortcuts}
+                  searchOpen={searchOpen}
+                  setSearchOpen={setSearchOpen}
+                />
+              } />
+              <Route path="/about" element={<About />} />
+              <Route path="/settings" element={<Settings shortcuts={shortcuts} />} />
+              <Route path="/note/:id/:name" element={
+                <NodeWrapper
+                  selectedNode={selectedNode}
+                  setSelectedNode={setSelectedNode}
+                  shortcuts={shortcuts}
+                />
+              } />
+            </Routes>
+          </TutorialController>
         </div>
       </div>
     </SelectedNodeProvider>
