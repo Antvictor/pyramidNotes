@@ -2,7 +2,7 @@
 import React from "react";
 import "./style.css";
 
-const ContextMenu = ({ menu, onClose, onCreateNode, onEditNode, onDeleteNode }) => {
+const ContextMenu = ({ menu, onClose, requestCreateNode, requestEditNode, requestDeleteNode }) => {
   if (!menu.show) return null;
 
   return (
@@ -16,20 +16,20 @@ const ContextMenu = ({ menu, onClose, onCreateNode, onEditNode, onDeleteNode }) 
         }}
       >
         {menu.type === "pane" && (
-          <div className="menu-item" onClick={() => { onCreateNode(menu.nodeId); onClose(); }}>
+          <div className="menu-item" onClick={() => { requestCreateNode(menu.nodeId); onClose(); }}>
             ➕ 创建节点
           </div>
         )}
 
         {menu.type === "node" && (
           <>
-            <div className="menu-item" onClick={() => { onCreateNode(menu.nodeId, menu.title); onClose(); }}>
+            <div className="menu-item" onClick={() => { requestCreateNode(menu.nodeId, menu.title); onClose(); }}>
               ➕ 创建节点
             </div>
-            <div className="menu-item" onClick={() => { onEditNode(menu.nodeId, menu.title); onClose(); }}>
+            <div className="menu-item" onClick={() => { requestEditNode(menu.nodeId, menu.title); onClose(); }}>
               ✏️ 修改节点
             </div>
-            <div className="menu-item" onClick={() => { onDeleteNode(menu.nodeId, menu.title); onClose(); }}>
+            <div className="menu-item" onClick={() => { requestDeleteNode(menu.nodeId, menu.title); onClose(); }}>
               🗑 删除节点
             </div>
           </>
