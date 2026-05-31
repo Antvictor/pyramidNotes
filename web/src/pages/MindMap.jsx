@@ -262,6 +262,16 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     }
   };
 
+  // Request create node - unified entry point (same logic for shortcut and right-click)
+  const requestCreateNode = (parentId, prefillName) => {
+    addNewNode(parentId, prefillName);
+  };
+
+  // Request edit node - unified entry point
+  const requestEditNode = (nodeId, nodeName) => {
+    updateNode(nodeId, nodeName);
+  };
+
   const confirmDelete = useCallback(() => {
     if (deleteTarget) {
       deleteNode(deleteTarget.id, deleteTarget.name);
