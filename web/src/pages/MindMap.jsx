@@ -212,7 +212,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
         const result = window.api.deleteFile(`${nodeId}-${node.name}.md`);
         if (handleFileError(result)) return;
       }
-    });
+    }
 
     // 从数据库中删除所有记录
     for (const nodeId of allIds) {

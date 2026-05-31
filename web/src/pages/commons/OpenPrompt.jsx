@@ -23,7 +23,7 @@ export default function OpenPrompt({ visible, id, title, onOk, onCancel }) {
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
-      onOk(id, value);
+      onOk(id, value, title);
     }
   };
 
@@ -52,7 +52,7 @@ export default function OpenPrompt({ visible, id, title, onOk, onCancel }) {
           <Button variant="outline" onClick={onCancel}>
             取消
           </Button>
-          <Button onClick={() => onOk(id, value)}>
+          <Button onClick={() => onOk(id, value, title)}>
             确定
           </Button>
         </DialogFooter>
