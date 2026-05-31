@@ -154,7 +154,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       // Ctrl+N - 新建节点
       if (matchKey(shortcuts.node?.newNode, e)) {
         e.preventDefault();
-        addNewNode(selectedNode.id);
+        addNewNode(selectedNode?.id || "1");  // Use root "1" if no node selected
         return;
       }
       // F2 - 修改节点
@@ -245,6 +245,21 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     // 同时删除markdown文件
     const result = window.api.deleteFile(`${id}-${title}.md`);
     if (handleFileError(result)) return;
+  };
+
+  // ========== Unified Request Methods ==========
+  // All shortcuts and context menu call these instead of direct operation functions
+  // This ensures consistent behavior and permission checks
+
+  // Request delete node - unified entry point with child count check
+  const requestDeleteNode = (nodeId, nodeName) => {
+    const childCount = db.notes.count().where({ top: nodeId }).run();
+    if (childCount === 0) {
+      deleteNode(nodeId, nodeName);
+    } else {
+      const currentNode = db.notes.select().where({ id: nodeId }).run()[0];
+      setDeleteTarget({ id: nodeId, name: nodeName, childCount, grandParentId: currentNode?.top || null });
+    }
   };
 
   const confirmDelete = useCallback(() => {
