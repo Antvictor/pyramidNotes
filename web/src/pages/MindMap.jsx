@@ -478,8 +478,11 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
 
       const yamlResult = await window.api.updateYaml(`${id}-${name}.md`, { title: name });
       if (handleFileError(yamlResult)) return;
+
+      // Sync selectedNode with updated name
+      setSelectedNode({ id, name });
     },
-    [setNotesData]
+    [setNotesData, setSelectedNode]
   );
 
   const handleReSelectFolder = async () => {
