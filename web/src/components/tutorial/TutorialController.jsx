@@ -4,6 +4,7 @@ import BubbleTooltip from "./BubbleTooltip";
 import { TUTORIAL_STEPS, APP_VERSION } from "./TUTORIAL_STEPS";
 import { executeAutoAction } from "./AutoActionExecutor";
 import { Detector } from "./Detector";
+import "./tutorial.css";
 
 export default function TutorialController({ children }) {
   const [state, setState] = useState({
