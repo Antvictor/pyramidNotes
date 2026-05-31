@@ -232,7 +232,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     }));
   };
 
-  const deleteNode = (id, title) => {
+  const _internalDeleteNode = (id, title) => {
     setNotesData(nds => nds.filter(n => n.id !== id));
     setEdges(eds => eds.filter(e => e.source !== id && e.target !== id));
     db.notes.delete({ "id": id });
@@ -249,7 +249,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const requestDeleteNode = (nodeId, nodeName) => {
     const childCount = db.notes.count().where({ top: nodeId }).run();
     if (childCount === 0) {
-      deleteNode(nodeId, nodeName);
+      _internalDeleteNode(nodeId, nodeName);
     } else {
       const currentNode = db.notes.select().where({ id: nodeId }).run()[0];
       setDeleteTarget({ id: nodeId, name: nodeName, childCount, grandParentId: currentNode?.top || null });
@@ -258,17 +258,17 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
 
   // Request create node - unified entry point (same logic for shortcut and right-click)
   const requestCreateNode = (parentId, prefillName) => {
-    addNewNode(parentId, prefillName);
+    _internalAddNode(parentId, prefillName);
   };
 
   // Request edit node - unified entry point
   const requestEditNode = (nodeId, nodeName) => {
-    updateNode(nodeId, nodeName);
+    _internalUpdateNode(nodeId, nodeName);
   };
 
   const confirmDelete = useCallback(() => {
     if (deleteTarget) {
-      deleteNode(deleteTarget.id, deleteTarget.name);
+      _internalDeleteNode(deleteTarget.id, deleteTarget.name);
       clearSelectedNode();
       setDeleteTarget(null);
     }
@@ -423,7 +423,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const closeMenu = () => setMenu((m) => ({ ...m, show: false }));
 
   // 新增节点
-  const addNewNode = (id) => {
+  const _internalAddNode = (id) => {
     setVisible(true);
     setNodeId(id);
     setTitle("");
@@ -457,7 +457,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     if (handleFileError(result)) return;
   }
   // 修改节点
-  const updateNode = (id, title) => {
+  const _internalUpdateNode = (id, title) => {
     setVisible(true);
     setNodeId(id)
     setTitle(title);
@@ -597,7 +597,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           onDeleteParentOnly={() => {
             const grandParentId = deleteTarget.grandParentId;
             promoteChildren(deleteTarget.id, grandParentId);
-            deleteNode(deleteTarget.id, deleteTarget.name);
+            _internalDeleteNode(deleteTarget.id, deleteTarget.name);
             setDeleteTarget(null);
             clearSelectedNode();
           }}
