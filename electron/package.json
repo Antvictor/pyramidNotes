@@ -13,8 +13,7 @@
       "output": "../release"
     },
     "files": [
-      "**/*",
-      "../dist/**/*"
+      "**/*"
     ],
     "extraResources": [
       {
