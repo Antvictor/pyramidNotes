@@ -1,58 +1,77 @@
-/* SelectionRing pulse animation */
+/* ========== SelectionRing ========== */
 @keyframes pulse {
   0%, 100% {
-    border-color: var(--link-color);
-    box-shadow: 0 0 0 0 rgba(var(--link-color-rgb), 0.4);
+    border-color: var(--link-color, #3b82f6);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
   }
   50% {
-    border-color: var(--link-color);
-    box-shadow: 0 0 0 8px rgba(var(--link-color-rgb), 0);
+    border-color: var(--link-color, #3b82f6);
+    box-shadow: 0 0 0 12px rgba(59, 130, 246, 0);
   }
 }
 
 .selection-ring {
   animation: pulse 2s ease-in-out infinite;
   pointer-events: none;
-  z-index: 9999;
+  z-index: 10001;
+  transition: left 0.15s ease, top 0.15s ease, width 0.15s ease, height 0.15s ease;
 }
 
-/* BubbleTooltip fadeIn animation */
-.bubble-tooltip {
-  animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-/* Tutorial mask - blocks user interaction during user-action phase */
-.tutorial-mask {
+/* ========== Spotlight Mask ========== */
+.tutorial-spotlight {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 10000 !important;
-  background: rgba(128, 128, 128, 0.5) !important;
-  pointer-events: all !important;
-  overflow: hidden;
+  z-index: 9989;
+  background: rgba(0, 0, 0, 0.5);
+  pointer-events: all;
 }
 
-/* 确保 BubbleTooltip 在遮罩之上且可点击 */
+/* ========== BubbleTooltip ========== */
 .bubble-tooltip {
-  pointer-events: all !important;
-  position: fixed !important;
-  z-index: 10001 !important;
+  animation: tooltipFadeIn 0.2s ease-out;
+  pointer-events: all;
 }
 
-/* Button within BubbleTooltip must be clickable */
+@keyframes tooltipFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ========== Tooltip Arrow ========== */
+.bubble-tooltip::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: 8px solid transparent;
+}
+
+.bubble-tooltip.arrow-top::after {
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-bottom-color: var(--bg-primary, #fff);
+  border-top: none;
+}
+
+.bubble-tooltip.arrow-bottom::after {
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top-color: var(--bg-primary, #fff);
+  border-bottom: none;
+}
+
+/* BubbleTooltip 按钮必须可点击 */
 .bubble-tooltip button {
   pointer-events: all !important;
+}
+
+/* ========== 教程激活时提升 Dialog 层级 ========== */
+.tutorial-active [data-slot="dialog-overlay"],
+.tutorial-active [data-slot="dialog-content"] {
+  z-index: 9995 !important;
 }

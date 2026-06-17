@@ -3,20 +3,19 @@
  * 这是新手教程（冒泡引导）系统的一部分
  */
 
-export async function executeAutoAction(autoAction, target) {
+export async function executeAutoAction(autoAction, target, navigate) {
   if (!autoAction) return { success: false, reason: 'no autoAction' };
 
   switch (autoAction.type) {
     case 'contextmenu':
       return executeContextmenu(target || autoAction.target);
     case 'navigate':
-      return executeNavigate(autoAction.path);
+      return executeNavigate(autoAction.path, navigate);
     case 'open-directory-dialog':
       return executeOpenDirectoryDialog();
     case 'click-button':
       return executeClickButton(autoAction.buttonType);
     case 'open-dialog':
-      // 通过 MutationObserver 检测弹窗
       return { success: true };
     default:
       return { success: false, reason: 'unknown action type' };
@@ -42,21 +41,33 @@ async function executeContextmenu(target) {
   if (!element) return { success: false, reason: 'element not found' };
 
   const rect = element.getBoundingClientRect();
-  const event = new MouseEvent('contextmenu', {
-    clientX: rect.left + rect.width / 2,
-    clientY: rect.top + rect.height / 2,
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+
+  // 在目标元素上触发，让事件冒泡到 React Flow 的事件委托层
+  element.dispatchEvent(new MouseEvent('contextmenu', {
+    clientX: cx,
+    clientY: cy,
+    screenX: cx,
+    screenY: cy,
+    button: 2,
+    buttons: 2,
     bubbles: true,
     cancelable: true,
     view: window
-  });
-  element.dispatchEvent(event);
+  }));
+
   return { success: true };
 }
 
 /**
- * 导航到指定路径
+ * 导航到指定路径（优先使用 React Router navigate）
  */
-async function executeNavigate(path) {
+async function executeNavigate(path, navigate) {
+  if (navigate) {
+    navigate(path);
+    return { success: true };
+  }
   window.location.href = path;
   return { success: true };
 }

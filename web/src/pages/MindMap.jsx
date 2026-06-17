@@ -15,6 +15,7 @@ import {
   addEdge,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   NodeToolbar,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -144,6 +145,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
 
   const clickTimerRef = useRef(null);
   const lastClickRef = useRef(null);
+  const creatingRootRef = useRef(false);
 
   // 节点快捷键处理
   useEffect(() => {
@@ -201,11 +203,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const deleteEntireTree = async (id, title) => {
     const allIds = await getAllDescendantIds(id);
 
-    // 从 UI 中删除所有节点
-    setNotesData(nds => nds.filter(n => !allIds.includes(n.id)));
-    setEdges(eds => eds.filter(e => !allIds.includes(e.source) && !allIds.includes(e.target)));
-
-    // 删除所有相关文件
+    // 先删除所有相关文件
     for (const nodeId of allIds) {
       const node = (await db.notes.select({ id: nodeId }))[0];
       if (node) {
@@ -218,6 +216,10 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     for (const nodeId of allIds) {
       await db.notes.delete({ "id": nodeId });
     }
+
+    // DB 操作全部完成后再更新 UI
+    setNotesData(nds => nds.filter(n => !allIds.includes(n.id)));
+    setEdges(eds => eds.filter(e => !allIds.includes(e.source) && !allIds.includes(e.target)));
   };
 
   // 将子节点提升到祖父节点下
@@ -254,7 +256,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       _internalDeleteNode(nodeId, nodeName);
     } else {
       const currentNode = (await db.notes.select({ id: nodeId }))[0];
-      setDeleteTarget({ id: nodeId, name: nodeName, childCount, grandParentId: currentNode?.top || null });
+      setDeleteTarget({ id: nodeId, name: nodeName, childCount, grandParentId: currentNode?.top || null, isRoot: currentNode?.top === '0' });
     }
   };
 
@@ -332,24 +334,47 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   // 添加连接
   useEffect(() => {
     if (!notesData) return;
-    //     if (!flowWrapperRef.current) return;
 
-    //     const { clientWidth: width, clientHeight: height } = flowWrapperRef.current;
-    console.log("notesData:", notesData);
-    const rootNode = notesData.find((n) => "0" === n.top);
-    console.log("rootNode:", rootNode);
-    const rootId = rootNode?.id;
+    let rootNode = notesData.find((n) => "0" === n.top);
 
-    console.log("rootId:", rootId);
+    // 没有 root 节点时的处理
+    if (!rootNode && !creatingRootRef.current) {
+      creatingRootRef.current = true;
+      const newRoot = {
+        id: "1",
+        name: "root",
+        content: "",
+        alias: "",
+        top: "0",
+        left: "0"
+      };
+
+      db.notes.insert(newRoot);
+      saveNode(newRoot);
+
+      if (notesData.length > 0) {
+        // 有孤儿节点：全部收编到新 root 下
+        const updated = notesData.map(n => {
+          db.notes.update({ id: n.id }, { top: "1" });
+          return { ...n, top: "1" };
+        });
+        setNotesData([newRoot, ...updated]);
+      } else {
+        setNotesData([newRoot]);
+      }
+      return;
+    }
+
+    const rootId = rootNode.id;
+    creatingRootRef.current = false;
     const posMap = layoutTree(notesData, rootId, 50, 50);
-    console.log("posMap:", posMap);
     const initNodes = notesData.map((n) => ({
       id: n.id,
       type: "custom",
       // NodeSearch 默认用 node.data.label 搜索，这里补上 label 字段
       data: { name: n.name, label: n.name, ...n },
       // position: n.position || { x: Math.random() * 400, y: Math.random() * 400 },
-      position: posMap.get(n.id),
+      position: posMap.get(n.id) || { x: Math.random() * 400, y: Math.random() * 400 },
     }));
 
     const initEdges = [];
@@ -398,6 +423,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   // 右键空白区域
   const onPaneContextMenu = useCallback((e) => {
     e.preventDefault();
+    e.stopPropagation();
     setMenu({
       show: true,
       x: e.clientX,
@@ -411,14 +437,19 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   // 右键节点
   const onNodeContextMenu = useCallback((e, node) => {
     e.preventDefault();
-    console.log("Right-clicked node:", node);
-    setMenu({
-      show: true,
-      x: e.clientX,
-      y: e.clientY,
-      type: "node",
-      nodeId: node.id,
-      title: node.data.name
+    e.stopPropagation();
+    setMenu(prev => {
+      if (prev.show && prev.type === 'node' && prev.nodeId === node.id) {
+        return prev; // 已在显示，不重复触发
+      }
+      return {
+        show: true,
+        x: e.clientX,
+        y: e.clientY,
+        type: "node",
+        nodeId: node.id,
+        title: node.data.name
+      };
     });
   }, []);
 
@@ -497,6 +528,18 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     await window.api.openSystemSettings();
   };
 
+  // ESC 返回时居中选中节点
+  const CenterOnSelected = () => {
+    const { setCenter, getNodes } = useReactFlow();
+    useEffect(() => {
+      if (selectedNode) {
+        const n = getNodes().find(nd => nd.id === selectedNode.id);
+        if (n) setCenter(n.position.x + 80, n.position.y + 20, { zoom: 1, duration: 300 });
+      }
+    }, [selectedNode]);
+    return null;
+  };
+
   return (
     <div
       style={{
@@ -506,6 +549,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       }}
     >
       <ReactFlowProvider>
+        <CenterOnSelected />
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -534,7 +578,8 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
 
               lastClickRef.current = null;
 
-              console.log("Double click");
+              // 双击进入编辑，设置 selectedNode 以便返回时居中
+              setSelectedNode({ id: node.id, name: node.data.name });
               navigate(`/note/${node.id}/${node.data.name}`);
               return;
             }
@@ -543,7 +588,6 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
             lastClickRef.current = node.id;
 
             clickTimerRef.current = setTimeout(() => {
-              console.log("Single click");
               setSelectedNode({
                 id: node.id,
                 name: node.data.name,
@@ -594,6 +638,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           open={!!deleteTarget}
           nodeName={deleteTarget?.name}
           childCount={deleteTarget?.childCount || 0}
+          isRootNode={deleteTarget?.isRoot || false}
           onDeleteEntireTree={() => {
             deleteEntireTree(deleteTarget.id, deleteTarget.name);
             setDeleteTarget(null);

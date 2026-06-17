@@ -7,18 +7,24 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 export function DeleteNodeDialog({
   open,
   onOpenChange,
   nodeName,
   childCount,
+  isRootNode,
   onDeleteEntireTree,
   onDeleteParentOnly,
   onCancel,
 }) {
-  const [selectedOption, setSelectedOption] = useState("parent-only") // 默认选择"仅删除父节点"
+  const [selectedOption, setSelectedOption] = useState(isRootNode ? "entire-tree" : "parent-only")
+
+  // isRootNode 变化时同步默认选项
+  useEffect(() => {
+    setSelectedOption(isRootNode ? "entire-tree" : "parent-only");
+  }, [isRootNode]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -41,13 +47,18 @@ export function DeleteNodeDialog({
               className="mt-1"
             />
             <div>
-              <div className="font-medium">删除整个子树</div>
+              <div className="font-medium">
+                {isRootNode ? '删除所有节点' : '删除整个子树'}
+              </div>
               <div className="text-sm text-muted-foreground">
-                删除 "{nodeName}" 及其所有子节点，此操作不可撤销
+                {isRootNode
+                  ? '删除根节点 "{nodeName}" 及其所有子节点，此操作不可撤销'
+                  : `删除 "${nodeName}" 及其所有子节点，此操作不可撤销`}
               </div>
             </div>
           </label>
 
+          {!isRootNode && (
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="radio"
@@ -64,6 +75,7 @@ export function DeleteNodeDialog({
               </div>
             </div>
           </label>
+          )}
         </div>
 
         <DialogFooter>
