@@ -2,10 +2,20 @@
   "name": "pyramid-notes-root",
   "private": true,
   "version": "1.0.0",
-
   "scripts": {
     "dev": "pnpm -r run dev",
     "build": "pnpm -r run build",
     "start": "pnpm --filter web run start"
+  },
+  "dependencies": {
+    "tmux": "^1.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@tiptap/react": "^3.23.6",
+      "@tiptap/starter-kit": "^3.23.6",
+      "@tiptap/core": "^3.23.6",
+      "tiptap-markdown": "^0.9.0"
+    }
   }
 }

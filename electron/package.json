@@ -1,16 +1,56 @@
 {
-  "name": "electron",
+  "name": "pyramid-notes",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Pyramid Notes - Mind Map Note Taking",
+  "author": "AntVictor",
   "type": "commonjs",
   "main": "main.cjs",
   "build": {
+    "appId": "com.antvictor.pyramid-notes",
+    "productName": "Pyramid Notes",
+    "directories": {
+      "output": "../release"
+    },
+    "files": [
+      "**/*",
+      "../dist/**/*"
+    ],
     "extraResources": [
       {
         "from": "sqlite-plugins",
         "to": "sqlite-plugins"
       }
-    ]
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "scripts": {
     "dev": "electron .",
@@ -19,12 +59,13 @@
   },
   "dependencies": {
     "better-sqlite3": "^8.7.0",
-    "electron": "^28.3.3",
     "gray-matter": "^4.0.3",
     "yaml": "^2.8.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
+    "electron": "^28.3.3",
+    "electron-builder": "^26.15.3",
     "electron-rebuild": "^3.2.9",
     "node-gyp": "^12.3.0"
   }
