@@ -29,6 +29,12 @@ export default function TipTapEditor({ content, onChange, keyBindings }: Props) 
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return;
+    let dom: HTMLElement;
+    try {
+      dom = editor.view.dom;
+    } catch {
+      return; // view not available yet
+    }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       const isMod = event.ctrlKey || event.metaKey;
@@ -57,7 +63,6 @@ export default function TipTapEditor({ content, onChange, keyBindings }: Props) 
       }
     };
 
-    const dom = editor.view.dom;
     dom.addEventListener("keydown", handleKeyDown);
     return () => dom.removeEventListener("keydown", handleKeyDown);
   }, [keyBindings]);
@@ -91,7 +96,7 @@ export default function TipTapEditor({ content, onChange, keyBindings }: Props) 
         }}
         editorProps={{
           attributes: {
-            class: "outline-none min-h-full p-4 prose prose-sm max-w-none",
+            class: "outline-none min-h-full p-4 prose prose-sm max-w-none dark:prose-invert",
           },
         }}
       >

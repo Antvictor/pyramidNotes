@@ -83,3 +83,14 @@ html.dark {
   --syntax-variable: #9cdcfe;
   --syntax-operator: #d4d4d4;
 }
+
+/* ========== ProseMirror Editor Dark Mode ========== */
+html.dark .ProseMirror {
+  caret-color: #fff;
+  color: var(--foreground);
+}
+
+html.dark .ProseMirror ::selection {
+  background: oklch(0.4 0.1 250);
+  color: #fff;
+}
