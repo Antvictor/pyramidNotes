@@ -71,7 +71,7 @@
   --font-weight-h6: 500;
 
   --line-height-heading: 1.25;
-  --line-height-body: 1.7;
+  --line-height-body: 1.5;
 
   --font-color-h1: oklch(0.645 0.246 16.439);
   --font-color-h2: oklch(0.769 0.188 70.08);
@@ -98,7 +98,7 @@
   /* Markdown Spacing */
   --spacing-heading-top: 1.5em;
   --spacing-heading-bottom: 0.5em;
-  --spacing-paragraph: 1em;
+  --spacing-paragraph: 0.5em;
   --spacing-list-item: 0.5em;
   --spacing-code-block: 1em;
   --spacing-blockquote: 0.5em 1em;
