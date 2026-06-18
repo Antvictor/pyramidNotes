@@ -2,6 +2,7 @@
 import { useEffect, useCallback, useRef } from "react";
 import { EditorProvider, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { Code } from "@tiptap/extension-code";
 import { Markdown } from "tiptap-markdown";
 import type { KeyBinding } from "./extensions/commands";
 
@@ -52,6 +53,9 @@ export default function TipTapEditor({ content, onChange, keyBindings }: Props) 
             case "italic":
               editor.chain().focus().toggleItalic().run();
               return;
+            case "code":
+              editor.chain().focus().toggleCode().run();
+              return;
             case "heading1":
               editor.chain().focus().toggleHeading({ level: 1 }).run();
               return;
@@ -72,20 +76,18 @@ export default function TipTapEditor({ content, onChange, keyBindings }: Props) 
     tightLists: true,
     tightListClass: "tight",
     bulletListMarker: "-",
-    orderedListMarker: ".",
-    emDelimiter: "*",
-    strongDelimiter: "**",
-    codeDelimiter: "`",
     linkify: false,
     breaks: false,
     transformPastedText: true,
     transformCopiedText: false,
   });
 
+  const starterKit = StarterKit.configure({ code: false });
+
   return (
     <div style={{ height: "100%", width: "100%", overflowY: "auto", overflowX: "hidden" }}>
       <EditorProvider
-        extensions={[StarterKit, markdownExtension]}
+        extensions={[starterKit, Code, markdownExtension]}
         onUpdate={handleUpdate}
         onCreate={({ editor }) => {
           editorRef.current = editor;

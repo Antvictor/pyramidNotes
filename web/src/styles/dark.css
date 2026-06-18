@@ -42,12 +42,12 @@ html.dark {
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
 
-  --font-color-h1: oklch(0.645 0.246 16.439);
-  --font-color-h2: oklch(0.769 0.188 70.08);
-  --font-color-h3: oklch(0.696 0.17 162.48);
-  --font-color-h4: oklch(0.627 0.265 303.9);
-  --font-color-h5: oklch(0.627 0.265 303.9);
-  --font-color-h6: oklch(0.627 0.265 303.9);
+  --font-color-h1: oklch(0.75 0.20 16.439);
+  --font-color-h2: oklch(0.83 0.15 70.08);
+  --font-color-h3: oklch(0.78 0.14 162.48);
+  --font-color-h4: oklch(0.72 0.22 303.9);
+  --font-color-h5: oklch(0.72 0.22 303.9);
+  --font-color-h6: oklch(0.72 0.22 303.9);
 
   /* Sidebar */
   --sidebar: oklch(0.205 0 0);

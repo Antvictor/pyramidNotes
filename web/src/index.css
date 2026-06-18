@@ -199,3 +199,42 @@ button:focus-visible {
     @apply bg-background text-foreground;
   }
 }
+
+/* Inline Code */
+.prose code:not(pre code) {
+  background: var(--color-code-bg);
+  color: var(--color-code-text);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-family: var(--font-family-mono, 'Fira Code', 'Consolas', monospace);
+  font-size: 0.9em;
+  border: 1px solid var(--color-code-border);
+}
+
+/* Code Blocks */
+.prose pre {
+  background: var(--color-code-bg);
+  border: 1px solid var(--color-code-border);
+  border-radius: var(--radius);
+  padding: var(--spacing-code-block);
+  margin: 1em 0;
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+.prose pre code {
+  background: transparent;
+  color: var(--color-text);
+  padding: 0;
+  border: none;
+  font-family: var(--font-family-mono, 'Fira Code', 'Consolas', monospace);
+  font-size: 0.875em;
+}
+
+/* Heading Colors — keeps Tailwind Typography styles, only adds color */
+.prose h1 { color: var(--font-color-h1); }
+.prose h2 { color: var(--font-color-h2); }
+.prose h3 { color: var(--font-color-h3); }
+.prose h4 { color: var(--font-color-h4); }
+.prose h5 { color: var(--font-color-h5); }
+.prose h6 { color: var(--font-color-h6); }
