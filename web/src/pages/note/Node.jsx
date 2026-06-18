@@ -70,7 +70,8 @@ const Note = ({ shortcuts }) => {
       <div>loading...</div> :
       <div style={{
         width: "90vw",
-        height: "94vh", }}>
+        height: "94vh",
+        overflow: "hidden" }}>
         <TipTapEditor content={value} onChange={saveFile} keyBindings={keyBindings} />
       </div>
 

@@ -83,7 +83,7 @@ export default function TipTapEditor({ content, onChange, keyBindings }: Props) 
   });
 
   return (
-    <div style={{ height: "100%", width: "100%" }}>
+    <div style={{ height: "100%", width: "100%", overflowY: "auto", overflowX: "hidden" }}>
       <EditorProvider
         extensions={[StarterKit, markdownExtension]}
         onUpdate={handleUpdate}
