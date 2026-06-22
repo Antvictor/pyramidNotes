@@ -18,13 +18,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
           cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install
 
       - name: Sync version from tag
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         run: |
           TAG_VERSION="${{ github.ref_name }}"
           VERSION="${TAG_VERSION#v}"
@@ -34,6 +35,12 @@ jobs:
         run: pnpm --filter web exec vite build
 
       - name: Build macOS
+        env:
+          npm_config_target: 28.3.3
+          npm_config_arch: x64
+          npm_config_target_arch: x64
+          npm_config_disturl: https://electronjs.org/headers
+          npm_config_runtime: electron
         run: cd electron && npx electron-builder --mac
 
       - uses: actions/upload-artifact@v4
@@ -45,6 +52,8 @@ jobs:
 
   build-win:
     runs-on: windows-latest
+    env:
+      npm_config_msvs_version: 2022
     steps:
       - uses: actions/checkout@v4
 
@@ -54,13 +63,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
           cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install
 
       - name: Sync version from tag
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         run: |
           $TAG_VERSION = "${{ github.ref_name }}"
           $VERSION = $TAG_VERSION -replace '^v', ''
@@ -70,6 +80,12 @@ jobs:
         run: pnpm --filter web exec vite build
 
       - name: Build Windows
+        env:
+          npm_config_target: 28.3.3
+          npm_config_arch: x64
+          npm_config_target_arch: x64
+          npm_config_disturl: https://electronjs.org/headers
+          npm_config_runtime: electron
         run: cd electron; npx electron-builder --win
 
       - uses: actions/upload-artifact@v4
@@ -94,6 +110,7 @@ jobs:
           path: release
 
       - name: Get tag annotation
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         run: |
           TAG="${{ github.ref_name }}"
           git tag -l --format='%(contents)' "$TAG" > /tmp/release-body.md
