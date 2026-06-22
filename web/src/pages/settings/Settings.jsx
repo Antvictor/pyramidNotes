@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Folder, HelpCircle, ChevronDown, Keyboard } from "lucide-react";
 import ShortcutsModal from "./ShortcutsModal";
+import HelpModal from "./HelpModal";
 
 const Settings = ({ shortcuts }) => {
   const [settings, setSettings] = useState({
@@ -12,6 +13,7 @@ const Settings = ({ shortcuts }) => {
   const [version, setVersion] = useState("");
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
+  const [helpModalOpen, setHelpModalOpen] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -257,12 +259,7 @@ const Settings = ({ shortcuts }) => {
           <div style={rowStyle}>
             <span style={labelStyle}>Help</span>
             <button
-              onClick={() =>
-                window.open(
-                  "https://github.com/Antvictor/pyramidNotes",
-                  "_blank",
-                )
-              }
+              onClick={() => setHelpModalOpen(true)}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -374,6 +371,10 @@ const Settings = ({ shortcuts }) => {
         <ShortcutsModal
           open={shortcutsModalOpen}
           onOpenChange={setShortcutsModalOpen}
+        />
+        <HelpModal
+          open={helpModalOpen}
+          onOpenChange={setHelpModalOpen}
         />
       </div>
     </div>
