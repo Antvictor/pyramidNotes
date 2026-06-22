@@ -139,6 +139,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const [title, setTitle] = useState();
   const [searchOpen, setSearchOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [moveSource, setMoveSource] = useState(null);
   const [permissionError, setPermissionError] = useState(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -268,6 +269,43 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   // Request edit node - unified entry point
   const requestEditNode = (nodeId, nodeName) => {
     _internalUpdateNode(nodeId, nodeName);
+  };
+
+  // Request move node - opens search dialog
+  const requestMoveNode = (nodeId, nodeName) => {
+    setMoveSource({ id: nodeId, name: nodeName });
+  };
+
+  // Check if nodeId is a descendant of ancestorId (prevent cycles)
+  const isDescendantOf = async (nodeId, ancestorId) => {
+    let current = nodeId;
+    const visited = new Set();
+    while (current && current !== "0") {
+      if (visited.has(current)) break;
+      visited.add(current);
+      const rows = await db.notes.select({ id: current });
+      if (!rows.length) break;
+      if (rows[0].top === ancestorId) return true;
+      current = rows[0].top;
+    }
+    return false;
+  };
+
+  // Execute node move
+  const executeMoveNode = async (targetId) => {
+    if (!moveSource) return;
+    if (moveSource.id === targetId) return;
+    if (await isDescendantOf(targetId, moveSource.id)) return;
+    const sourceNode = (await db.notes.select({ id: moveSource.id }))[0];
+    if (!sourceNode || sourceNode.top === targetId) return;
+
+    await db.notes.update({ id: moveSource.id }, { top: targetId });
+    await window.api.updateYaml(`${moveSource.id}-${moveSource.name}.md`, { top: targetId });
+
+    const res = await db.notes.select();
+    setNotesData(res);
+    setSelectedNode({ id: moveSource.id, name: moveSource.name });
+    setMoveSource(null);
   };
 
   const confirmDelete = useCallback(() => {
@@ -448,7 +486,8 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
         y: e.clientY,
         type: "node",
         nodeId: node.id,
-        title: node.data.name
+        title: node.data.name,
+        isRoot: node.data.top === "0"
       };
     });
   }, []);
@@ -613,12 +652,22 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
             }
           }}
         />
+        {moveSource && (
+          <NodeSearchDialog
+            open={!!moveSource}
+            onOpenChange={(open) => {
+              if (!open) setMoveSource(null);
+            }}
+            onSelectNode={(node) => executeMoveNode(node.id)}
+          />
+        )}
         <ContextMenu
           menu={menu}
           onClose={closeMenu}
           requestCreateNode={requestCreateNode}
           requestEditNode={requestEditNode}
           requestDeleteNode={requestDeleteNode}
+          onRequestMoveNode={requestMoveNode}
         />
         <OpenPrompt
           visible={visible}

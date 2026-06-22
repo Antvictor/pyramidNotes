@@ -2,7 +2,7 @@
 import React from "react";
 import "./style.css";
 
-const ContextMenu = ({ menu, onClose, requestCreateNode, requestEditNode, requestDeleteNode }) => {
+const ContextMenu = ({ menu, onClose, requestCreateNode, requestEditNode, requestDeleteNode, onRequestMoveNode }) => {
   if (!menu.show) return null;
 
   return (
@@ -29,6 +29,11 @@ const ContextMenu = ({ menu, onClose, requestCreateNode, requestEditNode, reques
             <div className="menu-item" data-menu-item="edit" onClick={() => { requestEditNode(menu.nodeId, menu.title); onClose(); }}>
               ✏️ 修改节点
             </div>
+            {!menu.isRoot && (
+              <div className="menu-item" data-menu-item="move" onClick={() => { onRequestMoveNode(menu.nodeId, menu.title); onClose(); }}>
+                📦 移动节点
+              </div>
+            )}
             <div className="menu-item" data-menu-item="delete" onClick={() => { requestDeleteNode(menu.nodeId, menu.title); onClose(); }}>
               🗑 删除节点
             </div>
