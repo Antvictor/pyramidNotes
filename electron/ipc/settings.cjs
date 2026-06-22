@@ -18,6 +18,11 @@ function registerSettingsIPC() {
 
     const result = await saveSettings(mergedSettings);
 
+    // Notify all windows about the change
+    BrowserWindow.getAllWindows().forEach(win => {
+      win.webContents.send('settings-changed', mergedSettings);
+    });
+
     // If storagePath changed, close old DB, re-init at new path, and re-scan
     if (result && storagePathChanged) {
       try {
@@ -29,11 +34,6 @@ function registerSettingsIPC() {
       } catch (err) {
         console.error('Failed to reload database:', err);
       }
-
-      // Notify all windows about the change
-      BrowserWindow.getAllWindows().forEach(win => {
-        win.webContents.send('settings-changed', mergedSettings);
-      });
     }
 
     return result;
