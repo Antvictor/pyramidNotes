@@ -61,13 +61,12 @@ jobs:
           node-version: '20.20.2'
           cache: 'pnpm'
 
-      - name: Configure VS for native modules
-        run: npm config set msvs_version 2022
-
       - name: Install dependencies (skip native build)
         run: pnpm install --ignore-scripts
 
       - name: Rebuild native modules for Electron
+        env:
+          npm_config_msvs_version: 2022
         run: npx electron-rebuild -f -w better-sqlite3 -v 28.3.3
 
       - name: Sync version from tag
