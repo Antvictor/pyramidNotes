@@ -1,0 +1,111 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Sync version from tag
+        run: |
+          TAG_VERSION="${{ github.ref_name }}"
+          VERSION="${TAG_VERSION#v}"
+          cd electron && npm version "$VERSION" --no-git-tag-version
+
+      - name: Build frontend
+        run: pnpm --filter web exec vite build
+
+      - name: Build macOS
+        run: cd electron && npx electron-builder --mac
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-builds
+          path: |
+            release/*.dmg
+            release/*-mac.zip
+
+  build-win:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Sync version from tag
+        run: |
+          $TAG_VERSION = "${{ github.ref_name }}"
+          $VERSION = $TAG_VERSION -replace '^v', ''
+          cd electron; npm version $VERSION --no-git-tag-version
+
+      - name: Build frontend
+        run: pnpm --filter web exec vite build
+
+      - name: Build Windows
+        run: cd electron; npx electron-builder --win
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: win-builds
+          path: |
+            release/*.exe
+            release/*-win.zip
+
+  create-release:
+    needs: [build-mac, build-win]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+
+      - name: Get tag annotation
+        run: |
+          TAG="${{ github.ref_name }}"
+          git tag -l --format='%(contents)' "$TAG" > /tmp/release-body.md
+          if [ ! -s /tmp/release-body.md ]; then
+            echo "（无更新说明）" > /tmp/release-body.md
+          fi
+          echo "---" >> /tmp/release-body.md
+          cat /tmp/release-body.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/**/*
+          body_path: /tmp/release-body.md
+          generate_release_notes: true
+          append_body: true
