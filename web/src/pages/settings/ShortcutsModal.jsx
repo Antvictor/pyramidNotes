@@ -91,6 +91,9 @@ export default function ShortcutsModal({ open, onOpenChange }) {
     e.preventDefault();
     e.stopPropagation();
 
+    // Skip modifier-only key presses
+    if (e.key === "Control" || e.key === "Meta" || e.key === "Alt" || e.key === "Shift") return;
+
     if (e.key === "Enter") {
       setEditingKey(null);
     } else if (e.key === "Escape") {
@@ -108,7 +111,7 @@ export default function ShortcutsModal({ open, onOpenChange }) {
         e.key === "Enter" ? "Enter" :
         e.key === "Delete" ? "Delete" :
         e.key === "Backspace" ? "Backspace" :
-        e.key.startsWith("F") && e.key.length <= 3 ? e.key :
+        /^F\d+$/.test(e.key) ? e.key :
         e.key.toUpperCase();
 
       parts.push(keyName);

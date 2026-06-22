@@ -13,19 +13,20 @@ function matchShortcut(e, shortcutStr) {
   const modifiers = parts.slice(0, -1);
   const key = parts[parts.length - 1];
 
-  // For modifiers not explicitly specified, require them NOT to be pressed
+  const needsCtrl = modifiers.includes('Ctrl');
+  const needsShift = modifiers.includes('Shift');
+  const needsAlt = modifiers.includes('Alt');
   const modStateMatch =
-    (modifiers.includes('Ctrl') || !isMod) &&
-    (modifiers.includes('Shift') || !isShift) &&
-    (modifiers.includes('Alt') || !isAlt);
+    (needsCtrl === isMod) &&
+    (needsShift === isShift) &&
+    (needsAlt === isAlt);
 
-  // Check key match
   const keyMatch =
     key === 'Escape' ? e.key === 'Escape' :
     key === 'Delete' ? e.key === 'Delete' :
     key === 'Enter' ? e.key === 'Enter' :
     key === 'Backspace' ? e.key === 'Backspace' :
-    key.startsWith('F') ? e.key === key :
+    /^F\d+$/.test(key) ? e.key === key :
     e.key.toLowerCase() === key.toLowerCase();
 
   return keyMatch && modStateMatch;

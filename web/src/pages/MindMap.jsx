@@ -116,15 +116,17 @@ function matchKey(shortcutStr, e) {
   const parts = shortcutStr.split('+');
   const modifiers = parts.slice(0, -1);
   const key = parts[parts.length - 1];
+  const needsCtrl = modifiers.includes('Ctrl');
+  const needsShift = modifiers.includes('Shift');
   const modStateMatch =
-    (modifiers.includes('Ctrl') || !isMod) &&
-    (modifiers.includes('Shift') || !isShift);
+    (needsCtrl === isMod) &&
+    (needsShift === isShift);
   const keyMatch =
     key === 'Escape' ? e.key === 'Escape' :
     key === 'Delete' ? e.key === 'Delete' :
     key === 'Enter' ? e.key === 'Enter' :
     key === 'Backspace' ? e.key === 'Backspace' :
-    key.startsWith('F') ? e.key === key :
+    /^F\d+$/.test(key) ? e.key === key :
     e.key.toLowerCase() === key.toLowerCase();
   return keyMatch && modStateMatch;
 }
