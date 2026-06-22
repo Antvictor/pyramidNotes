@@ -154,6 +154,12 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     const handler = (e) => {
       if (!shortcuts) return;
       if (visible) return;
+      // Ctrl+K - 搜索 (no selection required)
+      if (matchKey(shortcuts.global?.search, e)) {
+        e.preventDefault();
+        setSearchOpen(true);
+        return;
+      }
       // Ctrl+N - 新建节点 (no guard needed - works without selection)
       if (matchKey(shortcuts.node?.newNode, e)) {
         e.preventDefault();

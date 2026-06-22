@@ -188,8 +188,9 @@ export default function ShortcutsModal({ open, onOpenChange }) {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList style={{ width: "100%", marginBottom: 16 }}>
-            <TabsTrigger value="node" style={{ flex: 1 }}>节点快捷键</TabsTrigger>
-            <TabsTrigger value="note" style={{ flex: 1 }}>笔记快捷键</TabsTrigger>
+            <TabsTrigger value="node" style={{ flex: 1 }}>节点</TabsTrigger>
+            <TabsTrigger value="note" style={{ flex: 1 }}>笔记</TabsTrigger>
+            <TabsTrigger value="global" style={{ flex: 1 }}>全局</TabsTrigger>
           </TabsList>
 
           <TabsContent value="node">
@@ -210,6 +211,11 @@ export default function ShortcutsModal({ open, onOpenChange }) {
                   {renderShortcutValue("node", key, value)}
                 </div>
               ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="global">
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {Object.entries(shortcuts.global).map(([key, value]) => (
                 <div
                   key={key}
