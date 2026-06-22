@@ -118,6 +118,7 @@ jobs:
           echo "$NOTES"
           echo ""
           ls -R release/
+          gh release delete "$TAG" --cleanup-tag -y 2>/dev/null || true
           gh release create "$TAG" \
             release/**/* \
             --title "$TAG" \
