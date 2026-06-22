@@ -503,12 +503,12 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   }
   const insertNode = useCallback(
     (parent, name) => {
-      // const reactFlowBounds = event.currentTarget.getBoundingClientRect();
       setVisible(false);
+      const safeName = name.replace(/\//g, '-');
       const id = nanoid(12);
       const newNodeDb = {
         id: `${id}`,
-        name: `${name}`,
+        name: safeName,
         content: "",
         alias: "",
         top: `${parent}`,
@@ -538,19 +538,19 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const editNode = useCallback(
     async (id, name, orginName) => {
       console.log("editNode id:", id, "name:", name, "orginName:", orginName);
-      // const reactFlowBounds = event.currentTarget.getBoundingClientRect();
       setVisible(false);
-      db.notes.update({ id: id }, { name: name });
-      setNotesData(nds => nds.map(n => n.id === id ? { ...n, name: name } : n));
+      const safeName = name.replace(/\//g, '-');
+      db.notes.update({ id: id }, { name: safeName });
+      setNotesData(nds => nds.map(n => n.id === id ? { ...n, name: safeName } : n));
       // 修改文件名称
-      const renameResult = await window.api.renameFile(`${id}-${orginName}.md`, `${id}-${name}.md`);
+      const renameResult = await window.api.renameFile(`${id}-${orginName}.md`, `${id}-${safeName}.md`);
       if (handleFileError(renameResult)) return;
 
-      const yamlResult = await window.api.updateYaml(`${id}-${name}.md`, { title: name });
+      const yamlResult = await window.api.updateYaml(`${id}-${safeName}.md`, { title: safeName });
       if (handleFileError(yamlResult)) return;
 
       // Sync selectedNode with updated name
-      setSelectedNode({ id, name });
+      setSelectedNode({ id, name: safeName });
     },
     [setNotesData, setSelectedNode]
   );
