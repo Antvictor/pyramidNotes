@@ -106,19 +106,19 @@ jobs:
         with:
           path: release
 
-      - name: Get tag annotation
+      - name: Create Release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${{ github.ref_name }}"
-          git tag -l --format='%(contents)' "$TAG" > /tmp/release-body.md
-          if [ ! -s /tmp/release-body.md ]; then
-            echo "（无更新说明）" > /tmp/release-body.md
+          NOTES=$(git tag -l --format='%(contents)' "$TAG" 2>/dev/null || true)
+          if [ -z "$NOTES" ]; then
+            NOTES="（无更新说明）"
           fi
-          cat /tmp/release-body.md
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: release/**/*
-          body_path: /tmp/release-body.md
-          generate_release_notes: true
-          append_body: true
+          echo "$NOTES"
+          echo ""
+          ls -R release/
+          gh release create "$TAG" \
+            release/**/* \
+            --title "$TAG" \
+            --notes "$NOTES"
