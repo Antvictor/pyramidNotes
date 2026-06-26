@@ -13,7 +13,7 @@ git tag -a v1.0.0 -m "新功能：移动节点
 git push origin v1.0.0
 ```
 
-推送后 GitHub Actions 自动：macOS 构建 → Windows 构建 → 创建 Release（含你的更新说明 + 自动生成的 commit 列表）。
+推送 tag 后 GitHub Actions 自动执行：macOS 构建 -> Windows 构建 -> 校验 Release 资产 -> 生成 `release-metadata.json` -> 创建 GitHub Release。
 
 ## 本地开发
 
@@ -43,9 +43,23 @@ cd electron && npx electron-builder --mac
 | `Pyramid Notes-1.0.0-arm64.dmg` | macOS Apple Silicon 安装包 |
 | `Pyramid Notes-1.0.0-mac.zip` | macOS Intel 便携版 |
 | `Pyramid Notes-1.0.0-arm64-mac.zip` | macOS ARM 便携版 |
-| `Pyramid Notes Setup 1.0.0.exe` | Windows 安装程序 (x64 + x32) |
-| `Pyramid Notes-1.0.0-win.zip` | Windows x64 便携版 |
-| `Pyramid Notes-1.0.0-ia32-win.zip` | Windows x32 便携版 |
+| `Pyramid Notes Setup 1.0.0.exe` | Windows 安装程序，当前同时覆盖 x64 与 ia32 |
+| `Pyramid Notes-1.0.0-win.zip` | Windows 便携版 (x64) |
+| `Pyramid Notes-1.0.0-ia32-win.zip` | Windows 便携版 (ia32) |
+
+## 下载契约
+
+- macOS x64 默认下载：`Pyramid Notes-1.0.0.dmg`
+- macOS arm64 默认下载：`Pyramid Notes-1.0.0-arm64.dmg`
+- Windows x64 默认下载：`Pyramid Notes Setup 1.0.0.exe`
+- Windows ia32 默认下载：`Pyramid Notes Setup 1.0.0.exe`
+- `zip` 文件继续发布，但作为便携版二级资产，不是默认推荐下载
+
+GitHub Release 发布前会校验：
+
+- 四个支持目标都能映射到主下载资产
+- 文件名符合约定，不存在歧义
+- 会生成 `release/release-metadata.json` 供后续下载站点消费
 
 ## 版本号
 
