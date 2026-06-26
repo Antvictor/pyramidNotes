@@ -55,6 +55,32 @@ test('classifyAsset recognizes macOS and Windows artifacts', () => {
   assert.equal(classifyAsset('unexpected-file.zip'), null)
 })
 
+test('classifyAsset recognizes prerelease file names', () => {
+  assert.deepEqual(
+    classifyAsset('Pyramid Notes-1.0.0-alpha.dmg'),
+    {
+      id: 'macos-x64-dmg',
+      fileName: 'Pyramid Notes-1.0.0-alpha.dmg',
+      version: '1.0.0-alpha',
+      kind: 'installer',
+      targets: [TARGETS.macosX64],
+      sharedKey: null,
+    },
+  )
+
+  assert.deepEqual(
+    classifyAsset('Pyramid Notes Setup 1.0.0-alpha.exe'),
+    {
+      id: 'windows-shared-installer',
+      fileName: 'Pyramid Notes Setup 1.0.0-alpha.exe',
+      version: '1.0.0-alpha',
+      kind: 'installer',
+      targets: [TARGETS.windowsX64, TARGETS.windowsIa32],
+      sharedKey: 'windows-shared-installer',
+    },
+  )
+})
+
 test('choosePrimaryAsset prefers the installer for a target', () => {
   const installer = {
     fileName: 'Pyramid Notes-1.0.0.dmg',

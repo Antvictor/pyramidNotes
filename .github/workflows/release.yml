@@ -32,7 +32,12 @@ jobs:
         run: |
           TAG_VERSION="${{ github.ref_name }}"
           VERSION="${TAG_VERSION#v}"
-          cd electron && npm version "$VERSION" --no-git-tag-version
+          CURRENT_VERSION=$(node -p "require('./electron/package.json').version")
+          if [ "$CURRENT_VERSION" = "$VERSION" ]; then
+            echo "electron/package.json already uses version $VERSION"
+          else
+            cd electron && npm version "$VERSION" --no-git-tag-version
+          fi
 
       - name: Build frontend
         run: pnpm --filter web exec vite build
@@ -74,7 +79,12 @@ jobs:
         run: |
           $TAG_VERSION = "${{ github.ref_name }}"
           $VERSION = $TAG_VERSION -replace '^v', ''
-          cd electron; npm version $VERSION --no-git-tag-version
+          $CURRENT_VERSION = node -p "require('./electron/package.json').version"
+          if ($CURRENT_VERSION -eq $VERSION) {
+            Write-Host "electron/package.json already uses version $VERSION"
+          } else {
+            cd electron; npm version $VERSION --no-git-tag-version
+          }
 
       - name: Build frontend
         run: pnpm --filter web exec vite build

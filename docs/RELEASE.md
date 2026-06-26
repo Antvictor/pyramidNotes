@@ -13,7 +13,7 @@
 修改 `electron/package.json` 中的 `version` 字段：
 
 ```json
-"version": "1.0.0"
+"version": "1.0.0-alpha"
 ```
 
 ### 2. 打包
@@ -38,8 +38,8 @@
 git checkout main
 git merge <你的开发分支>
 git push origin main
-git tag -a v1.0.0 -m "更新说明"
-git push origin v1.0.0
+git tag -a v1.0.0-alpha -m "更新说明"
+git push origin v1.0.0-alpha
 ```
 
 ### 4. 由 workflow 自动创建 GitHub Release
@@ -56,10 +56,14 @@ git push origin v1.0.0
 
 ### 5. Prerelease 规则
 
-- `v1.0.0` -> stable release
+当前阶段默认继续发布 prerelease，不使用 stable tag。
+
+- `v1.0.0-alpha` -> prerelease
 - `v1.0.0-alpha.1` -> prerelease
 - `v1.0.0-beta.2` -> prerelease
 - `v1.0.0-rc.1` -> prerelease
+
+只有在准备正式公开时才使用不带后缀的 stable tag，例如 `v1.0.0`。
 
 workflow 和 `release-metadata.json` 都按同一规则设置 `prerelease`。
 
@@ -76,12 +80,12 @@ workflow 和 `release-metadata.json` 都按同一规则设置 `prerelease`。
 
 | 平台 | 文件 | 说明 |
 |------|------|------|
-| macOS Intel | Pyramid Notes-1.0.0.dmg | 拖拽安装 |
-| macOS Intel | Pyramid Notes-1.0.0-mac.zip | 解压即用 |
-| macOS Apple Silicon | Pyramid Notes-1.0.0-arm64.dmg | 拖拽安装 |
-| macOS Apple Silicon | Pyramid Notes-1.0.0-arm64-mac.zip | 解压即用 |
-| Windows x64 | Pyramid Notes Setup 1.0.0.exe | 默认安装程序 |
-| Windows ia32 | Pyramid Notes Setup 1.0.0.exe | 默认安装程序 |
-| Windows x64 | Pyramid Notes-1.0.0-win.zip | 解压即用 |
-| Windows ia32 | Pyramid Notes-1.0.0-ia32-win.zip | 解压即用 |
+| macOS Intel | Pyramid Notes-1.0.0-alpha.dmg | 拖拽安装 |
+| macOS Intel | Pyramid Notes-1.0.0-alpha-mac.zip | 解压即用 |
+| macOS Apple Silicon | Pyramid Notes-1.0.0-alpha-arm64.dmg | 拖拽安装 |
+| macOS Apple Silicon | Pyramid Notes-1.0.0-alpha-arm64-mac.zip | 解压即用 |
+| Windows x64 | Pyramid Notes Setup 1.0.0-alpha.exe | 默认安装程序 |
+| Windows ia32 | Pyramid Notes Setup 1.0.0-alpha.exe | 默认安装程序 |
+| Windows x64 | Pyramid Notes-1.0.0-alpha-win.zip | 解压即用 |
+| Windows ia32 | Pyramid Notes-1.0.0-alpha-ia32-win.zip | 解压即用 |
 ```
