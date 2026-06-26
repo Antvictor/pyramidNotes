@@ -69,6 +69,18 @@ test('classifyAsset recognizes prerelease file names', () => {
   )
 
   assert.deepEqual(
+    classifyAsset('Pyramid Notes-1.0.0-alpha-arm64.dmg'),
+    {
+      id: 'macos-arm64-dmg',
+      fileName: 'Pyramid Notes-1.0.0-alpha-arm64.dmg',
+      version: '1.0.0-alpha',
+      kind: 'installer',
+      targets: [TARGETS.macosArm64],
+      sharedKey: null,
+    },
+  )
+
+  assert.deepEqual(
     classifyAsset('Pyramid Notes Setup 1.0.0-alpha.exe'),
     {
       id: 'windows-shared-installer',
@@ -77,6 +89,18 @@ test('classifyAsset recognizes prerelease file names', () => {
       kind: 'installer',
       targets: [TARGETS.windowsX64, TARGETS.windowsIa32],
       sharedKey: 'windows-shared-installer',
+    },
+  )
+
+  assert.deepEqual(
+    classifyAsset('Pyramid Notes-1.0.0-alpha-ia32-win.zip'),
+    {
+      id: 'windows-ia32-zip',
+      fileName: 'Pyramid Notes-1.0.0-alpha-ia32-win.zip',
+      version: '1.0.0-alpha',
+      kind: 'archive',
+      targets: [TARGETS.windowsIa32],
+      sharedKey: null,
     },
   )
 })

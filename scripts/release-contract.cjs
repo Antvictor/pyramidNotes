@@ -21,21 +21,15 @@ const VERSION_PATTERN = '\\d+\\.\\d+\\.\\d+(?:-(?:alpha|beta|rc)[0-9A-Za-z.-]*)?
 
 const FILE_PATTERNS = [
   {
-    name: 'macos-x64-dmg',
-    regex: new RegExp(`^Pyramid Notes-(${VERSION_PATTERN})\\.dmg$`),
-    kind: 'installer',
-    targets: [TARGETS.macosX64],
-  },
-  {
     name: 'macos-arm64-dmg',
     regex: new RegExp(`^Pyramid Notes-(${VERSION_PATTERN})-arm64\\.dmg$`),
     kind: 'installer',
     targets: [TARGETS.macosArm64],
   },
   {
-    name: 'macos-x64-zip',
-    regex: new RegExp(`^Pyramid Notes-(${VERSION_PATTERN})-mac\\.zip$`),
-    kind: 'archive',
+    name: 'macos-x64-dmg',
+    regex: new RegExp(`^Pyramid Notes-(${VERSION_PATTERN})\\.dmg$`),
+    kind: 'installer',
     targets: [TARGETS.macosX64],
   },
   {
@@ -45,6 +39,12 @@ const FILE_PATTERNS = [
     targets: [TARGETS.macosArm64],
   },
   {
+    name: 'macos-x64-zip',
+    regex: new RegExp(`^Pyramid Notes-(${VERSION_PATTERN})-mac\\.zip$`),
+    kind: 'archive',
+    targets: [TARGETS.macosX64],
+  },
+  {
     name: 'windows-shared-installer',
     regex: new RegExp(`^Pyramid Notes Setup (${VERSION_PATTERN})\\.exe$`),
     kind: 'installer',
@@ -52,16 +52,16 @@ const FILE_PATTERNS = [
     sharedKey: SHARED_WINDOWS_INSTALLER,
   },
   {
-    name: 'windows-x64-zip',
-    regex: new RegExp(`^Pyramid Notes-(${VERSION_PATTERN})-win\\.zip$`),
-    kind: 'archive',
-    targets: [TARGETS.windowsX64],
-  },
-  {
     name: 'windows-ia32-zip',
     regex: new RegExp(`^Pyramid Notes-(${VERSION_PATTERN})-ia32-win\\.zip$`),
     kind: 'archive',
     targets: [TARGETS.windowsIa32],
+  },
+  {
+    name: 'windows-x64-zip',
+    regex: new RegExp(`^Pyramid Notes-(${VERSION_PATTERN})-win\\.zip$`),
+    kind: 'archive',
+    targets: [TARGETS.windowsX64],
   },
 ]
 
