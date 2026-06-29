@@ -20,48 +20,6 @@ export const targetLabels = {
   },
 }
 
-const englishFeatures = [
-  {
-    title: 'Keep the structure visible',
-    body: 'Knowledge stays in a tree, so parent-child relationships remain clear instead of gradually turning into a flat pile of unrelated notes.',
-  },
-  {
-    title: 'Let nodes hold the actual notes',
-    body: 'Open a node and you get a full Markdown document with headings, lists, and code blocks. The tree handles structure; the node holds the body text.',
-  },
-  {
-    title: 'Browse, search, then reshape',
-    body: 'Browse by tree, search by node name or full text, then move an entire subtree without breaking the surrounding structure.',
-  },
-]
-
-const englishUseCases = [
-  'Course notes that need chapter structure and long-form writing',
-  'Research topics that branch into sub-questions and references',
-  'Technical knowledge bases that need both browsing and full-text lookup',
-]
-
-const chineseFeatures = [
-  {
-    title: '先把结构立住',
-    body: '知识先按树状结构组织，主题之间的上下级关系会一直保留，不容易写着写着又变成一堆彼此孤立的笔记。',
-  },
-  {
-    title: '节点承载正文数据',
-    body: '树负责结构，节点打开后是一篇完整 Markdown。标题、列表、代码块和正文内容，都放在节点对应的文档里。',
-  },
-  {
-    title: '浏览、搜索、调整放在一起',
-    body: '可以按树浏览，也可以搜节点名和正文，再把整棵子树移动到更合适的位置，不用在几个工具之间来回切换。',
-  },
-]
-
-const chineseUseCases = [
-  '需要长期维护章节层级的课程笔记',
-  '会持续分叉主题的研究资料整理',
-  '既要按结构浏览又要按正文搜索的技术知识库',
-]
-
 const rootMedia = {
   zh: {
     title: '中文界面',
@@ -78,83 +36,165 @@ const rootMedia = {
 const localeMedia = {
   en: {
     hero: {
-      label: 'Note screenshot',
-      title: 'The tree handles navigation, while full Markdown expands the note itself',
-      caption: 'This is the actual Pyramid Notes interface. The note body is shown in the editor, while the tree remains visible as the structure.',
+      label: 'Product interface',
+      title: 'The tree stays visible while the note body opens as full Markdown',
+      caption: 'The interface keeps structure on one side and long-form note writing on the other, so you do not lose context while expanding a topic.',
       src: 'assets/product-media/en/en-editor-open-note-desktop.png',
       alt: 'Pyramid Notes editor screenshot',
     },
-    gallery: [
+    demoSteps: [
       {
-        title: 'Tree stays readable',
-        body: 'Use the hierarchy to keep a domain visible instead of navigating through deep nested folders.',
+        eyebrow: '01',
+        title: 'See the topic map before it becomes a note pile',
+        body: 'The tree is not a side feature. It is the main frame for browsing chapters, subtopics, and how a knowledge area is expanding over time.',
+        mediaLabel: 'Tree overview',
+        mediaType: 'image',
         src: 'assets/product-media/en/en-tree-overview-desktop.png',
         alt: 'English tree overview screenshot',
+        zoom: { scale: 1.35, origin: '50% 50%' },
       },
       {
-        title: 'Node search and full-text search',
-        body: 'Jump to a node by name or search across Markdown content when the tree grows large.',
+        eyebrow: '02',
+        title: 'Jump by node name or full-text search',
+        body: 'When the hierarchy grows large, search brings you back to the exact node or paragraph you need without breaking the overall structure-first workflow.',
+        mediaLabel: 'Search view',
+        mediaType: 'image',
         src: 'assets/product-media/en/en-search-fulltext-desktop.png',
         alt: 'English full-text search screenshot',
+        zoom: { scale: 1.35, origin: '50% 50%' },
       },
       {
-        title: 'Restructure freely',
-        body: 'Move nodes and subtrees while keeping the surrounding topic map intact.',
+        eyebrow: '03',
+        title: 'Reshape branches instead of rewriting the system',
+        body: 'Move nodes and subtrees into better positions as the material evolves. The surrounding topic map stays intact, so reorganizing is part of the normal workflow.',
+        mediaLabel: 'Node operations',
+        mediaType: 'image',
         src: 'assets/product-media/en/en-node-operations-desktop.png',
         alt: 'English node operations screenshot',
+        zoom: { scale: 1.35, origin: '35% 55%' },
+      },
+      {
+        eyebrow: '04',
+        title: 'Write inside a node instead of leaving the structure behind',
+        body: 'Each node opens as a real Markdown document with headings, lists, and longer note bodies, so the tree remains a system rather than just a folder shell.',
+        mediaLabel: 'Editor view',
+        mediaType: 'image',
+        src: 'assets/product-media/en/en-editor-open-note-desktop.png',
+        alt: 'English editor screenshot',
+        zoom: { scale: 1.35, origin: '0% 0%' },
       },
     ],
     workflow: {
-      title: 'What the workflow actually looks like',
-      body: 'Open a node from the tree, write in Markdown, go back to the hierarchy, then search when needed. The clip below was captured from the actual desktop app.',
+      title: 'What the actual workflow looks like',
+      body: 'Open a node from the tree, write in Markdown, return to the structure, then search when needed. This clip is captured from the real desktop app and sits between feature understanding and scenario fit.',
       videoLabel: 'Workflow clip',
-      imageLabel: 'Static key frame',
-      videoSrc: 'assets/product-media/en/en-workflow-open-edit-search.webm',
-      posterSrc: 'assets/product-media/en/en-editor-open-note-desktop.png',
-      videoAlt: 'English workflow demo clip',
-      imageAlt: 'English workflow key frame',
+      imageLabel: 'Key frame',
+      gifSrc: 'assets/product-media/en/en-workflow-open-edit-search.gif',
+      gifAlt: 'English workflow demo clip',
     },
   },
   zh: {
     hero: {
-      label: '正文截图',
-      title: '树状结构负责定位，完整 Markdown 负责展开正文',
-      caption: '这里展示的是实际 Pyramid Notes 界面。树保持结构可见，正文在编辑区里展开。',
+      label: '产品界面',
+      title: '树状结构保持可见，节点正文在旁边完整展开',
+      caption: '界面把结构和正文放在同一个工作区里：一侧保持知识层级，一侧展开 Markdown 正文，写内容时不会丢掉上下文。',
       src: 'assets/product-media/zh/zh-editor-open-note-desktop.png',
-      alt: 'Pyramid Notes 树状界面截图',
+      alt: 'Pyramid Notes 编辑器截图',
     },
-    gallery: [
+    demoSteps: [
       {
-        title: '结构始终可见',
-        body: '当主题不断扩展时，树状结构仍然能帮助你看见章节、子主题和上下文关系。',
+        eyebrow: '01',
+        title: '先看见整张知识地图，再决定写到哪里',
+        body: '树状结构不是附属导航，而是知识体系本身。章节、分支、子主题都能一直看见，不容易慢慢写成一堆互相脱节的笔记。',
+        mediaLabel: '树视图',
+        mediaType: 'image',
         src: 'assets/product-media/zh/zh-tree-overview-desktop.png',
         alt: '中文树视图截图',
+        zoom: { scale: 1.35, origin: '50% 50%' },
       },
       {
-        title: '节点搜索、全文搜索',
-        body: '树适合浏览，搜索适合回到具体内容。节点搜索和全文搜索都放在同一个工作流里。',
+        eyebrow: '02',
+        title: '节点搜索和全文搜索放在同一个工作流里',
+        body: '当树越来越大时，可以先按节点名定位，也可以直接按正文内容搜索，再回到原来的结构继续整理，不用切换到另一套工具。',
+        mediaLabel: '搜索视图',
+        mediaType: 'image',
         src: 'assets/product-media/zh/zh-search-fulltext-desktop.png',
         alt: '中文全文搜索截图',
+        zoom: { scale: 1.35, origin: '50% 50%' },
       },
       {
-        title: '随意调整结构',
-        body: '移动节点时会连同整棵子树一起移动，更适合长期整理课程、研究或技术资料。',
+        eyebrow: '03',
+        title: '需要重构时，移动整棵子树而不是推倒重来',
+        body: '随着内容增长，主题边界会变化。你可以直接移动节点和分支，把材料调整到更合适的位置，而不是重新搭一套目录。',
+        mediaLabel: '结构调整',
+        mediaType: 'image',
         src: 'assets/product-media/zh/zh-node-operations-desktop.png',
         alt: '中文节点操作截图',
+        zoom: { scale: 1.35, origin: '35% 55%' },
+      },
+      {
+        eyebrow: '04',
+        title: '进入节点后，正文就是完整 Markdown',
+        body: '节点不是一句标题，而是一篇真正可以持续写下去的正文。标题、列表、代码块和长段内容都可以自然放进同一个节点里。',
+        mediaLabel: '正文编辑',
+        mediaType: 'image',
+        src: 'assets/product-media/zh/zh-editor-open-note-desktop.png',
+        alt: '中文编辑器截图',
+        zoom: { scale: 1.35, origin: '0% 0%' },
       },
     ],
     workflow: {
-      title: '先看结构，再写正文，再回到结构',
-      body: '真实使用时，通常就是先从树里进入节点，写 Markdown，再回到层级继续整理，需要时再用搜索定位内容。',
+      title: '真实整理流程是什么样子',
+      body: '通常会先从树里进入节点，再写 Markdown，然后回到结构继续整理，最后在需要时用搜索快速定位。这段视频展示的是实际桌面应用里的完整片段。',
       videoLabel: '流程短片',
-      imageLabel: '静态关键帧',
-      videoSrc: 'assets/product-media/zh/zh-workflow-open-edit-search.webm',
-      posterSrc: 'assets/product-media/zh/zh-editor-open-note-desktop.png',
-      videoAlt: '中文工作流演示视频',
-      imageAlt: '中文工作流关键帧',
+      imageLabel: '关键帧',
+      gifSrc: 'assets/product-media/zh/zh-workflow-open-edit-search.gif',
+      gifAlt: '中文工作流演示动画',
     },
   },
 }
+
+const englishScenarioSteps = [
+  {
+    kicker: 'Scenario 01',
+    title: 'Course notes that need a durable chapter structure',
+    body: 'Use it when lecture notes cannot stay flat. Chapters, subtopics, exercises, and references all benefit from being kept in a visible hierarchy while each node still carries long-form Markdown.',
+    accent: 'Structured study notes',
+  },
+  {
+    kicker: 'Scenario 02',
+    title: 'Research topics that branch into questions and references',
+    body: 'A research thread rarely grows in one line. New questions, supporting evidence, and side branches can split naturally into subtrees without losing the relationship back to the main theme.',
+    accent: 'Branching research maps',
+  },
+  {
+    kicker: 'Scenario 03',
+    title: 'Technical knowledge bases that need browsing and retrieval',
+    body: 'If you need both a stable topic map and fast text lookup, Pyramid Notes fits better than a folder pile or a giant single document. You can browse first, search second, and still keep the same system.',
+    accent: 'Searchable knowledge systems',
+  },
+]
+
+const chineseScenarioSteps = [
+  {
+    kicker: '场景 01',
+    title: '需要长期维护章节层级的课程笔记',
+    body: '如果你的学习资料不是零散摘录，而是有章节、有分支、有习题和参考材料的体系化内容，这种“树负责结构、节点负责正文”的形式会更稳。',
+    accent: '结构化学习笔记',
+  },
+  {
+    kicker: '场景 02',
+    title: '会持续分叉问题和材料的研究整理',
+    body: '研究资料往往不会沿着单线生长。问题、子问题、线索、参考文献都会不断分叉，树状结构更适合把这些关系一起保留下来。',
+    accent: '分叉式研究地图',
+  },
+  {
+    kicker: '场景 03',
+    title: '既要按结构浏览又要按正文检索的技术知识库',
+    body: '如果你既需要一张稳定的主题地图，又需要快速按正文找回内容，它会比文件夹堆积或单篇超长文档更合适。',
+    accent: '可搜索的知识系统',
+  },
+]
 
 export const siteContent = {
   root: {
@@ -204,14 +244,11 @@ export const siteContent = {
     manualPrimary: 'Primary installer',
     manualSecondary: 'Secondary asset',
     unavailableLabel: 'unavailable',
-    mediaGalleryTitle: 'See the actual interface',
-    featuresTitle: 'What the tool is optimized for',
-    features: englishFeatures,
-    useCasesTitle: 'Where it fits best',
-    useCases: englishUseCases,
-    workflowTitle: 'A workflow built around structure first',
-    workflowBody:
-      'The tree is responsible for structure, and each node is responsible for the note body. That split makes it easier to keep a knowledge system coherent instead of slowly accumulating notes that no longer relate clearly to one another.',
+    demoSectionTitle: 'Product walkthrough',
+    demoSectionIntro: 'See how Pyramid Notes handles structure, search, editing, and reorganization in the actual desktop interface.',
+    workflowSectionTitle: 'Workflow demo',
+    scenarioSectionTitle: 'Best-fit scenarios',
+    scenarioSectionIntro: 'Pyramid Notes is not trying to replace every note app. It fits best when your material needs a visible structure and long-form writing at the same time.',
     requirementsTitle: 'System requirements',
     requirements: [
       'macOS Intel or Apple Silicon',
@@ -226,6 +263,8 @@ export const siteContent = {
       'The first launch is Alpha software: expect rough edges and keep backups of important material.',
     ],
     media: localeMedia.en,
+    demoSteps: localeMedia.en.demoSteps,
+    scenarioSteps: englishScenarioSteps,
   },
   zh: {
     languageCode: 'zh',
@@ -250,14 +289,11 @@ export const siteContent = {
     manualPrimary: '默认安装包',
     manualSecondary: '二级下载项',
     unavailableLabel: '暂不可用',
-    mediaGalleryTitle: '先看真实界面，再决定是否下载',
-    featuresTitle: '它更适合解决什么问题',
-    features: chineseFeatures,
-    useCasesTitle: '更适合这些场景',
-    useCases: chineseUseCases,
-    workflowTitle: '围绕真实知识整理流程来设计',
-    workflowBody:
-      '这里把结构和正文分开处理：树负责知识体系的层级关系，节点负责承载正文内容。这样整理出来的，不只是很多条笔记，而是一个可以一直维护下去的知识系统。',
+    demoSectionTitle: '功能演示',
+    demoSectionIntro: '从真实界面里看结构、搜索、编辑和调整分支这几个核心环节是怎样连接在一起的。',
+    workflowSectionTitle: '流程演示',
+    scenarioSectionTitle: '适用场景',
+    scenarioSectionIntro: '它不是所有笔记工具的替代品，而是更适合那些既要结构清晰、又要承载长正文内容的整理场景。',
     requirementsTitle: '系统要求',
     requirements: [
       'macOS Intel 或 Apple Silicon',
@@ -272,5 +308,7 @@ export const siteContent = {
       '当前仍是 Alpha 软件，建议先用演示数据或备份后的笔记目录体验。',
     ],
     media: localeMedia.zh,
+    demoSteps: localeMedia.zh.demoSteps,
+    scenarioSteps: chineseScenarioSteps,
   },
 }
