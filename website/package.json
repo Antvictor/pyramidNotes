@@ -1,0 +1,12 @@
+{
+  "name": "website",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/serve-site.mjs . 4173",
+    "build": "node scripts/build-site.mjs",
+    "preview": "node scripts/serve-site.mjs dist 4174",
+    "test": "node --test src/lib/*.test.js"
+  }
+}

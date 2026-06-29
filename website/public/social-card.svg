@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="Pyramid Notes social card">
+  <defs>
+    <linearGradient id="bg" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#f7fafc" />
+      <stop offset="100%" stop-color="#e8eff5" />
+    </linearGradient>
+    <linearGradient id="panel" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f3f8fb" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <circle cx="108" cy="96" r="84" fill="rgba(20,119,213,0.12)" />
+  <circle cx="1010" cy="112" r="112" fill="rgba(18,128,92,0.1)" />
+  <rect x="90" y="120" width="430" height="370" rx="28" fill="url(#panel)" stroke="rgba(20,32,43,0.08)" />
+  <rect x="560" y="92" width="550" height="430" rx="30" fill="url(#panel)" stroke="rgba(20,32,43,0.08)" />
+  <rect x="96" y="126" width="88" height="88" rx="24" fill="#1477d5" />
+  <text x="119" y="183" fill="#ffffff" font-family="Segoe UI, sans-serif" font-size="48" font-weight="700">PN</text>
+  <text x="96" y="260" fill="#15202b" font-family="Segoe UI, sans-serif" font-size="64" font-weight="700">Pyramid Notes</text>
+  <text x="96" y="315" fill="#5f7284" font-family="Segoe UI, sans-serif" font-size="28">
+    Local-first tree notes with one Markdown document per node.
+  </text>
+  <text x="96" y="372" fill="#1477d5" font-family="Segoe UI, sans-serif" font-size="24" font-weight="600">
+    Bilingual download • macOS • Windows • Alpha
+  </text>
+  <rect x="610" y="144" width="170" height="330" rx="20" fill="#10253c" />
+  <text x="640" y="186" fill="rgba(255,255,255,0.6)" font-family="Segoe UI, sans-serif" font-size="18">TREE VIEW</text>
+  <rect x="634" y="212" width="118" height="42" rx="14" fill="rgba(255,255,255,0.09)" />
+  <rect x="634" y="268" width="118" height="42" rx="14" fill="rgba(20,119,213,0.42)" />
+  <rect x="634" y="324" width="118" height="42" rx="14" fill="rgba(255,255,255,0.09)" />
+  <rect x="634" y="380" width="118" height="42" rx="14" fill="rgba(255,255,255,0.09)" />
+  <rect x="808" y="144" width="250" height="330" rx="22" fill="#ffffff" />
+  <rect x="832" y="170" width="34" height="34" rx="10" fill="rgba(20,119,213,0.12)" />
+  <rect x="876" y="170" width="34" height="34" rx="10" fill="rgba(20,119,213,0.12)" />
+  <rect x="920" y="170" width="34" height="34" rx="10" fill="rgba(20,119,213,0.12)" />
+  <text x="832" y="252" fill="#15202b" font-family="Segoe UI, sans-serif" font-size="34" font-weight="700">Consensus Algorithms</text>
+  <text x="832" y="300" fill="#5f7284" font-family="Segoe UI, sans-serif" font-size="22">
+    Keep long-running notes visible in a structured tree.
+  </text>
+  <text x="832" y="338" fill="#5f7284" font-family="Segoe UI, sans-serif" font-size="22">
+    Edit each node as a full Markdown document.
+  </text>
+  <text x="832" y="376" fill="#5f7284" font-family="Segoe UI, sans-serif" font-size="22">
+    Search locally across the whole note graph.
+  </text>
+</svg>
