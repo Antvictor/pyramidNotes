@@ -54,10 +54,29 @@ function resolveMediaPath(relativePath) {
   return joinBasePath(basePath, relativePath)
 }
 
+function renderStoryMedia(media, eager = false) {
+  if (media.mediaType === 'video') {
+    return `
+      <video
+        autoplay
+        muted
+        loop
+        playsinline
+        controls
+        poster="${resolveMediaPath(media.posterSrc)}"
+      >
+        <source src="${resolveMediaPath(media.src)}" type="video/webm" />
+      </video>
+    `
+  }
+
+  return `<img src="${resolveMediaPath(media.src)}" alt="${escapeHtml(media.alt)}" loading="${eager ? 'eager' : 'lazy'}" />`
+}
+
 function renderHeroMedia(content) {
   const hero = content.media.hero
   return `
-    <div class="hero-visual">
+    <section class="hero-visual hero-panel">
       <div class="preview-heading">
         <h3>${hero.label}</h3>
         <span class="preview-badge">Actual product media</span>
@@ -69,91 +88,105 @@ function renderHeroMedia(content) {
         <strong>${hero.title}</strong>
         <p>${hero.caption}</p>
       </div>
+    </section>
+  `
+}
+
+function renderSectionLead(title, intro) {
+  return `
+    <div class="section-lead">
+      <h3 class="section-title">${title}</h3>
+      <p class="section-intro">${intro}</p>
     </div>
   `
 }
 
-function renderFeatureCards(content) {
+function renderDemoPreview(step) {
   return `
-    <section class="section-stack feature-section">
-      <h3 class="section-title">${content.featuresTitle}</h3>
-      <div class="section-grid">
-        ${content.features.map((feature) => `
-          <article class="feature-card">
-            <h3>${feature.title}</h3>
-            <p>${feature.body}</p>
-          </article>
-        `).join('')}
+    <article class="demo-preview-card" data-demo-slide>
+      <div class="demo-slide-copy">
+        <div class="story-step-meta">
+          <span class="step-index">${step.eyebrow}</span>
+          <span class="step-label">${step.mediaLabel}</span>
+        </div>
+        <h4>${step.title}</h4>
+        <p>${step.body}</p>
+      </div>
+      <div class="demo-slide-media">
+        <figure class="media-frame demo-preview-frame">
+          ${renderStoryMedia(step, true)}
+        </figure>
+      </div>
+    </article>
+  `
+}
+
+function renderDemoStory(content) {
+  const firstStep = content.demoSteps[0]
+
+  return `
+    <section
+      class="section-stack story-section demo-story"
+      data-demo-story
+      data-demo-count="${content.demoSteps.length}"
+    >
+      ${renderSectionLead(content.demoSectionTitle, content.demoSectionIntro)}
+      <div class="demo-story-track" data-demo-track>
+        <div class="demo-stage" data-demo-stage>
+          <div class="demo-stage-sticky">
+            <div class="demo-stage-viewport" data-demo-preview>
+              ${renderDemoPreview(firstStep)}
+            </div>
+            <div class="demo-stage-dots">
+              ${content.demoSteps.map((step, index) => `
+                <button
+                  type="button"
+                  class="demo-dot${index === 0 ? ' is-active' : ''}"
+                  data-demo-dot
+                  data-step-index="${index}"
+                  aria-label="${escapeHtml(step.title)}"
+                ></button>
+              `).join('')}
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   `
 }
 
-function renderUseCases(content) {
-  return `
-    <section class="section-stack use-case-section">
-      <h3 class="section-title">${content.useCasesTitle}</h3>
-      <div class="use-case-row">
-        ${content.useCases.map((item) => `
-          <article class="use-case-chip">
-            <p>${item}</p>
-          </article>
-        `).join('')}
-      </div>
-    </section>
-  `
-}
-
-function renderExampleStrip(content) {
+function renderWorkflowSection(content) {
   const workflow = content.media.workflow
 
   return `
-    <section class="section-stack example-section">
-      <div class="example-card workflow-card">
-        <div class="example-copy">
-          <h3>${content.workflowTitle}</h3>
-          <p>${content.workflowBody}</p>
-          <div class="workflow-labels">
-            <span class="example-node">${workflow.videoLabel}</span>
-            <span class="example-node">${workflow.imageLabel}</span>
+    <section class="section-stack workflow-section">
+      ${renderSectionLead(content.workflowSectionTitle, workflow.body)}
+      <div class="workflow-stage">
+        <div class="workflow-video-panel">
+          <div class="preview-heading">
+            <h3>${workflow.videoLabel}</h3>
+            <span class="preview-badge">${content.alphaBadge}</span>
           </div>
-        </div>
-        <div class="workflow-media-stack">
-          <div class="example-document workflow-video-card">
-            <video
-              autoplay
-              muted
-              loop
-              playsinline
-              controls
-              poster="${resolveMediaPath(workflow.posterSrc)}"
-            >
-              <source src="${resolveMediaPath(workflow.videoSrc)}" type="video/webm" />
-            </video>
-          </div>
-          <div class="example-document workflow-image-card">
-            <img src="${resolveMediaPath(workflow.posterSrc)}" alt="${escapeHtml(workflow.imageAlt)}" loading="lazy" />
-          </div>
+          <figure class="media-frame workflow-media-frame">
+            <img src="${resolveMediaPath(workflow.gifSrc)}" alt="${escapeHtml(workflow.gifAlt)}" loading="lazy" />
+          </figure>
         </div>
       </div>
     </section>
   `
 }
 
-function renderMediaGallery(content) {
+function renderScenarioStory(content) {
   return `
-    <section class="section-stack media-gallery-section">
-      <h3 class="section-title">${content.mediaGalleryTitle}</h3>
-      <div class="media-gallery-grid">
-        ${content.media.gallery.map((item) => `
-          <article class="media-card">
-            <figure class="media-frame">
-              <img src="${resolveMediaPath(item.src)}" alt="${escapeHtml(item.alt)}" loading="lazy" />
-            </figure>
-            <div class="media-card-copy">
-              <h3>${item.title}</h3>
-              <p>${item.body}</p>
-            </div>
+    <section class="section-stack story-section scenario-story" data-scenario-story>
+      ${renderSectionLead(content.scenarioSectionTitle, content.scenarioSectionIntro)}
+      <div class="scenario-stack">
+        ${content.scenarioSteps.map((step, index) => `
+          <article class="scenario-card" data-scenario-step data-step-index="${index}">
+            <div class="scenario-kicker">${step.kicker}</div>
+            <h4>${step.title}</h4>
+            <p>${step.body}</p>
+            <div class="scenario-accent">${step.accent}</div>
           </article>
         `).join('')}
       </div>
@@ -194,7 +227,7 @@ function renderLocalizedPage(locale, pageKey = locale) {
     <div class="site-shell">
       ${renderTopbar(pageKey === 'root' ? locale : pageKey)}
       <section class="hero">
-        <article class="hero-copy">
+        <article class="hero-copy hero-panel">
           <div class="eyebrow">${content.alphaBadge}</div>
           <h2>${content.headline}</h2>
           <p class="section-intro">${content.intro}</p>
@@ -206,14 +239,13 @@ function renderLocalizedPage(locale, pageKey = locale) {
             <span id="version-pill" class="version-pill">${content.versionPrefix}: --</span>
           </div>
         </article>
-        ${renderHeroMedia(content)}
+        <!-- ${renderHeroMedia(content)} -->
       </section>
       <section class="content-layout">
         <div class="content-main">
-          ${renderMediaGallery(content)}
-          ${renderFeatureCards(content)}
-          ${renderUseCases(content)}
-          ${renderExampleStrip(content)}
+          ${renderDemoStory(content)}
+          ${renderWorkflowSection(content)}
+          ${renderScenarioStory(content)}
           <section class="section-stack sidebar-section">
             <div class="downloads-layout">
               <article class="download-card recommended">
@@ -237,8 +269,207 @@ function renderLocalizedPage(locale, pageKey = locale) {
     </div>
   `
 
+  initializeStorytelling()
   hydrateReleaseState(locale)
 }
+
+function preloadDemoMedia(steps) {
+  for (const step of steps.slice(1)) {
+    if (step.mediaType === 'video') {
+      const poster = new Image()
+      poster.src = resolveMediaPath(step.posterSrc)
+      continue
+    }
+
+    const image = new Image()
+    image.src = resolveMediaPath(step.src)
+  }
+}
+
+function setDemoPreview(previewNode, step) {
+  previewNode.innerHTML = renderDemoPreview(step)
+}
+
+function findActiveIndex(nodes, thresholdRatio = 0.35) {
+  const threshold = window.innerHeight * thresholdRatio
+  let activeIndex = 0
+
+  nodes.forEach((node, index) => {
+    const rect = node.getBoundingClientRect()
+    if (rect.top <= threshold) {
+      activeIndex = index
+    }
+  })
+
+  return activeIndex
+}
+
+function initializeDemoStory() {
+  const section = document.querySelector('[data-demo-story]')
+  if (!section) {
+    return
+  }
+
+  const locale = siteContent[document.documentElement.lang.startsWith('zh') ? 'zh' : 'en']
+  const steps = locale.demoSteps
+  const trackNode = section.querySelector('[data-demo-track]')
+  const previewNode = section.querySelector('[data-demo-preview]')
+  const dotNodes = [...section.querySelectorAll('[data-demo-dot]')]
+  const totalSteps = steps.length
+  let activeIndex = -1
+  let ticking = false
+
+  section.style.setProperty('--demo-steps', String(totalSteps))
+  preloadDemoMedia(steps)
+
+  const resolveActiveIndex = () => {
+    if (!trackNode || totalSteps <= 1) {
+      return 0
+    }
+
+    const rect = trackNode.getBoundingClientRect()
+    const viewportHeight = window.innerHeight
+    const scrollableDistance = Math.max(rect.height - viewportHeight, 1)
+    const progress = Math.min(Math.max(-rect.top / scrollableDistance, 0), 1)
+
+    return Math.min(totalSteps - 1, Math.round(progress * (totalSteps - 1)))
+  }
+
+  const update = () => {
+    ticking = false
+    const nextIndex = resolveActiveIndex()
+
+    if (nextIndex === activeIndex) {
+      return
+    }
+
+    activeIndex = nextIndex
+    dotNodes.forEach((node, index) => {
+      const isActive = index === activeIndex
+      node.classList.toggle('is-active', isActive)
+      node.setAttribute('aria-current', isActive ? 'true' : 'false')
+    })
+    setDemoPreview(previewNode, steps[activeIndex])
+  }
+
+  const requestUpdate = () => {
+    if (ticking) {
+      return
+    }
+
+    ticking = true
+    window.requestAnimationFrame(update)
+  }
+
+  section.classList.add('is-enhanced')
+  dotNodes.forEach((node) => {
+    node.addEventListener('click', () => {
+      const index = Number(node.dataset.stepIndex || '0')
+      if (!trackNode || totalSteps <= 1) {
+        return
+      }
+
+      const viewportHeight = window.innerHeight
+      const trackRect = trackNode.getBoundingClientRect()
+      const trackTop = window.scrollY + trackRect.top
+      const scrollableDistance = Math.max(trackNode.offsetHeight - viewportHeight, 0)
+      const progress = index / (totalSteps - 1)
+      const targetY = trackTop + scrollableDistance * progress
+
+      window.scrollTo({
+        top: targetY,
+        behavior: 'smooth',
+      })
+    })
+  })
+  requestUpdate()
+  window.addEventListener('scroll', requestUpdate, { passive: true })
+  window.addEventListener('resize', requestUpdate)
+}
+
+function initializeScenarioStory() {
+  const section = document.querySelector('[data-scenario-story]')
+  if (!section) {
+    return
+  }
+
+  const stepNodes = [...section.querySelectorAll('[data-scenario-step]')]
+  let ticking = false
+
+  const update = () => {
+    ticking = false
+    const activeIndex = findActiveIndex(stepNodes, 0.45)
+
+    stepNodes.forEach((node, index) => {
+      const depth = Math.abs(index - activeIndex)
+      node.dataset.active = index === activeIndex ? 'true' : 'false'
+      node.dataset.depth = String(Math.min(depth, 3))
+      node.dataset.position = index < activeIndex ? 'before' : index > activeIndex ? 'after' : 'current'
+    })
+  }
+
+  const requestUpdate = () => {
+    if (ticking) {
+      return
+    }
+
+    ticking = true
+    window.requestAnimationFrame(update)
+  }
+
+  section.classList.add('is-enhanced')
+  requestUpdate()
+  window.addEventListener('scroll', requestUpdate, { passive: true })
+  window.addEventListener('resize', requestUpdate)
+}
+
+function initializeImageZoom() {
+  const lightbox = document.createElement('div')
+  lightbox.className = 'image-lightbox'
+  lightbox.innerHTML = `
+    <div class="image-lightbox-content">
+      <button class="image-lightbox-close" aria-label="Close zoom">&times;</button>
+      <img src="" alt="" />
+    </div>
+  `
+  document.body.appendChild(lightbox)
+
+  const img = lightbox.querySelector('img')
+  const closeBtn = lightbox.querySelector('.image-lightbox-close')
+
+  function open(src, alt) {
+    img.src = src
+    img.alt = alt
+    lightbox.classList.add('is-open')
+  }
+
+  function close() {
+    lightbox.classList.remove('is-open')
+    img.src = ''
+  }
+
+  closeBtn.addEventListener('click', close)
+  lightbox.addEventListener('click', (e) => {
+    if (e.target === lightbox) close()
+  })
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && lightbox.classList.contains('is-open')) close()
+  })
+
+  document.addEventListener('dblclick', (e) => {
+    const target = e.target.closest('.media-frame img')
+    if (!target) return
+    open(target.src, target.alt || '')
+  })
+}
+
+function initializeStorytelling() {
+  document.documentElement.classList.add('js-ready')
+  initializeDemoStory()
+  initializeScenarioStory()
+}
+
+initializeImageZoom()
 
 function resolvePreferredLocale() {
   return navigator.language && navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en'
@@ -284,6 +515,7 @@ function renderManualTargets(locale, metadata, recommendedTarget) {
       : entry.kind === 'installer'
         ? content.manualPrimary
         : content.manualSecondary
+
     return `
       <div class="download-target">
         <div>
