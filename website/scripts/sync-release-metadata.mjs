@@ -1,20 +1,18 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const publicDir = path.resolve(__dirname, '../public')
-const outputPath = path.join(publicDir, 'release-metadata.json')
-const require = createRequire(import.meta.url)
-const {
+import {
   buildReleaseMetadata,
   classifyAsset,
   groupAssetsByTarget,
   isPrereleaseTag,
   validateAssetsByTarget,
   validateMetadata,
-} = require('../../scripts/release-contract.cjs')
+} from './release-contract.mjs'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const publicDir = path.resolve(__dirname, '../public')
+const outputPath = path.join(publicDir, 'release-metadata.json')
 const repository = process.env.GITHUB_REPOSITORY || 'Antvictor/pyramidNotes'
 const preferPrerelease = process.env.SITE_RELEASE_CHANNEL !== 'stable'
 const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN
