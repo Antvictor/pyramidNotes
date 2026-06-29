@@ -18,18 +18,16 @@ function registerSettingsIPC() {
     const storagePathChanged = newSettings.storagePath && newSettings.storagePath !== oldStoragePath;
 
     const result = await saveSettings(mergedSettings);
+    if (!result) {
+      return result;
+    }
 
-    // Notify all windows about the change
-    BrowserWindow.getAllWindows().forEach(win => {
-      win.webContents.send('settings-changed', mergedSettings);
-    });
-
-    if (result && newSettings.language !== undefined) {
+    if (newSettings.language !== undefined) {
       applyApplicationMenu(mergedSettings.language);
     }
 
     // If storagePath changed, close old DB, re-init at new path, and re-scan
-    if (result && storagePathChanged) {
+    if (storagePathChanged) {
       try {
         console.log('Storage path changed from', oldStoragePath, 'to', mergedSettings.storagePath);
         closeDatabase();
@@ -38,8 +36,14 @@ function registerSettingsIPC() {
         console.log('Database reloaded for new storage path');
       } catch (err) {
         console.error('Failed to reload database:', err);
+        return false;
       }
     }
+
+    // Notify renderer only after settings side-effects are ready.
+    BrowserWindow.getAllWindows().forEach(win => {
+      win.webContents.send('settings-changed', mergedSettings);
+    });
 
     return result;
   });

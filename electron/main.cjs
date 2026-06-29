@@ -7,6 +7,7 @@ const { initializeDatabase, closeDatabase } = require('./db/db.cjs')
 const { initNode } = require('./nodes/initNode')
 const { loadSettings, getCachedSettings } = require('./common/settings.cjs')
 const { registerSettingsIPC } = require('./ipc/settings.cjs')
+const { registerCaptureIPC } = require('./ipc/capture.cjs')
 const { applyApplicationMenu } = require('./common/locale.cjs')
 
 if (process.env.PYRAMID_CAPTURE_REMOTE_DEBUG_PORT) {
@@ -29,6 +30,7 @@ app.whenReady().then(async () => {
     registerPathIPC();
     registerFileIPC();
     registerSettingsIPC();
+    registerCaptureIPC();
 
     // Handler to reload database when storagePath changes
     ipcMain.handle('reloadDatabase', async (event, newStoragePath) => {
