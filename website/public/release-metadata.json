@@ -1,0 +1,84 @@
+{
+  "tag": "v1.0.0-alpha",
+  "name": "v1.0.0-alpha",
+  "prerelease": true,
+  "publishedAt": "2026-06-26T04:26:47Z",
+  "targets": {
+    "macos-x64": {
+      "fileName": "Pyramid.Notes-1.0.0-alpha.dmg",
+      "url": "https://github.com/Antvictor/pyramidNotes/releases/download/v1.0.0-alpha/Pyramid.Notes-1.0.0-alpha.dmg",
+      "kind": "installer",
+      "assets": [
+        {
+          "fileName": "Pyramid.Notes-1.0.0-alpha-mac.zip",
+          "url": "https://github.com/Antvictor/pyramidNotes/releases/download/v1.0.0-alpha/Pyramid.Notes-1.0.0-alpha-mac.zip",
+          "kind": "archive",
+          "primary": false
+        },
+        {
+          "fileName": "Pyramid.Notes-1.0.0-alpha.dmg",
+          "url": "https://github.com/Antvictor/pyramidNotes/releases/download/v1.0.0-alpha/Pyramid.Notes-1.0.0-alpha.dmg",
+          "kind": "installer",
+          "primary": true
+        }
+      ]
+    },
+    "macos-arm64": {
+      "fileName": "Pyramid.Notes-1.0.0-alpha-arm64.dmg",
+      "url": "https://github.com/Antvictor/pyramidNotes/releases/download/v1.0.0-alpha/Pyramid.Notes-1.0.0-alpha-arm64.dmg",
+      "kind": "installer",
+      "assets": [
+        {
+          "fileName": "Pyramid.Notes-1.0.0-alpha-arm64-mac.zip",
+          "url": "https://github.com/Antvictor/pyramidNotes/releases/download/v1.0.0-alpha/Pyramid.Notes-1.0.0-alpha-arm64-mac.zip",
+          "kind": "archive",
+          "primary": false
+        },
+        {
+          "fileName": "Pyramid.Notes-1.0.0-alpha-arm64.dmg",
+          "url": "https://github.com/Antvictor/pyramidNotes/releases/download/v1.0.0-alpha/Pyramid.Notes-1.0.0-alpha-arm64.dmg",
+          "kind": "installer",
+          "primary": true
+        }
+      ]
+    },
+    "windows-x64": {
+      "fileName": "Pyramid.Notes.Setup.1.0.0-alpha.exe",
+      "url": "https://github.com/Antvictor/pyramidNotes/releases/download/v1.0.0-alpha/Pyramid.Notes.Setup.1.0.0-alpha.exe",
+      "kind": "installer",
+      "assets": [
+        {
+          "fileName": "Pyramid.Notes-1.0.0-alpha-win.zip",
+          "url": "https://github.com/Antvictor/pyramidNotes/releases/download/v1.0.0-alpha/Pyramid.Notes-1.0.0-alpha-win.zip",
+          "kind": "archive",
+          "primary": false
+        },
+        {
+          "fileName": "Pyramid.Notes.Setup.1.0.0-alpha.exe",
+          "url": "https://github.com/Antvictor/pyramidNotes/releases/download/v1.0.0-alpha/Pyramid.Notes.Setup.1.0.0-alpha.exe",
+          "kind": "installer",
+          "primary": true
+        }
+      ]
+    },
+    "windows-ia32": {
+      "fileName": "Pyramid.Notes.Setup.1.0.0-alpha.exe",
+      "url": "https://github.com/Antvictor/pyramidNotes/releases/download/v1.0.0-alpha/Pyramid.Notes.Setup.1.0.0-alpha.exe",
+      "kind": "installer",
+      "assets": [
+        {
+          "fileName": "Pyramid.Notes-1.0.0-alpha-ia32-win.zip",
+          "url": "https://github.com/Antvictor/pyramidNotes/releases/download/v1.0.0-alpha/Pyramid.Notes-1.0.0-alpha-ia32-win.zip",
+          "kind": "archive",
+          "primary": false
+        },
+        {
+          "fileName": "Pyramid.Notes.Setup.1.0.0-alpha.exe",
+          "url": "https://github.com/Antvictor/pyramidNotes/releases/download/v1.0.0-alpha/Pyramid.Notes.Setup.1.0.0-alpha.exe",
+          "kind": "installer",
+          "primary": true
+        }
+      ]
+    }
+  }
+}
