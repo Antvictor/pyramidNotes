@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
+import { useTranslation } from "react-i18next"
 
 export function DeleteNodeDialog({
   open,
@@ -19,6 +20,7 @@ export function DeleteNodeDialog({
   onDeleteParentOnly,
   onCancel,
 }) {
+  const { t } = useTranslation()
   const [selectedOption, setSelectedOption] = useState(isRootNode ? "entire-tree" : "parent-only")
 
   // isRootNode 变化时同步默认选项
@@ -30,9 +32,9 @@ export function DeleteNodeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton={false}>
         <DialogHeader>
-          <DialogTitle>确认删除节点</DialogTitle>
+          <DialogTitle>{t("dialogs.deleteNode.title")}</DialogTitle>
           <DialogDescription>
-            节点 "{nodeName}" 包含 {childCount} 个子节点，请选择删除方式：
+            {t("dialogs.deleteNode.description", { nodeName, count: childCount })}
           </DialogDescription>
         </DialogHeader>
 
@@ -48,12 +50,12 @@ export function DeleteNodeDialog({
             />
             <div>
               <div className="font-medium">
-                {isRootNode ? '删除所有节点' : '删除整个子树'}
+                {isRootNode ? t("dialogs.deleteNode.deleteAll") : t("dialogs.deleteNode.deleteSubtree")}
               </div>
               <div className="text-sm text-muted-foreground">
                 {isRootNode
-                  ? '删除根节点 "{nodeName}" 及其所有子节点，此操作不可撤销'
-                  : `删除 "${nodeName}" 及其所有子节点，此操作不可撤销`}
+                  ? t("dialogs.deleteNode.deleteRootDescription", { nodeName })
+                  : t("dialogs.deleteNode.deleteSubtreeDescription", { nodeName })}
               </div>
             </div>
           </label>
@@ -69,9 +71,9 @@ export function DeleteNodeDialog({
               className="mt-1"
             />
             <div>
-              <div className="font-medium">仅删除 "{nodeName}"</div>
+              <div className="font-medium">{t("dialogs.deleteNode.deleteParentOnly", { nodeName })}</div>
               <div className="text-sm text-muted-foreground">
-                子节点将提升到上一级
+                {t("dialogs.deleteNode.promoteChildren")}
               </div>
             </div>
           </label>
@@ -80,7 +82,7 @@ export function DeleteNodeDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={onCancel}>
-            取消
+            {t("common.cancel")}
           </Button>
           <Button
             variant={selectedOption === "entire-tree" ? "destructive" : "default"}
@@ -92,7 +94,7 @@ export function DeleteNodeDialog({
               }
             }}
           >
-            确认
+            {t("common.confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

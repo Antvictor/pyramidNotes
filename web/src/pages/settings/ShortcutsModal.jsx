@@ -12,6 +12,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { useTranslation } from "react-i18next";
 
 const DEFAULT_SHORTCUTS = {
   node: {
@@ -34,6 +35,7 @@ const DEFAULT_SHORTCUTS = {
 const LOCKED_SHORTCUTS = ["backToMap"];
 
 export default function ShortcutsModal({ open, onOpenChange }) {
+  const { t } = useTranslation();
   const [shortcuts, setShortcuts] = useState(DEFAULT_SHORTCUTS);
   const [editingKey, setEditingKey] = useState(null);
   const [activeTab, setActiveTab] = useState("node");
@@ -45,13 +47,12 @@ export default function ShortcutsModal({ open, onOpenChange }) {
 
   // Listen for settings changes to update shortcuts
   useEffect(() => {
-    if (window.api.onSettingsChanged) {
-      window.api.onSettingsChanged((newSettings) => {
-        if (newSettings.shortcuts) {
-          setShortcuts(newSettings.shortcuts);
-        }
-      });
-    }
+    if (!window.api?.onSettingsChanged) return undefined;
+    return window.api.onSettingsChanged((newSettings) => {
+      if (newSettings.shortcuts) {
+        setShortcuts(newSettings.shortcuts);
+      }
+    });
   }, []);
 
   const loadShortcuts = async () => {
@@ -124,7 +125,7 @@ export default function ShortcutsModal({ open, onOpenChange }) {
 
   const renderShortcutValue = (category, key, value) => {
     if (LOCKED_SHORTCUTS.includes(key)) {
-      return <span style={{ color: "var(--text-secondary)" }}>[锁定]</span>;
+      return <span style={{ color: "var(--text-secondary)" }}>[{t("shortcuts.locked")}]</span>;
     }
 
     if (editingKey === `${category}.${key}`) {
@@ -165,35 +166,35 @@ export default function ShortcutsModal({ open, onOpenChange }) {
   };
 
   const nodeLabels = {
-    newNode: "新建节点",
-    renameNode: "修改节点",
-    deleteNode: "删除节点",
+    newNode: t("shortcuts.actions.newNode"),
+    renameNode: t("shortcuts.actions.renameNode"),
+    deleteNode: t("shortcuts.actions.deleteNode"),
   };
 
   const noteLabels = {
-    bold: "加粗",
-    italic: "斜体",
-    heading1: "标题1",
-    heading2: "标题2",
+    bold: t("shortcuts.actions.bold"),
+    italic: t("shortcuts.actions.italic"),
+    heading1: t("shortcuts.actions.heading1"),
+    heading2: t("shortcuts.actions.heading2"),
   };
 
   const globalLabels = {
-    search: "搜索",
-    backToMap: "返回思维导图",
+    search: t("shortcuts.actions.search"),
+    backToMap: t("shortcuts.actions.backToMap"),
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent style={{ maxWidth: 500 }}>
         <DialogHeader>
-          <DialogTitle>快捷键设置</DialogTitle>
+          <DialogTitle>{t("shortcuts.title")}</DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList style={{ width: "100%", marginBottom: 16 }}>
-            <TabsTrigger value="node" style={{ flex: 1 }}>节点</TabsTrigger>
-            <TabsTrigger value="note" style={{ flex: 1 }}>笔记</TabsTrigger>
-            <TabsTrigger value="global" style={{ flex: 1 }}>全局</TabsTrigger>
+            <TabsTrigger value="node" style={{ flex: 1 }}>{t("shortcuts.tabs.node")}</TabsTrigger>
+            <TabsTrigger value="note" style={{ flex: 1 }}>{t("shortcuts.tabs.note")}</TabsTrigger>
+            <TabsTrigger value="global" style={{ flex: 1 }}>{t("shortcuts.tabs.global")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="node">
@@ -270,9 +271,9 @@ export default function ShortcutsModal({ open, onOpenChange }) {
           }}
         >
           <Button variant="outline" onClick={handleReset}>
-            重置为默认
+            {t("shortcuts.reset")}
           </Button>
-          <Button onClick={handleSave}>确定</Button>
+          <Button onClick={handleSave}>{t("shortcuts.save")}</Button>
         </div>
       </DialogContent>
     </Dialog>

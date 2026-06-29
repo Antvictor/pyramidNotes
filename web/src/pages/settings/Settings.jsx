@@ -2,13 +2,15 @@ import { useState, useEffect } from "react";
 import { Folder, HelpCircle, ChevronDown, Keyboard } from "lucide-react";
 import ShortcutsModal from "./ShortcutsModal";
 import HelpModal from "./HelpModal";
+import { useTranslation } from "react-i18next";
 
-const Settings = ({ shortcuts }) => {
+const Settings = () => {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState({
     theme: "system",
     storagePath: "",
     autoUpdate: true,
-    language: "en",
+    language: "system",
   });
   const [version, setVersion] = useState("");
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
@@ -77,9 +79,16 @@ const Settings = ({ shortcuts }) => {
   };
 
   const languages = [
-    { value: "en", label: "English" },
-    { value: "zh", label: "中文" },
+    { value: "system", label: t("settings.language.system") },
+    { value: "zh-CN", label: t("settings.language.zhCN") },
+    { value: "en", label: t("settings.language.english") },
   ];
+
+  const themeLabels = {
+    light: t("settings.theme.light"),
+    dark: t("settings.theme.dark"),
+    system: t("settings.theme.system"),
+  };
 
   const sectionStyle = {
     width: "100%",
@@ -127,14 +136,14 @@ const Settings = ({ shortcuts }) => {
           maxWidth: 850,
         }}
       >
-        <h1 style={{ fontSize: 24, marginBottom: 24 }}>Settings</h1>
+        <h1 style={{ fontSize: 24, marginBottom: 24 }}>{t("settings.title")}</h1>
 
         {/* Basic Info Section */}
         <div style={sectionStyle}>
-          <h3 style={{ marginBottom: 12 }}>Basic Info</h3>
+          <h3 style={{ marginBottom: 12 }}>{t("settings.sections.basic")}</h3>
 
           <div style={rowStyle}>
-            <span style={labelStyle}>Mode</span>
+            <span style={labelStyle}>{t("settings.theme.label")}</span>
             <div style={controlStyle}>
               {["light", "dark", "system"].map((mode) => (
                 <button
@@ -155,14 +164,14 @@ const Settings = ({ shortcuts }) => {
                     textTransform: "capitalize",
                   }}
                 >
-                  {mode}
+                  {themeLabels[mode]}
                 </button>
               ))}
             </div>
           </div>
 
           <div style={{ ...rowStyle, borderBottom: "none" }}>
-            <span style={labelStyle}>Data Storage</span>
+            <span style={labelStyle}>{t("settings.storage.label")}</span>
             <div style={controlStyle}>
               <span
                 style={{
@@ -174,10 +183,11 @@ const Settings = ({ shortcuts }) => {
                   whiteSpace: "nowrap",
                 }}
               >
-                {settings.storagePath || "Not set"}
+                {settings.storagePath || t("common.notSet")}
               </span>
               <button
                 onClick={handleStorageChange}
+                data-tutorial-id="change-storage-directory"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -192,7 +202,7 @@ const Settings = ({ shortcuts }) => {
                 }}
               >
                 <Folder size={14} />
-                Change
+                {t("settings.storage.change")}
               </button>
             </div>
           </div>
@@ -200,7 +210,7 @@ const Settings = ({ shortcuts }) => {
 
         {/* Common Operations Section */}
         <div style={sectionStyle}>
-          <h3 style={{ marginBottom: 12 }}>Common Operations</h3>
+          <h3 style={{ marginBottom: 12 }}>{t("settings.sections.commonOperations")}</h3>
           <div
             style={{
               color: "var(--text-secondary)",
@@ -214,17 +224,17 @@ const Settings = ({ shortcuts }) => {
 
         {/* Other Section */}
         <div style={sectionStyle}>
-          <h3 style={{ marginBottom: 12 }}>Other</h3>
+          <h3 style={{ marginBottom: 12 }}>{t("settings.sections.other")}</h3>
 
           <div style={rowStyle}>
-            <span style={labelStyle}>System Version</span>
+            <span style={labelStyle}>{t("settings.version")}</span>
             <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>
               {version}
             </span>
           </div>
 
           <div style={rowStyle}>
-            <span style={labelStyle}>Auto Update</span>
+            <span style={labelStyle}>{t("settings.autoUpdate")}</span>
             <button
               onClick={() => handleAutoUpdateChange(!settings.autoUpdate)}
               style={{
@@ -257,7 +267,7 @@ const Settings = ({ shortcuts }) => {
           </div>
 
           <div style={rowStyle}>
-            <span style={labelStyle}>Help</span>
+            <span style={labelStyle}>{t("settings.help")}</span>
             <button
               onClick={() => setHelpModalOpen(true)}
               style={{
@@ -274,14 +284,15 @@ const Settings = ({ shortcuts }) => {
               }}
             >
               <HelpCircle size={14} />
-              Documentation
+              {t("settings.documentation")}
             </button>
           </div>
 
           <div style={rowStyle}>
-            <span style={labelStyle}>快捷键</span>
+            <span style={labelStyle}>{t("settings.shortcuts")}</span>
             <button
               onClick={() => setShortcutsModalOpen(true)}
+              data-tutorial-id="open-shortcuts"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -296,12 +307,12 @@ const Settings = ({ shortcuts }) => {
               }}
             >
               <Keyboard size={14} />
-              配置
+              {t("settings.configure")}
             </button>
           </div>
 
           <div style={{ ...rowStyle, borderBottom: "none" }}>
-            <span style={labelStyle}>Language</span>
+            <span style={labelStyle}>{t("settings.language.label")}</span>
             <div style={{ position: "relative" }}>
               <button
                 onClick={() => setLangDropdownOpen(!langDropdownOpen)}
@@ -321,7 +332,7 @@ const Settings = ({ shortcuts }) => {
                 }}
               >
                 {languages.find((l) => l.value === settings.language)?.label ||
-                  "English"}
+                  t("settings.language.system")}
                 <ChevronDown size={12} />
               </button>
               {langDropdownOpen && (

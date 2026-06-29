@@ -5,26 +5,33 @@ import './styles/dark.css'
 import './index.css'
 import App from './App.jsx'
 import { themeService } from './services/themeService';
+import { initializeI18n } from './i18n';
 
-// Initialize theme on app startup based on saved preference
-async function initTheme() {
+async function bootstrap() {
+  let settings = { theme: 'system', language: 'system' };
+
   try {
-    if (window.api && window.api.getSettings) {
-      const settings = await window.api.getSettings();
-      themeService.setThemeMode(settings.theme || 'system');
-    } else {
-      themeService.setTheme(themeService.getTheme());
+    if (window.api?.getSettings) {
+      settings = { ...settings, ...(await window.api.getSettings()) };
     }
   } catch (error) {
-    console.error('Failed to load theme settings:', error);
-    themeService.setTheme(themeService.getTheme());
+    console.error('Failed to load startup settings:', error);
   }
+
+  themeService.setThemeMode(settings.theme || 'system');
+
+  try {
+    await initializeI18n(settings.language, navigator.languages);
+  } catch (error) {
+    console.error('Failed to initialize language:', error);
+    await initializeI18n('en', ['en']);
+  }
+
+  createRoot(document.getElementById('root')).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
 }
 
-initTheme();
-
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+void bootstrap();

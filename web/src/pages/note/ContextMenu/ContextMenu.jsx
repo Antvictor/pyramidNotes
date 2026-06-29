@@ -1,8 +1,10 @@
 // src/components/ContextMenu/index.jsx
 import React from "react";
 import "./style.css";
+import { useTranslation } from "react-i18next";
 
 const ContextMenu = ({ menu, onClose, requestCreateNode, requestEditNode, requestDeleteNode, onRequestMoveNode }) => {
+  const { t } = useTranslation();
   if (!menu.show) return null;
 
   return (
@@ -17,25 +19,25 @@ const ContextMenu = ({ menu, onClose, requestCreateNode, requestEditNode, reques
       >
         {menu.type === "pane" && (
           <div className="menu-item" data-menu-item="create" onClick={() => { requestCreateNode(menu.nodeId); onClose(); }}>
-            ➕ 创建节点
+            ➕ {t("nodeMenu.create")}
           </div>
         )}
 
         {menu.type === "node" && (
           <>
             <div className="menu-item" data-menu-item="create" onClick={() => { requestCreateNode(menu.nodeId, menu.title); onClose(); }}>
-              ➕ 创建节点
+              ➕ {t("nodeMenu.create")}
             </div>
             <div className="menu-item" data-menu-item="edit" onClick={() => { requestEditNode(menu.nodeId, menu.title); onClose(); }}>
-              ✏️ 修改节点
+              ✏️ {t("nodeMenu.rename")}
             </div>
             {!menu.isRoot && (
               <div className="menu-item" data-menu-item="move" onClick={() => { onRequestMoveNode(menu.nodeId, menu.title); onClose(); }}>
-                📦 移动节点
+                📦 {t("nodeMenu.move")}
               </div>
             )}
             <div className="menu-item" data-menu-item="delete" onClick={() => { requestDeleteNode(menu.nodeId, menu.title); onClose(); }}>
-              🗑 删除节点
+              🗑 {t("nodeMenu.delete")}
             </div>
           </>
         )}

@@ -1,10 +1,13 @@
 const { BrowserWindow, app } = require("electron");
 const path = require("path");
+const { resolveLanguage, getWindowTitle } = require("../common/locale.cjs");
 
-function createWindow() {
+function createWindow(settings = {}) {
+  const language = resolveLanguage(settings.language, [app.getLocale()]);
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
+    title: getWindowTitle(language),
     webPreferences: {
       preload: path.join(__dirname, "../preload.cjs"),
     }
@@ -16,7 +19,9 @@ function createWindow() {
   } else {
     // 开发环境：加载 Vite dev server
     win.loadURL("http://localhost:5173");
-    win.webContents.openDevTools();
+    if (!process.env.PYRAMID_CAPTURE_MODE) {
+      win.webContents.openDevTools();
+    }
   }
 
   return win;

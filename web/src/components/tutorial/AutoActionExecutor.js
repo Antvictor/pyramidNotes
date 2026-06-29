@@ -84,24 +84,17 @@ async function executeOpenDirectoryDialog() {
  * 点击按钮
  */
 async function executeClickButton(buttonType) {
-  let button;
-  switch (buttonType) {
-    case 'shortcuts':
-      button = Array.from(document.querySelectorAll('button')).find(
-        btn => btn.textContent.includes('配置')
-      );
-      break;
-    case 'change-dir':
-      button = Array.from(document.querySelectorAll('button')).find(
-        btn => btn.textContent.includes('Change')
-      );
-      break;
-    default:
-      return { success: false, reason: 'unknown button type' };
-  }
+  const targetType = buttonType === 'shortcuts'
+    ? 'shortcuts-button'
+    : buttonType === 'change-dir'
+      ? 'change-dir-button'
+      : null;
+  if (!targetType) return { success: false, reason: 'unknown button type' };
+  const button = findTutorialTarget({ type: targetType });
 
   if (!button) return { success: false, reason: 'button not found' };
 
   button.click();
   return { success: true };
 }
+import { findTutorialTarget } from "./targetResolver";

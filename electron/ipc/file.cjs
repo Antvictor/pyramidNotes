@@ -7,6 +7,32 @@ const path = require("path");
 const matter = require('gray-matter');
 const yaml = require('yaml');
 
+async function findFileByNoteId(dataPath, noteId) {
+    if (!noteId) {
+        return null;
+    }
+
+    const entries = await fs.readdir(dataPath, { withFileTypes: true });
+    for (const entry of entries) {
+        if (!entry.isFile() || path.extname(entry.name) !== '.md') {
+            continue;
+        }
+
+        const candidatePath = path.join(dataPath, entry.name);
+        try {
+            const candidateContent = await fs.readFile(candidatePath, 'utf-8');
+            const parsed = matter(candidateContent);
+            if (parsed.data?.id === noteId) {
+                return candidatePath;
+            }
+        } catch {
+            continue;
+        }
+    }
+
+    return null;
+}
+
 function registerFileIPC() {
     const buildMarkdown = (yamlData, content) => {
         const safeContent = typeof content === 'string' ? content : '';
@@ -18,7 +44,21 @@ function registerFileIPC() {
     ipcMain.handle("openFile", async (event, fileName) => {
         try {
             const dataPath = resolveStoragePath();
-            const filePath = path.join(dataPath, fileName);
+            let filePath = path.join(dataPath, fileName);
+            try {
+                await fs.access(filePath);
+            } catch (accessError) {
+                if (accessError.code !== 'ENOENT') {
+                    throw accessError;
+                }
+
+                const noteId = String(fileName || '').split('-')[0];
+                const fallbackPath = await findFileByNoteId(dataPath, noteId);
+                if (!fallbackPath) {
+                    throw accessError;
+                }
+                filePath = fallbackPath;
+            }
             const content = await fs.readFile(filePath, 'utf-8');
             return await matter(content);
         } catch (error) {

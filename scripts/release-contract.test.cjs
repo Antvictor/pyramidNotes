@@ -103,6 +103,18 @@ test('classifyAsset recognizes prerelease file names', () => {
       sharedKey: null,
     },
   )
+
+  assert.deepEqual(
+    classifyAsset('Pyramid.Notes-1.0.0-alpha-arm64.dmg'),
+    {
+      id: 'macos-arm64-dmg',
+      fileName: 'Pyramid.Notes-1.0.0-alpha-arm64.dmg',
+      version: '1.0.0-alpha',
+      kind: 'installer',
+      targets: [TARGETS.macosArm64],
+      sharedKey: null,
+    },
+  )
 })
 
 test('choosePrimaryAsset prefers the installer for a target', () => {
@@ -148,14 +160,14 @@ test('validateReleaseAssets accepts the current shared Windows installer layout'
   assert.deepEqual(result.errors, [])
   assert.equal(
     result.metadata.targets[TARGETS.windowsX64].fileName,
-    'Pyramid Notes Setup 1.0.0.exe',
+    'Pyramid.Notes.Setup.1.0.0.exe',
   )
   assert.equal(
     result.metadata.targets[TARGETS.windowsIa32].fileName,
-    'Pyramid Notes Setup 1.0.0.exe',
+    'Pyramid.Notes.Setup.1.0.0.exe',
   )
   assert.equal(
-    result.metadata.targets[TARGETS.windowsIa32].assets.some((asset) => asset.fileName === 'Pyramid Notes-1.0.0-ia32-win.zip'),
+    result.metadata.targets[TARGETS.windowsIa32].assets.some((asset) => asset.fileName === 'Pyramid.Notes-1.0.0-ia32-win.zip'),
     true,
   )
 })
@@ -211,8 +223,8 @@ test('buildReleaseMetadata exposes the minimum schema', () => {
 
   assert.equal(metadata.tag, 'v1.0.0')
   assert.equal(metadata.prerelease, false)
-  assert.equal(metadata.targets[TARGETS.macosX64].fileName, 'Pyramid Notes-1.0.0.dmg')
-  assert.equal(metadata.targets[TARGETS.windowsIa32].url.includes('Pyramid%20Notes%20Setup%201.0.0.exe'), true)
+  assert.equal(metadata.targets[TARGETS.macosX64].fileName, 'Pyramid.Notes-1.0.0.dmg')
+  assert.equal(metadata.targets[TARGETS.windowsIa32].url.includes('Pyramid.Notes.Setup.1.0.0.exe'), true)
   assert.deepEqual(validateMetadata(metadata), [])
 })
 

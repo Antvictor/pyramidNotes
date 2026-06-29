@@ -1,35 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-
-function resolveElement(target) {
-  if (!target) return null;
-
-  switch (target.type) {
-    case 'pane':
-      return document.querySelector('.react-flow__pane');
-    case 'node':
-      return document.querySelector('.react-flow__node');
-    case 'dialog':
-      return document.querySelector('[data-slot="dialog-content"]');
-    case 'editor':
-      return document.querySelector('.ProseMirror');
-    case 'sidebar-settings':
-      return document.querySelector('a[href="/settings"]');
-    case 'change-dir-button':
-      return Array.from(document.querySelectorAll('button')).find(
-        btn => btn.textContent.includes('Change')
-      );
-    case 'shortcuts-button':
-      return Array.from(document.querySelectorAll('button')).find(
-        btn => btn.textContent.includes('配置')
-      );
-    case 'menu-item':
-      return document.querySelector(`[data-menu-item="${target.value}"]`);
-    case 'keyboard':
-      return null;
-    default:
-      return null;
-  }
-}
+import { findTutorialTarget } from "./targetResolver";
 
 export default function SelectionRing({ target }) {
   const [rect, setRect] = useState(null);
@@ -39,7 +9,7 @@ export default function SelectionRing({ target }) {
     if (!target) { setRect(null); return; }
 
     const updateRect = () => {
-      const el = resolveElement(target);
+      const el = findTutorialTarget(target);
       if (el) {
         const r = el.getBoundingClientRect();
         setRect({ left: r.left, top: r.top, width: r.width, height: r.height });
@@ -69,7 +39,7 @@ export default function SelectionRing({ target }) {
   useEffect(() => {
     if (rect || !target) return;
     const timer = setInterval(() => {
-      const el = resolveElement(target);
+      const el = findTutorialTarget(target);
       if (el) {
         const r = el.getBoundingClientRect();
         setRect({ left: r.left, top: r.top, width: r.width, height: r.height });

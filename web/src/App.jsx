@@ -8,15 +8,12 @@ import MindMap from "./pages/MindMap";
 import Node from "./pages/note/Node"
 import { SelectedNodeProvider } from "./contexts/SelectedNodeContext";
 import TutorialController from "./components/tutorial/TutorialController";
-import useShortcuts from "./hooks/useShortcuts";
+import { initializeI18n } from "./i18n";
 
 function AppContent() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [shortcuts, setShortcuts] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
-
-  const location = useLocation();
-  const navigate = useNavigate();
 
   // Load settings on mount
   useEffect(() => {
@@ -29,27 +26,16 @@ function AppContent() {
 
   // Listen for settings changes
   useEffect(() => {
-    if (window.api.onSettingsChanged) {
-      window.api.onSettingsChanged((newSettings) => {
-        setShortcuts(newSettings.shortcuts || null);
-      });
-    }
+    if (!window.api?.onSettingsChanged) return undefined;
+    return window.api.onSettingsChanged((newSettings) => {
+      setShortcuts(newSettings.shortcuts || null);
+      void initializeI18n(newSettings.language, navigator.languages);
+    });
   }, []);
 
   const clearSelectedNode = useCallback(() => {
     setSelectedNode(null);
   }, []);
-
-  const handleBackToMap = useCallback(() => {
-    if (location.pathname.startsWith('/note/')) {
-      navigate('/');
-    } else {
-      // In MindMap, Esc clears selection if search is not open
-      if (!searchOpen) {
-        clearSelectedNode();
-      }
-    }
-  }, [location.pathname, searchOpen, navigate, clearSelectedNode]);
 
   // Provide shortcuts context value
   const contextValue = {
@@ -159,33 +145,6 @@ function MindMapWrapper({ selectedNode, setSelectedNode, clearSelectedNode, shor
       setSearchOpen={setSearchOpen}
     />
   );
-}
-
-function matchKey(shortcutStr, e) {
-  if (!shortcutStr) return false;
-
-  const isMod = e.ctrlKey || e.metaKey;
-  const isShift = e.shiftKey;
-  const isAlt = e.altKey;
-
-  const parts = shortcutStr.split('+');
-  const modifiers = parts.slice(0, -1);
-  const key = parts[parts.length - 1];
-
-  const modStateMatch =
-    (modifiers.includes('Ctrl') || !isMod) &&
-    (modifiers.includes('Shift') || !isShift) &&
-    (modifiers.includes('Alt') || !isAlt);
-
-  const keyMatch =
-    key === 'Escape' ? e.key === 'Escape' :
-    key === 'Delete' ? e.key === 'Delete' :
-    key === 'Enter' ? e.key === 'Enter' :
-    key === 'Backspace' ? e.key === 'Backspace' :
-    key.startsWith('F') ? e.key === key :
-    e.key.toLowerCase() === key.toLowerCase();
-
-  return keyMatch && modStateMatch;
 }
 
 // Wrapper for Node that handles shortcuts

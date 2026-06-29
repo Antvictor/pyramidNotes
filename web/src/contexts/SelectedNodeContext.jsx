@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext } from 'react';
 
 const SelectedNodeContext = createContext({
   selectedNode: null,

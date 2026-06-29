@@ -7,8 +7,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 
 export default function OpenPrompt({ visible, id, title, onOk, onCancel }) {
+  const { t } = useTranslation();
   const [value, setValue] = useState("");
   const inputRef = useRef(null);
 
@@ -31,7 +33,7 @@ export default function OpenPrompt({ visible, id, title, onOk, onCancel }) {
     <Dialog open={visible} onOpenChange={(open) => !open && onCancel()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>请输入节点名称</DialogTitle>
+          <DialogTitle>{t("dialogs.nodePrompt.title")}</DialogTitle>
         </DialogHeader>
 
         <div className="py-4">
@@ -41,7 +43,7 @@ export default function OpenPrompt({ visible, id, title, onOk, onCancel }) {
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="节点名称"
+            placeholder={t("dialogs.nodePrompt.placeholder")}
             autoFocus
             autoComplete="off"
             className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -50,10 +52,10 @@ export default function OpenPrompt({ visible, id, title, onOk, onCancel }) {
 
         <DialogFooter>
           <Button variant="outline" onClick={onCancel}>
-            取消
+            {t("common.cancel")}
           </Button>
           <Button onClick={() => onOk(id, value, title)}>
-            确定
+            {t("common.confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

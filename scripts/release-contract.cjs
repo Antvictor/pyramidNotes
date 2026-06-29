@@ -18,48 +18,50 @@ const TARGET_ORDER = [
 const DEFAULT_REPOSITORY = 'Antvictor/pyramidNotes'
 const SHARED_WINDOWS_INSTALLER = 'windows-shared-installer'
 const VERSION_PATTERN = '\\d+\\.\\d+\\.\\d+(?:-(?:alpha|beta|rc)[0-9A-Za-z.-]*)?'
+const PRODUCT_PATTERN = 'Pyramid[ .]Notes'
+const SETUP_PATTERN = 'Pyramid[ .]Notes[ .]Setup'
 
 const FILE_PATTERNS = [
   {
     name: 'macos-arm64-dmg',
-    regex: new RegExp(`^Pyramid Notes-(${VERSION_PATTERN})-arm64\\.dmg$`),
+    regex: new RegExp(`^${PRODUCT_PATTERN}-(${VERSION_PATTERN})-arm64\\.dmg$`),
     kind: 'installer',
     targets: [TARGETS.macosArm64],
   },
   {
     name: 'macos-x64-dmg',
-    regex: new RegExp(`^Pyramid Notes-(${VERSION_PATTERN})\\.dmg$`),
+    regex: new RegExp(`^${PRODUCT_PATTERN}-(${VERSION_PATTERN})\\.dmg$`),
     kind: 'installer',
     targets: [TARGETS.macosX64],
   },
   {
     name: 'macos-arm64-zip',
-    regex: new RegExp(`^Pyramid Notes-(${VERSION_PATTERN})-arm64-mac\\.zip$`),
+    regex: new RegExp(`^${PRODUCT_PATTERN}-(${VERSION_PATTERN})-arm64-mac\\.zip$`),
     kind: 'archive',
     targets: [TARGETS.macosArm64],
   },
   {
     name: 'macos-x64-zip',
-    regex: new RegExp(`^Pyramid Notes-(${VERSION_PATTERN})-mac\\.zip$`),
+    regex: new RegExp(`^${PRODUCT_PATTERN}-(${VERSION_PATTERN})-mac\\.zip$`),
     kind: 'archive',
     targets: [TARGETS.macosX64],
   },
   {
     name: 'windows-shared-installer',
-    regex: new RegExp(`^Pyramid Notes Setup (${VERSION_PATTERN})\\.exe$`),
+    regex: new RegExp(`^${SETUP_PATTERN}[ .](${VERSION_PATTERN})\\.exe$`),
     kind: 'installer',
     targets: [TARGETS.windowsX64, TARGETS.windowsIa32],
     sharedKey: SHARED_WINDOWS_INSTALLER,
   },
   {
     name: 'windows-ia32-zip',
-    regex: new RegExp(`^Pyramid Notes-(${VERSION_PATTERN})-ia32-win\\.zip$`),
+    regex: new RegExp(`^${PRODUCT_PATTERN}-(${VERSION_PATTERN})-ia32-win\\.zip$`),
     kind: 'archive',
     targets: [TARGETS.windowsIa32],
   },
   {
     name: 'windows-x64-zip',
-    regex: new RegExp(`^Pyramid Notes-(${VERSION_PATTERN})-win\\.zip$`),
+    regex: new RegExp(`^${PRODUCT_PATTERN}-(${VERSION_PATTERN})-win\\.zip$`),
     kind: 'archive',
     targets: [TARGETS.windowsX64],
   },
@@ -252,8 +254,20 @@ function validateAssetsByTarget(assetsByTarget) {
 }
 
 function buildDownloadUrl(repository, tag, fileName) {
-  const encodedFileName = encodeURIComponent(fileName)
+  const encodedFileName = encodeURIComponent(toPublishedAssetName(fileName))
   return `https://github.com/${repository}/releases/download/${encodeURIComponent(tag)}/${encodedFileName}`
+}
+
+function toPublishedAssetName(fileName) {
+  return fileName.replaceAll(' ', '.')
+}
+
+function resolveAssetDownloadUrl(asset, repository, tag) {
+  if (asset.url) {
+    return asset.url
+  }
+
+  return buildDownloadUrl(repository, tag, asset.fileName)
 }
 
 function toTargetEntry(targetKey, assets, repository, tag) {
@@ -261,12 +275,12 @@ function toTargetEntry(targetKey, assets, repository, tag) {
   const primaryAsset = choosePrimaryAsset(targetKey, uniqueAssets)
 
   return {
-    fileName: primaryAsset.fileName,
-    url: buildDownloadUrl(repository, tag, primaryAsset.fileName),
+    fileName: toPublishedAssetName(primaryAsset.fileName),
+    url: resolveAssetDownloadUrl(primaryAsset, repository, tag),
     kind: primaryAsset.kind,
     assets: uniqueAssets.map((asset) => ({
-      fileName: asset.fileName,
-      url: buildDownloadUrl(repository, tag, asset.fileName),
+      fileName: toPublishedAssetName(asset.fileName),
+      url: resolveAssetDownloadUrl(asset, repository, tag),
       kind: asset.kind,
       primary: asset.relativePath === primaryAsset.relativePath,
     })),
@@ -398,6 +412,8 @@ module.exports = {
   groupAssetsByTarget,
   isIgnoredReleasePath,
   isPrereleaseTag,
+  toPublishedAssetName,
+  validateAssetsByTarget,
   validateMetadata,
   validateReleaseAssets,
 }

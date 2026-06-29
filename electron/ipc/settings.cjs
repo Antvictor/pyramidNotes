@@ -2,6 +2,7 @@ const { ipcMain, dialog, BrowserWindow } = require('electron');
 const { loadSettings, saveSettings, getCachedSettings, setCachedSettings, DEFAULT_SETTINGS } = require('../common/settings.cjs');
 const { closeDatabase, initializeDatabase } = require('../db/db.cjs');
 const { initNode } = require('../nodes/initNode');
+const { applyApplicationMenu } = require('../common/locale.cjs');
 
 function registerSettingsIPC() {
   ipcMain.handle('getSettings', async () => {
@@ -22,6 +23,10 @@ function registerSettingsIPC() {
     BrowserWindow.getAllWindows().forEach(win => {
       win.webContents.send('settings-changed', mergedSettings);
     });
+
+    if (result && newSettings.language !== undefined) {
+      applyApplicationMenu(mergedSettings.language);
+    }
 
     // If storagePath changed, close old DB, re-init at new path, and re-scan
     if (result && storagePathChanged) {
