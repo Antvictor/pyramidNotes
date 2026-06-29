@@ -54,7 +54,9 @@ function resolveMediaPath(relativePath) {
   return joinBasePath(basePath, relativePath)
 }
 
-function renderStoryMedia(media, eager = false) {
+function renderStoryMedia(media, eager = false, zoom = null) {
+  const zoomStyle = zoom ? ` style="transform:scale(${zoom.scale});transform-origin:${zoom.origin}"` : ''
+
   if (media.mediaType === 'video') {
     return `
       <video
@@ -70,7 +72,7 @@ function renderStoryMedia(media, eager = false) {
     `
   }
 
-  return `<img src="${resolveMediaPath(media.src)}" alt="${escapeHtml(media.alt)}" loading="${eager ? 'eager' : 'lazy'}" />`
+  return `<img src="${resolveMediaPath(media.src)}" alt="${escapeHtml(media.alt)}" loading="${eager ? 'eager' : 'lazy'}"${zoomStyle} />`
 }
 
 function renderHeroMedia(content) {
@@ -114,7 +116,7 @@ function renderDemoPreview(step) {
       </div>
       <div class="demo-slide-media">
         <figure class="media-frame demo-preview-frame">
-          ${renderStoryMedia(step, true)}
+          ${renderStoryMedia(step, true, step.zoom || null)}
         </figure>
       </div>
     </article>

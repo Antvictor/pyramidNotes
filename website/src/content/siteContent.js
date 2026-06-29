@@ -51,6 +51,7 @@ const localeMedia = {
         mediaType: 'image',
         src: 'assets/product-media/en/en-tree-overview-desktop.png',
         alt: 'English tree overview screenshot',
+        zoom: { scale: 1.35, origin: '50% 50%' },
       },
       {
         eyebrow: '02',
@@ -60,6 +61,7 @@ const localeMedia = {
         mediaType: 'image',
         src: 'assets/product-media/en/en-search-fulltext-desktop.png',
         alt: 'English full-text search screenshot',
+        zoom: { scale: 1.35, origin: '50% 50%' },
       },
       {
         eyebrow: '03',
@@ -69,6 +71,7 @@ const localeMedia = {
         mediaType: 'image',
         src: 'assets/product-media/en/en-node-operations-desktop.png',
         alt: 'English node operations screenshot',
+        zoom: { scale: 1.35, origin: '35% 55%' },
       },
       {
         eyebrow: '04',
@@ -78,6 +81,7 @@ const localeMedia = {
         mediaType: 'image',
         src: 'assets/product-media/en/en-editor-open-note-desktop.png',
         alt: 'English editor screenshot',
+        zoom: { scale: 1.35, origin: '0% 0%' },
       },
     ],
     workflow: {
@@ -106,6 +110,7 @@ const localeMedia = {
         mediaType: 'image',
         src: 'assets/product-media/zh/zh-tree-overview-desktop.png',
         alt: '中文树视图截图',
+        zoom: { scale: 1.35, origin: '50% 50%' },
       },
       {
         eyebrow: '02',
@@ -115,6 +120,7 @@ const localeMedia = {
         mediaType: 'image',
         src: 'assets/product-media/zh/zh-search-fulltext-desktop.png',
         alt: '中文全文搜索截图',
+        zoom: { scale: 1.35, origin: '50% 50%' },
       },
       {
         eyebrow: '03',
@@ -124,6 +130,7 @@ const localeMedia = {
         mediaType: 'image',
         src: 'assets/product-media/zh/zh-node-operations-desktop.png',
         alt: '中文节点操作截图',
+        zoom: { scale: 1.35, origin: '35% 55%' },
       },
       {
         eyebrow: '04',
@@ -133,6 +140,7 @@ const localeMedia = {
         mediaType: 'image',
         src: 'assets/product-media/zh/zh-editor-open-note-desktop.png',
         alt: '中文编辑器截图',
+        zoom: { scale: 1.35, origin: '0% 0%' },
       },
     ],
     workflow: {
