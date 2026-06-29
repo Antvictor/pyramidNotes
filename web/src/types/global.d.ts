@@ -12,6 +12,12 @@ interface PyramidSettings {
 interface PyramidApi {
   getSettings: () => Promise<PyramidSettings>;
   saveSettings: (settings: Partial<PyramidSettings>) => Promise<boolean>;
+  capturePage: (options?: {
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+  }) => Promise<string | null>;
   onSettingsChanged: (callback: (settings: PyramidSettings) => void) => () => void;
   getVersion?: () => string;
   [key: string]: unknown;

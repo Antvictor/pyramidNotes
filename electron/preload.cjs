@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('api', {
     dbQuery: (sql, params) => ipcRenderer.invoke('dbQuery', sql, params),
     getSettings: () => ipcRenderer.invoke('getSettings'),
     saveSettings: (settings) => ipcRenderer.invoke('saveSettings', settings),
+    capturePage: (options) => ipcRenderer.invoke('capturePage', options),
     selectDirectory: () => ipcRenderer.invoke('selectDirectory'),
     openSystemSettings: () => ipcRenderer.invoke('openSystemSettings'),
     reloadDatabase: (newStoragePath) => ipcRenderer.invoke('reloadDatabase', newStoragePath),
