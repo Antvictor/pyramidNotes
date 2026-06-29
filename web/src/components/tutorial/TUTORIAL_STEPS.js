@@ -6,7 +6,7 @@ export const TUTORIAL_STEPS = [
     id: 'context-menu-intro',
     page: 'MindMap',
     target: { type: 'node' },
-    bubbleContent: '欢迎使用 Pyramid Notes！接下来将引导你了解右键菜单的功能。点击「下一步」开始',
+    bubbleContentKey: 'tutorial.steps.contextMenu.intro',
     autoAction: {
       type: 'contextmenu',
       description: '自动触发右键菜单'
@@ -14,23 +14,23 @@ export const TUTORIAL_STEPS = [
     subSteps: [
       {
         target: { type: 'menu-item', value: 'create' },
-        bubbleContent: '「创建节点」— 在当前节点下创建一个新的子节点',
+        bubbleContentKey: 'tutorial.steps.contextMenu.create',
         buttons: ['skip', 'next']
       },
       {
         target: { type: 'menu-item', value: 'edit' },
-        bubbleContent: '「修改节点」— 修改当前节点的名称',
+        bubbleContentKey: 'tutorial.steps.contextMenu.rename',
         buttons: ['skip', 'next']
       },
       {
         target: { type: 'menu-item', value: 'delete' },
-        bubbleContent: '「删除节点」— 删除当前节点，有子节点时会询问删除方式',
+        bubbleContentKey: 'tutorial.steps.contextMenu.delete',
         buttons: ['skip', 'next']
       },
       {
         target: { type: 'menu-item', value: 'create' },
-        bubbleContent: '现在请点击「创建节点」来体验一下！',
-        bubbleAfterAction: '请点击菜单中的「创建节点」',
+        bubbleContentKey: 'tutorial.steps.contextMenu.tryCreate',
+        bubbleAfterActionKey: 'tutorial.steps.contextMenu.tryCreateAction',
         requiredAction: {
           type: 'click-menu-item',
           menuItem: 'create',
@@ -52,8 +52,8 @@ export const TUTORIAL_STEPS = [
       type: 'dialog-close',
       detectEvent: 'dialogClosed'
     },
-    bubbleContent: '请输入节点名称后点击「确定」来完成创建',
-    bubbleAfterAction: '请输入名称并点击「确定」',
+    bubbleContentKey: 'tutorial.steps.createDialog.prompt',
+    bubbleAfterActionKey: 'tutorial.steps.createDialog.action',
     buttons: ['skip']
   },
 
@@ -67,7 +67,7 @@ export const TUTORIAL_STEPS = [
       type: 'navigate-to-editor',
       detectEvent: 'routeChanged'
     },
-    bubbleContent: '双击任意节点进入编辑模式，查看节点内容',
+    bubbleContentKey: 'tutorial.steps.openEditor',
     buttons: ['skip']
   },
 
@@ -81,7 +81,7 @@ export const TUTORIAL_STEPS = [
       type: 'escape-to-exit',
       detectEvent: 'routeChanged'
     },
-    bubbleContent: '按 ESC 键退出编辑模式，返回脑图',
+    bubbleContentKey: 'tutorial.steps.exitEditor',
     buttons: ['skip']
   },
 
@@ -96,7 +96,7 @@ export const TUTORIAL_STEPS = [
       description: '自动导航到设置页面'
     },
     requiredAction: null,
-    bubbleContent: '节点操作演示完成！点击下一步前往设置页面',
+    bubbleContentKey: 'tutorial.steps.openSettings',
     buttons: ['skip', 'next']
   },
 
@@ -114,8 +114,8 @@ export const TUTORIAL_STEPS = [
       type: 'select-directory',
       detectEvent: 'directoryChanged'
     },
-    bubbleContent: '点击「Change」按钮可以修改数据存储目录',
-    bubbleAfterAction: '请选择一个目录作为数据存储位置',
+    bubbleContentKey: 'tutorial.steps.changeDirectory',
+    bubbleAfterActionKey: 'tutorial.steps.changeDirectoryAction',
     buttons: ['skip']
   }
 ];

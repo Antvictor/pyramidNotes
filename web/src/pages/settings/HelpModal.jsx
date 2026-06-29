@@ -4,6 +4,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useTranslation } from "react-i18next";
 
 const kbd = (text) => (
   <code style={{
@@ -53,31 +54,47 @@ const tdStyle = (last) => ({
 });
 
 export default function HelpModal({ open, onOpenChange }) {
+  const { t } = useTranslation();
+  const mindMapShortcuts = [
+    ["Ctrl+N", t("help.shortcuts.actions.newChild")],
+    ["F2", t("help.shortcuts.actions.rename")],
+    ["Delete", t("help.shortcuts.actions.delete")],
+    ["Ctrl+K", t("help.shortcuts.actions.search")],
+    ["Escape", t("help.shortcuts.actions.clearOrClose")],
+  ];
+  const editorShortcuts = [
+    ["Ctrl+B", t("help.shortcuts.actions.bold")],
+    ["Ctrl+I", t("help.shortcuts.actions.italic")],
+    ["Ctrl+1", t("help.shortcuts.actions.heading1")],
+    ["Ctrl+2", t("help.shortcuts.actions.heading2")],
+    ["Escape", t("help.shortcuts.actions.back")],
+  ];
+  const mouseActions = [
+    [t("help.sections.mindMap"), t("help.mouse.select")],
+    [t("help.sections.editor"), t("help.mouse.open")],
+    [t("nodeMenu.create"), t("help.mouse.contextMenu")],
+    [t("mindMap.rootFallback"), t("help.mouse.createRoot")],
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent style={{ maxWidth: 560, maxHeight: "80vh", overflow: "auto" }}>
         <DialogHeader>
-          <DialogTitle>使用说明</DialogTitle>
+          <DialogTitle>{t("help.title")}</DialogTitle>
         </DialogHeader>
 
-        <div style={sectionTitle}>快捷键</div>
+        <div style={sectionTitle}>{t("help.sections.shortcuts")}</div>
 
-        <div style={{ ...text, fontWeight: 600, marginBottom: 4 }}>思维导图</div>
+        <div style={{ ...text, fontWeight: 600, marginBottom: 4 }}>{t("help.sections.mindMap")}</div>
         <table style={tableStyle}>
           <thead>
             <tr>
-              <th style={thStyle}>快捷键</th>
-              <th style={thStyle}>操作</th>
+              <th style={thStyle}>{t("help.columns.shortcut")}</th>
+              <th style={thStyle}>{t("help.columns.action")}</th>
             </tr>
           </thead>
           <tbody>
-            {[
-              ["Ctrl+N", "新建子节点"],
-              ["F2", "重命名选中节点"],
-              ["Delete", "删除选中节点"],
-              ["Ctrl+K", "打开搜索"],
-              ["Escape", "取消选中 / 关闭搜索"],
-            ].map(([key, action], i, arr) => (
+            {mindMapShortcuts.map(([key, action], i, arr) => (
               <tr key={key}>
                 <td style={tdStyle(i === arr.length - 1)}>{kbd(key)}</td>
                 <td style={tdStyle(i === arr.length - 1)}>{action}</td>
@@ -86,22 +103,16 @@ export default function HelpModal({ open, onOpenChange }) {
           </tbody>
         </table>
 
-        <div style={{ ...text, fontWeight: 600, marginBottom: 4 }}>编辑器</div>
+        <div style={{ ...text, fontWeight: 600, marginBottom: 4 }}>{t("help.sections.editor")}</div>
         <table style={tableStyle}>
           <thead>
             <tr>
-              <th style={thStyle}>快捷键</th>
-              <th style={thStyle}>操作</th>
+              <th style={thStyle}>{t("help.columns.shortcut")}</th>
+              <th style={thStyle}>{t("help.columns.action")}</th>
             </tr>
           </thead>
           <tbody>
-            {[
-              ["Ctrl+B", "加粗"],
-              ["Ctrl+I", "斜体"],
-              ["Ctrl+1", "一级标题"],
-              ["Ctrl+2", "二级标题"],
-              ["Escape", "返回思维导图"],
-            ].map(([key, action], i, arr) => (
+            {editorShortcuts.map(([key, action], i, arr) => (
               <tr key={key}>
                 <td style={tdStyle(i === arr.length - 1)}>{kbd(key)}</td>
                 <td style={tdStyle(i === arr.length - 1)}>{action}</td>
@@ -110,21 +121,16 @@ export default function HelpModal({ open, onOpenChange }) {
           </tbody>
         </table>
 
-        <div style={{ ...text, fontWeight: 600, marginBottom: 4 }}>鼠标</div>
+        <div style={{ ...text, fontWeight: 600, marginBottom: 4 }}>{t("help.sections.mouse")}</div>
         <table style={tableStyle}>
           <thead>
             <tr>
-              <th style={thStyle}>操作</th>
-              <th style={thStyle}>效果</th>
+              <th style={thStyle}>{t("help.columns.action")}</th>
+              <th style={thStyle}>{t("help.columns.result")}</th>
             </tr>
           </thead>
           <tbody>
-            {[
-              ["单击节点", "选中节点"],
-              ["双击节点", "进入编辑器"],
-              ["右键节点", "弹出菜单（创建 / 重命名 / 移动 / 删除）"],
-              ["右键空白", "创建根级节点"],
-            ].map(([action, result], i, arr) => (
+            {mouseActions.map(([action, result], i, arr) => (
               <tr key={action}>
                 <td style={tdStyle(i === arr.length - 1)}>{action}</td>
                 <td style={tdStyle(i === arr.length - 1)}>{result}</td>
@@ -133,19 +139,19 @@ export default function HelpModal({ open, onOpenChange }) {
           </tbody>
         </table>
 
-        <div style={sectionTitle}>操作指南</div>
+        <div style={sectionTitle}>{t("help.sections.operations")}</div>
 
         <div style={text}>
-          <strong>打开笔记</strong> — 双击思维导图中的节点进入编辑器，按 {kbd("Escape")} 返回。
+          <strong>{t("help.operations.openTitle")}</strong> — {t("help.operations.openBody")}
         </div>
         <div style={text}>
-          <strong>移动节点</strong> — 右键节点 → 选择"📦 移动节点" → 搜索目标父节点 → 选中确认。节点及其子节点将整体移动。
+          <strong>{t("help.operations.moveTitle")}</strong> — {t("help.operations.moveBody")}
         </div>
         <div style={text}>
-          <strong>搜索</strong> — 按 {kbd("Ctrl+K")} 打开搜索框，支持两种模式：<strong>节点搜索</strong>（按名称查找）和 <strong>全文搜索</strong>（搜索笔记内容）。
+          <strong>{t("help.operations.searchTitle")}</strong> — {t("help.operations.searchBody")}
         </div>
         <div style={text}>
-          <strong>自定义快捷键</strong> — 设置 → 快捷键 → 点击任意快捷键即可重新绑定。
+          <strong>{t("help.operations.shortcutsTitle")}</strong> — {t("help.operations.shortcutsBody")}
         </div>
       </DialogContent>
     </Dialog>

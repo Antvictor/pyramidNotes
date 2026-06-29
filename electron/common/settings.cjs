@@ -9,7 +9,7 @@ const DEFAULT_SETTINGS = {
   theme: 'system',
   storagePath: path.join(app.getPath('documents'), 'pyramidNotes'),
   autoUpdate: true,
-  language: 'en',
+  language: 'system',
   shortcuts: {
     node: {
       newNode: 'Ctrl+N',

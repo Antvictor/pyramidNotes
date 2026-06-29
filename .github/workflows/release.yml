@@ -32,7 +32,12 @@ jobs:
         run: |
           TAG_VERSION="${{ github.ref_name }}"
           VERSION="${TAG_VERSION#v}"
-          cd electron && npm version "$VERSION" --no-git-tag-version
+          CURRENT_VERSION=$(node -p "require('./electron/package.json').version")
+          if [ "$CURRENT_VERSION" = "$VERSION" ]; then
+            echo "electron/package.json already uses version $VERSION"
+          else
+            cd electron && npm version "$VERSION" --no-git-tag-version
+          fi
 
       - name: Build frontend
         run: pnpm --filter web exec vite build
@@ -74,7 +79,12 @@ jobs:
         run: |
           $TAG_VERSION = "${{ github.ref_name }}"
           $VERSION = $TAG_VERSION -replace '^v', ''
-          cd electron; npm version $VERSION --no-git-tag-version
+          $CURRENT_VERSION = node -p "require('./electron/package.json').version"
+          if ($CURRENT_VERSION -eq $VERSION) {
+            Write-Host "electron/package.json already uses version $VERSION"
+          } else {
+            cd electron; npm version $VERSION --no-git-tag-version
+          }
 
       - name: Build frontend
         run: pnpm --filter web exec vite build
@@ -102,11 +112,34 @@ jobs:
       - name: Fetch tags
         run: git fetch --tags --force
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.20.2'
+
       - uses: actions/download-artifact@v4
         with:
           path: release
 
+      - name: Compute release flags
+        id: release-flags
+        shell: bash
+        run: |
+          TAG="${{ github.ref_name }}"
+          if [[ "$TAG" == *-alpha* || "$TAG" == *-beta* || "$TAG" == *-rc* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+        # The metadata generator derives the same prerelease boolean from the tag.
+
+      - name: Validate release assets
+        run: node scripts/verify-release-assets.cjs --release-dir release --tag "${{ github.ref_name }}" --release-name "${{ github.ref_name }}" --repo "${{ github.repository }}"
+
+      - name: Generate release metadata
+        run: node scripts/generate-release-metadata.cjs --release-dir release --tag "${{ github.ref_name }}" --release-name "${{ github.ref_name }}" --repo "${{ github.repository }}"
+
       - name: Create Release
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -118,8 +151,14 @@ jobs:
           echo "$NOTES"
           echo ""
           ls -R release/
+          mapfile -t ASSET_PATHS < release/publish-manifest.txt
+          PRERELEASE_FLAG=()
+          if [ "${{ steps.release-flags.outputs.prerelease }}" = "true" ]; then
+            PRERELEASE_FLAG+=(--prerelease)
+          fi
           gh release delete "$TAG" --cleanup-tag -y 2>/dev/null || true
           gh release create "$TAG" \
-            release/**/* \
+            "${ASSET_PATHS[@]}" \
             --title "$TAG" \
-            --notes "$NOTES"
+            --notes "$NOTES" \
+            "${PRERELEASE_FLAG[@]}"

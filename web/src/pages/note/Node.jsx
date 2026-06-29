@@ -1,9 +1,11 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { StrictMode, useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import TipTapEditor from "../../core/editor/TipTapEditor";
+import { useTranslation } from "react-i18next";
 
 
 const Note = ({ shortcuts }) => {
+  const { t } = useTranslation();
   const { id, name } = useParams(); // 路由传入的文件名
   const [value, setValue] = useState("");
   const [yamlValue, setYamlValue] = useState("");
@@ -67,7 +69,7 @@ const Note = ({ shortcuts }) => {
     // </StrictMode>
     // <Markdown content={value} onChange={saveFile} />
     !ready ?
-      <div>loading...</div> :
+      <div>{t("editor.loading")}</div> :
       <div style={{
         width: "90vw",
         height: "94vh",

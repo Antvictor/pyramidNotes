@@ -26,11 +26,9 @@ import db from "./db/db"
 import ContextMenu from "./note/ContextMenu/ContextMenu";
 import OpenPrompt from "./commons/OpenPrompt";
 import { PermissionDialog } from "@/components/ui/permission-dialog";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DeleteNodeDialog } from "@/components/ui/delete-node-dialog";
 import { nanoid } from "nanoid";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import yaml from "yaml";
 
 // 数据文件
 // import notesData from "../assets/data/data.json";
@@ -209,7 +207,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   };
 
   // 删除整个子树
-  const deleteEntireTree = async (id, title) => {
+  const deleteEntireTree = async (id) => {
     const allIds = await getAllDescendantIds(id);
 
     // 先删除所有相关文件
@@ -316,14 +314,6 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     setMoveSource(null);
   };
 
-  const confirmDelete = useCallback(() => {
-    if (deleteTarget) {
-      _internalDeleteNode(deleteTarget.id, deleteTarget.name);
-      clearSelectedNode();
-      setDeleteTarget(null);
-    }
-  }, [deleteTarget, clearSelectedNode]);
-
   useEffect(() => {
     db.notes.select().then((res) => {
       // 调用electron api，扫描数据目录下的markdown，并根据yaml头构建节点数据，然后存入sqlite; 最后从sqlite读取节点数据进行展示
@@ -349,18 +339,16 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
 
   // Listen for settings changes (storagePath change)
   useEffect(() => {
-    if (window.api.onSettingsChanged) {
-      window.api.onSettingsChanged((newSettings) => {
-        console.log("Settings changed, reloading notes for storagePath:", newSettings.storagePath);
-        // Re-query the database to get notes from new storage path
-        db.notes.select().then((res) => {
-          console.log("Reloaded notes:", res);
-          if (res && res.length > 0) {
-            setNotesData(res);
-          }
-        });
+    if (!window.api?.onSettingsChanged) return undefined;
+    return window.api.onSettingsChanged((newSettings) => {
+      console.log("Settings changed, reloading notes for storagePath:", newSettings.storagePath);
+      db.notes.select().then((res) => {
+        console.log("Reloaded notes:", res);
+        if (res && res.length > 0) {
+          setNotesData(res);
+        }
       });
-    }
+    });
   }, []);
 
   // 处理 URL 搜索参数，打开搜索对话框

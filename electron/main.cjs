@@ -7,7 +7,11 @@ const { initializeDatabase, closeDatabase } = require('./db/db.cjs')
 const { initNode } = require('./nodes/initNode')
 const { loadSettings, getCachedSettings } = require('./common/settings.cjs')
 const { registerSettingsIPC } = require('./ipc/settings.cjs')
+const { applyApplicationMenu } = require('./common/locale.cjs')
 
+if (process.env.PYRAMID_CAPTURE_REMOTE_DEBUG_PORT) {
+  app.commandLine.appendSwitch('remote-debugging-port', String(process.env.PYRAMID_CAPTURE_REMOTE_DEBUG_PORT))
+}
 
 app.whenReady().then(async () => {
   try {
@@ -20,6 +24,7 @@ app.whenReady().then(async () => {
     // Now initNode can use correct storagePath via cached settings
     await initNode();
 
+    applyApplicationMenu(settings.language);
     createWindow(settings);
     registerPathIPC();
     registerFileIPC();
@@ -64,5 +69,5 @@ app.on('window-all-closed', () => {
 })
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  if (BrowserWindow.getAllWindows().length === 0) createWindow(getCachedSettings())
 })

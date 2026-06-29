@@ -6,6 +6,8 @@ import { TUTORIAL_STEPS, APP_VERSION } from "./TUTORIAL_STEPS";
 import { executeAutoAction } from "./AutoActionExecutor";
 import { Detector } from "./Detector";
 import "./tutorial.css";
+import { useTranslation } from "react-i18next";
+import { findTutorialTarget } from "./targetResolver";
 
 const MASK_Z = 9989;
 const ELEVATED_Z = 9990;
@@ -18,27 +20,8 @@ function resolveTarget(step, substepIndex) {
   return step?.target;
 }
 
-// 查找目标 DOM 元素
-function findTargetElement(target) {
-  if (!target) return null;
-  switch (target.type) {
-    case 'pane': return document.querySelector('.react-flow__pane');
-    case 'node': return document.querySelector('.react-flow__node');
-    case 'dialog': return document.querySelector('[data-slot="dialog-content"]');
-    case 'editor': return document.querySelector('.ProseMirror');
-    case 'sidebar-settings': return document.querySelector('a[href="/settings"]');
-    case 'change-dir-button':
-      return Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Change'));
-    case 'shortcuts-button':
-      return Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('配置'));
-    case 'menu-item':
-      return document.querySelector(`[data-menu-item="${target.value}"]`);
-    case 'keyboard': return null;
-    default: return null;
-  }
-}
-
 export default function TutorialController({ children }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [state, setState] = useState({
@@ -85,7 +68,7 @@ export default function TutorialController({ children }) {
 
     const updateRect = () => {
       if (!active) return;
-      const el = findTargetElement(target);
+      const el = findTutorialTarget(target);
       if (el) {
         const r = el.getBoundingClientRect();
         setState(s => ({ ...s, targetRect: { left: r.left, top: r.top, width: r.width, height: r.height, bottom: r.bottom, right: r.right } }));
@@ -102,7 +85,7 @@ export default function TutorialController({ children }) {
 
     const onResize = () => {
       const currentTarget = resolveTarget(TUTORIAL_STEPS[state.stepIndex], state.substepIndex);
-      const currentEl = findTargetElement(currentTarget);
+      const currentEl = findTutorialTarget(currentTarget);
       if (currentEl) {
         const r = currentEl.getBoundingClientRect();
         setState(s => ({ ...s, targetRect: { left: r.left, top: r.top, width: r.width, height: r.height, bottom: r.bottom, right: r.right } }));
@@ -151,7 +134,7 @@ export default function TutorialController({ children }) {
     if (!state.isActive) return;
 
     const target = resolveTarget(step, state.substepIndex);
-    const el = findTargetElement(target);
+    const el = findTutorialTarget(target);
     if (!el) return;
 
     // 提升当前已存在的目标元素
@@ -165,7 +148,7 @@ export default function TutorialController({ children }) {
     if (observerRef.current) observerRef.current.disconnect();
 
     observerRef.current = new MutationObserver(() => {
-      const currentEl = findTargetElement(target);
+      const currentEl = findTutorialTarget(target);
       if (currentEl && currentEl !== el && !elevatedRef.current.find(r => r.el === currentEl)) {
         elevateTarget(currentEl);
       }
@@ -244,7 +227,7 @@ export default function TutorialController({ children }) {
 
   // ========== 步骤推进 ==========
   const advanceStep = useCallback(() => {
-    const currentTargetEl = findTargetElement(resolveTarget(step, state.substepIndex));
+    const currentTargetEl = findTutorialTarget(resolveTarget(step, state.substepIndex));
     if (currentTargetEl) restoreTarget(currentTargetEl);
 
     if (userActionUnsubRef.current) {
@@ -282,12 +265,12 @@ export default function TutorialController({ children }) {
   // ========== 等待 DOM ==========
   const waitForDOM = useCallback((target, maxWait = 2000) => {
     return new Promise((resolve) => {
-      const el = findTargetElement(target);
+      const el = findTutorialTarget(target);
       if (el) { resolve(el); return; }
 
       const startTime = Date.now();
       const timer = setInterval(() => {
-        const el = findTargetElement(target);
+        const el = findTutorialTarget(target);
         if (el) {
           clearInterval(timer);
           resolve(el);
@@ -349,7 +332,7 @@ export default function TutorialController({ children }) {
 
   // ========== 处理跳过 ==========
   const handleSkip = useCallback(async () => {
-    const currentTargetEl = findTargetElement(resolveTarget(step, state.substepIndex));
+    const currentTargetEl = findTutorialTarget(resolveTarget(step, state.substepIndex));
     if (currentTargetEl) restoreTarget(currentTargetEl);
 
     // 关闭可能残留的右键菜单
@@ -424,7 +407,7 @@ export default function TutorialController({ children }) {
             pointerEvents: 'all',
           }}
         >
-          <p style={{ marginBottom: 16 }}>目标元素加载超时，请重试或跳过</p>
+          <p style={{ marginBottom: 16 }}>{t("tutorial.timeout")}</p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
             <button
               onClick={handleSkip}
@@ -436,7 +419,7 @@ export default function TutorialController({ children }) {
                 cursor: 'pointer', fontSize: 14,
               }}
             >
-              跳过
+              {t("common.skip")}
             </button>
             <button
               onClick={handleNext}
@@ -448,7 +431,7 @@ export default function TutorialController({ children }) {
                 cursor: 'pointer', fontSize: 14,
               }}
             >
-              重试
+              {t("common.retry")}
             </button>
           </div>
         </div>

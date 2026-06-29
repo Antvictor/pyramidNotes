@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 
 const GAP = 12;
 
@@ -26,6 +27,7 @@ function calcPosition(targetRect, tooltipWidth, tooltipHeight) {
 }
 
 export default function BubbleTooltip({ step, phase, targetRect, onNext, onSkip }) {
+  const { t } = useTranslation();
   const tooltipRef = useRef(null);
   const [position, setPosition] = useState(null);
 
@@ -33,13 +35,14 @@ export default function BubbleTooltip({ step, phase, targetRect, onNext, onSkip 
     ? step.subSteps[step._currentSubstep]
     : null;
 
-  const content = substep
-    ? (phase === 'user-action' && substep.bubbleAfterAction
-        ? substep.bubbleAfterAction
-        : substep.bubbleContent)
-    : (phase === 'user-action' && step?.bubbleAfterAction
-        ? step?.bubbleAfterAction
-        : step?.bubbleContent);
+  const contentKey = substep
+    ? (phase === 'user-action' && substep.bubbleAfterActionKey
+        ? substep.bubbleAfterActionKey
+        : substep.bubbleContentKey)
+    : (phase === 'user-action' && step?.bubbleAfterActionKey
+        ? step?.bubbleAfterActionKey
+        : step?.bubbleContentKey);
+  const content = contentKey ? t(contentKey) : t("tutorial.loading");
 
   const buttons = substep?.buttons || step?.buttons || ['skip'];
   const showNext = phase !== 'user-action';
@@ -76,17 +79,17 @@ export default function BubbleTooltip({ step, phase, targetRect, onNext, onSkip 
       }}
     >
       <div style={{ marginBottom: 16, fontSize: 14, lineHeight: 1.6 }}>
-        {content || '加载中…'}
+        {content}
       </div>
       <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
         {buttons.includes('skip') && (
           <Button variant="outline" onClick={onSkip}>
-            跳过
+            {t("common.skip")}
           </Button>
         )}
         {showNext && buttons.includes('next') && (
           <Button onClick={onNext}>
-            下一步
+            {t("common.next")}
           </Button>
         )}
       </div>

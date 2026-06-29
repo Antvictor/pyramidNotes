@@ -1,5 +1,11 @@
 const {contextBridge, ipcRenderer} = require('electron');
 
+function subscribeToIpc(channel, callback) {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on(channel, listener);
+    return () => ipcRenderer.removeListener(channel, listener);
+}
+
 contextBridge.exposeInMainWorld('api', {
     openFile: (fileName) => ipcRenderer.invoke('openFile', fileName),
     deleteFile: (fileName, nodeId) => ipcRenderer.invoke('deleteFile', fileName, nodeId),
@@ -13,5 +19,5 @@ contextBridge.exposeInMainWorld('api', {
     selectDirectory: () => ipcRenderer.invoke('selectDirectory'),
     openSystemSettings: () => ipcRenderer.invoke('openSystemSettings'),
     reloadDatabase: (newStoragePath) => ipcRenderer.invoke('reloadDatabase', newStoragePath),
-    onSettingsChanged: (callback) => ipcRenderer.on('settings-changed', (event, settings) => callback(settings)),
+    onSettingsChanged: (callback) => subscribeToIpc('settings-changed', callback),
 })

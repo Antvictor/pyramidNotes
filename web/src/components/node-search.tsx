@@ -22,6 +22,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import db from "@/pages/db/db.js";
+import { useTranslation } from "react-i18next";
 
 // 全文搜索结果类型
 export interface FullTextSearchResult {
@@ -49,6 +50,7 @@ export function NodeSearchInternal({
   open,
   onOpenChange,
 }: NodeSearchProps) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"node" | "fulltext">("node");
   const [searchResults, setSearchResults] = useState<Node<BuiltInEdge>[]>([]);
   const [fullTextSearchResults, setFullTextSearchResults] = useState<FullTextSearchResult[]>([]);
@@ -160,13 +162,13 @@ export function NodeSearchInternal({
     <>
       <Tabs value={activeTab} onValueChange={onTabChange} className="w-full border-0">
         <TabsList className="grid grid-cols-2 bg-background border p-0 rounded-md">
-          <TabsTrigger  value="node">节点搜索</TabsTrigger>
-          <TabsTrigger value="fulltext">全文搜索</TabsTrigger>
+          <TabsTrigger value="node">{t("search.tabs.node")}</TabsTrigger>
+          <TabsTrigger value="fulltext">{t("search.tabs.fullText")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="node" className="mt-2">
           <CommandInput
-            placeholder="搜索节点名称..."
+            placeholder={t("search.placeholders.node")}
             onValueChange={onChange}
             value={searchString}
             onFocus={() => onOpenChange?.(true)}
@@ -175,9 +177,9 @@ export function NodeSearchInternal({
           {open && (
             <CommandList>
               {!searchResults.length ? (
-                <CommandEmpty>未找到结果。{searchString}</CommandEmpty>
+                <CommandEmpty>{t("search.noResults", { query: searchString })}</CommandEmpty>
               ) : (
-                <CommandGroup heading="节点">
+                <CommandGroup heading={t("search.groups.nodes")}>
                   {searchResults.map((node) => {
                     return (
                       <CommandItem
@@ -197,7 +199,7 @@ export function NodeSearchInternal({
 
         <TabsContent value="fulltext" className="mt-2">
           <CommandInput
-            placeholder="搜索节点内容..."
+            placeholder={t("search.placeholders.fullText")}
             onValueChange={onChange}
             value={searchString}
             onFocus={() => onOpenChange?.(true)}
@@ -206,11 +208,11 @@ export function NodeSearchInternal({
           {open && (
             <CommandList>
               {!fullTextSearchResults.length ? (
-                <CommandEmpty>未找到结果。{searchString}</CommandEmpty>
+                <CommandEmpty>{t("search.noResults", { query: searchString })}</CommandEmpty>
               ) : (
-                <CommandGroup heading="全文搜索结果">
+                <CommandGroup heading={t("search.groups.fullText")}>
                   {fullTextSearchResults.map((result) => {
-                    const displayValue = result.name || result.id || "未命名节点";
+                    const displayValue = result.name || result.id || t("search.unnamedNode");
                     return (
                       <CommandItem
                         key={result.id}

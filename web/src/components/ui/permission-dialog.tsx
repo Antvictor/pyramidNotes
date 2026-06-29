@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Folder, Settings } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 /**
  * 权限获取弹窗组件
@@ -28,6 +29,7 @@ export function PermissionDialog({
   onOpenSystemSettings,
   onClose,
 }) {
+  const { t } = useTranslation();
   const [isOpeningSettings, setIsOpeningSettings] = useState(false);
 
   const handleOpenSystemSettings = async () => {
@@ -43,12 +45,12 @@ export function PermissionDialog({
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>权限不足</DialogTitle>
+          <DialogTitle>{t("dialogs.permission.title")}</DialogTitle>
           <DialogDescription>
-            无法访问存储文件夹。请授予应用程序访问该文件夹的权限，或选择一个新的文件夹。
+            {t("dialogs.permission.description")}
             {errorMessage && (
               <span className="block mt-2 text-xs text-muted-foreground">
-                错误信息: {errorMessage}
+                {t("dialogs.permission.errorDetails", { error: errorMessage })}
               </span>
             )}
           </DialogDescription>
@@ -61,7 +63,7 @@ export function PermissionDialog({
             className="w-full justify-start"
           >
             <Folder className="mr-2 h-4 w-4" />
-            重新选择文件夹
+            {t("dialogs.permission.reselectFolder")}
           </Button>
 
           <Button
@@ -71,13 +73,13 @@ export function PermissionDialog({
             disabled={isOpeningSettings}
           >
             <Settings className="mr-2 h-4 w-4" />
-            {isOpeningSettings ? "正在打开..." : "打开系统设置"}
+            {isOpeningSettings ? t("dialogs.permission.openingSettings") : t("dialogs.permission.openSystemSettings")}
           </Button>
         </div>
 
         <DialogFooter className="sm:justify-center">
           <Button variant="ghost" onClick={onClose}>
-            取消
+            {t("common.cancel")}
           </Button>
         </DialogFooter>
       </DialogContent>
