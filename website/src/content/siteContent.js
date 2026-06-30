@@ -85,12 +85,12 @@ const localeMedia = {
       },
     ],
     workflow: {
-      title: 'What the actual workflow looks like',
-      body: 'Open a node from the tree, write in Markdown, return to the structure, then search when needed. This clip is captured from the real desktop app and sits between feature understanding and scenario fit.',
-      videoLabel: 'Workflow clip',
+      title: 'A quick interface tour from tree to settings',
+      body: 'This sequence shows the real desktop app moving through the core views: tree structure, branch operations, search, note editing, and settings. It is meant to make the interface readable before download, not to simulate a fake product flow.',
+      videoLabel: 'Interface tour',
       imageLabel: 'Key frame',
       gifSrc: 'assets/product-media/en/en-workflow-open-edit-search.gif',
-      gifAlt: 'English workflow demo clip',
+      gifAlt: 'English interface tour animation',
     },
   },
   zh: {
@@ -144,12 +144,12 @@ const localeMedia = {
       },
     ],
     workflow: {
-      title: '真实整理流程是什么样子',
-      body: '通常会先从树里进入节点，再写 Markdown，然后回到结构继续整理，最后在需要时用搜索快速定位。这段视频展示的是实际桌面应用里的完整片段。',
-      videoLabel: '流程短片',
+      title: '从树结构到设置的一段界面导览',
+      body: '这段动画展示的是真实桌面应用里的几个核心界面：树结构、节点操作、搜索、正文编辑和设置。它的目标是让用户在下载前先看清界面，而不是拼接一个虚假的操作流程。',
+      videoLabel: '界面导览',
       imageLabel: '关键帧',
       gifSrc: 'assets/product-media/zh/zh-workflow-open-edit-search.gif',
-      gifAlt: '中文工作流演示动画',
+      gifAlt: '中文界面导览动画',
     },
   },
 }
@@ -199,7 +199,7 @@ const chineseScenarioSteps = [
 export const siteContent = {
   root: {
     productName: 'Pyramid Notes',
-    headline: 'A structure-first Markdown knowledge tool. Choose your language and inspect the product before downloading the latest Alpha build.',
+    headline: 'A locally-oriented tree-structured knowledge management tool.',
     intro:
       'Pyramid Notes organizes knowledge as a tree, with each node holding its own note body. It was built to make a personal knowledge system easier to maintain, and to avoid ending up with many notes that never connect into a system.',
     recommendationIntro: {
@@ -226,7 +226,7 @@ export const siteContent = {
     productName: 'Pyramid Notes',
     alphaBadge: 'Early Alpha',
     headline:
-      'A local-first structured knowledge desktop app where the tree stays visible and every node opens into a full Markdown document.',
+      'A locally-oriented tree-structured knowledge management tool.',
     intro:
       'Pyramid Notes is a structure-first desktop app for organizing knowledge as a tree. The tree keeps the system visible, and each node carries the full Markdown note.',
     alphaCopy:
@@ -271,7 +271,7 @@ export const siteContent = {
     languageName: '简体中文',
     productName: 'Pyramid Notes',
     alphaBadge: '早期 Alpha',
-    headline: '一款本地优先的结构知识桌面应用：树状结构保持可见，每个节点展开后都是完整 Markdown。',
+    headline: '一款本地优先的树结构知识管理工具',
     intro:
       'Pyramid Notes 是一个结构优先的知识整理工具。它先用树状结构把知识体系组织起来，再由节点承载对应的 Markdown 正文。',
     alphaCopy:

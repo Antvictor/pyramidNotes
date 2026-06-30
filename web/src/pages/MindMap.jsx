@@ -26,9 +26,12 @@ import db from "./db/db"
 import ContextMenu from "./note/ContextMenu/ContextMenu";
 import OpenPrompt from "./commons/OpenPrompt";
 import { PermissionDialog } from "@/components/ui/permission-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DeleteNodeDialog } from "@/components/ui/delete-node-dialog";
+import { buildDeleteConfirmation, buildDeleteRequest } from "./deleteNodeRequest";
 import { nanoid } from "nanoid";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 // 数据文件
 // import notesData from "../assets/data/data.json";
@@ -130,6 +133,7 @@ function matchKey(shortcutStr, e) {
 }
 
 export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNode, shortcuts }) {
+  const { t } = useTranslation();
   // const flowWrapperRef = useRef(null);
   // 查询sqlite中的节点数据
   const [notesData, setNotesData] = useState(null);
@@ -139,6 +143,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const [title, setTitle] = useState();
   const [searchOpen, setSearchOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null);
   const [moveSource, setMoveSource] = useState(null);
   const [permissionError, setPermissionError] = useState(null);
   const [searchParams] = useSearchParams();
@@ -259,12 +264,56 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   // Request delete node - unified entry point with child count check
   const requestDeleteNode = async (nodeId, nodeName) => {
     const childCount = await db.notes.count({ top: nodeId });
-    if (childCount === 0) {
-      _internalDeleteNode(nodeId, nodeName);
-    } else {
-      const currentNode = (await db.notes.select({ id: nodeId }))[0];
-      setDeleteTarget({ id: nodeId, name: nodeName, childCount, grandParentId: currentNode?.top || null, isRoot: currentNode?.top === '0' });
+    const currentNode = (await db.notes.select({ id: nodeId }))[0];
+    const request = buildDeleteRequest({
+      nodeId,
+      nodeName,
+      childCount,
+      grandParentId: currentNode?.top || null,
+      isRoot: currentNode?.top === '0',
+    });
+
+    if (!request.requiresChoice) {
+      setDeleteConfirmation({
+        ...request,
+        mode: request.isRoot ? "entire-tree" : "parent-only",
+        confirmation: buildDeleteConfirmation({
+          nodeName: request.name,
+          mode: request.isRoot ? "entire-tree" : "parent-only",
+        }),
+      });
+      return;
     }
+
+    setDeleteTarget(request);
+  };
+
+  const requestDeleteConfirmation = (mode) => {
+    if (!deleteTarget) return;
+    setDeleteConfirmation({
+      ...deleteTarget,
+      mode,
+      confirmation: buildDeleteConfirmation({
+        nodeName: deleteTarget.name,
+        mode,
+      }),
+    });
+    setDeleteTarget(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmation) return;
+
+    if (deleteConfirmation.mode === "entire-tree") {
+      await deleteEntireTree(deleteConfirmation.id, deleteConfirmation.name);
+    } else {
+      const grandParentId = deleteConfirmation.grandParentId;
+      promoteChildren(deleteConfirmation.id, grandParentId);
+      _internalDeleteNode(deleteConfirmation.id, deleteConfirmation.name);
+    }
+
+    setDeleteConfirmation(null);
+    clearSelectedNode();
   };
 
   // Request create node - unified entry point (same logic for shortcut and right-click)
@@ -684,19 +733,30 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           nodeName={deleteTarget?.name}
           childCount={deleteTarget?.childCount || 0}
           isRootNode={deleteTarget?.isRoot || false}
+          requiresChoice={deleteTarget?.requiresChoice ?? true}
           onDeleteEntireTree={() => {
-            deleteEntireTree(deleteTarget.id, deleteTarget.name);
-            setDeleteTarget(null);
-            clearSelectedNode();
+            requestDeleteConfirmation("entire-tree");
           }}
           onDeleteParentOnly={() => {
-            const grandParentId = deleteTarget.grandParentId;
-            promoteChildren(deleteTarget.id, grandParentId);
-            _internalDeleteNode(deleteTarget.id, deleteTarget.name);
-            setDeleteTarget(null);
-            clearSelectedNode();
+            requestDeleteConfirmation("parent-only");
           }}
           onCancel={() => setDeleteTarget(null)}
+        />
+        <ConfirmDialog
+          open={!!deleteConfirmation}
+          title={t("dialogs.deleteNode.title")}
+          message={deleteConfirmation ? t(
+            deleteConfirmation.confirmation.translationKey,
+            deleteConfirmation.confirmation.values,
+          ) : ""}
+          destructive
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteConfirmation(null)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDeleteConfirmation(null);
+            }
+          }}
         />
       </ReactFlowProvider>
     </div>
