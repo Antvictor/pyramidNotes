@@ -9,8 +9,8 @@ Define the capture and regeneration standard for the website-facing product medi
 ## Static Screenshots
 
 - Target output: PNG
-- Recommended capture width: `1920px`
-- Recommended capture height: `1200px`
+- Recommended capture width: `1600px`
+- Recommended capture height: `1000px`
 - Avoid overly wide empty margins; the primary content should occupy most of the frame
 - Use the application window itself as the source, not post-upscaled small captures
 - Optimize for direct readability inside the website hero and feature showcase areas
@@ -24,6 +24,7 @@ Define the capture and regeneration standard for the website-facing product medi
 - Recommended playback pace: `10fps - 12fps`
 - Recommended step delays: roughly `1200ms - 2200ms`
 - The workflow should read clearly at website size without needing manual pause or tab switching
+- For GIF assemblies, use a short ordered screenshot sequence rather than a long screen recording
 
 ## Required Scenes
 
@@ -47,7 +48,7 @@ Any other model or agent can reuse the capture scripts directly if it is given:
 
 - The repository root
 - The target language: `en` or `zh`
-- A demo storage path, such as `/tmp/pn-media-en` or `/tmp/pn-media-zh`
+- A demo storage path, such as `/tmp/pn-media-en` or `/tmp/金字塔笔记-中文演示数据`
 - The running Electron CDP websocket URL from `http://127.0.0.1:9223/json/list`
 - The output directory for captures
 - The desired capture size overrides, if different from the defaults
@@ -63,5 +64,6 @@ The script entry points are:
 
 - `scripts/capture-product-media.mjs`
 - `scripts/capture-product-workflow.mjs`
+- `scripts/build-product-story-gif.py`
 
 The reusable contract is command-line only, so an agent does not need to understand the UI internals if it can provide the parameters above.
