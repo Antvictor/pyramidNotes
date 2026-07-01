@@ -7,7 +7,6 @@ on:
     paths:
       - 'website/**'
       - '.github/workflows/pages.yml'
-      - 'docs/website-deployment.md'
   workflow_dispatch:
 
 permissions:
