@@ -10,6 +10,33 @@ import { SelectedNodeProvider } from "./contexts/SelectedNodeContext";
 import TutorialController from "./components/tutorial/TutorialController";
 import { initializeI18n } from "./i18n";
 
+const DEFAULT_SHORTCUTS = {
+  node: {
+    newNode: "Ctrl+N",
+    renameNode: "F2",
+    deleteNode: "Delete",
+  },
+  note: {
+    bold: "Ctrl+B",
+    italic: "Ctrl+I",
+    heading1: "Ctrl+1",
+    heading2: "Ctrl+2",
+    extractNode: "Ctrl+Shift+M",
+  },
+  global: {
+    search: "Ctrl+K",
+    backToMap: "Escape",
+  },
+};
+
+function mergeShortcutsWithDefaults(shortcuts) {
+  return {
+    node: { ...DEFAULT_SHORTCUTS.node, ...(shortcuts?.node || {}) },
+    note: { ...DEFAULT_SHORTCUTS.note, ...(shortcuts?.note || {}) },
+    global: { ...DEFAULT_SHORTCUTS.global, ...(shortcuts?.global || {}) },
+  };
+}
+
 function AppContent() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [shortcuts, setShortcuts] = useState(null);
@@ -19,7 +46,7 @@ function AppContent() {
   useEffect(() => {
     const loadSettings = async () => {
       const settings = await window.api.getSettings();
-      setShortcuts(settings.shortcuts || null);
+      setShortcuts(mergeShortcutsWithDefaults(settings.shortcuts));
     };
     loadSettings();
   }, []);
@@ -28,7 +55,7 @@ function AppContent() {
   useEffect(() => {
     if (!window.api?.onSettingsChanged) return undefined;
     return window.api.onSettingsChanged((newSettings) => {
-      setShortcuts(newSettings.shortcuts || null);
+      setShortcuts(mergeShortcutsWithDefaults(newSettings.shortcuts));
       void initializeI18n(newSettings.language, navigator.languages);
     });
   }, []);
@@ -150,15 +177,18 @@ function MindMapWrapper({ selectedNode, setSelectedNode, clearSelectedNode, shor
 // Wrapper for Node that handles shortcuts
 function NodeWrapper({ selectedNode, setSelectedNode, shortcuts }) {
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    if (!shortcuts) return;
-
     const handler = (e) => {
       // Escape - return to MindMap
       if (e.key === 'Escape') {
         e.preventDefault();
-        navigate('/');
+        if (location.state?.fromNote) {
+          navigate(-1);
+        } else {
+          navigate('/');
+        }
         return;
       }
 
@@ -172,7 +202,7 @@ function NodeWrapper({ selectedNode, setSelectedNode, shortcuts }) {
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [shortcuts, navigate]);
+  }, [location.state, navigate]);
 
   return <Node selectedNode={selectedNode} setSelectedNode={setSelectedNode} shortcuts={shortcuts} />;
 }

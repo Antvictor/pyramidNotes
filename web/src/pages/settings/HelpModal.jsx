@@ -67,6 +67,7 @@ export default function HelpModal({ open, onOpenChange }) {
     ["Ctrl+I", t("help.shortcuts.actions.italic")],
     ["Ctrl+1", t("help.shortcuts.actions.heading1")],
     ["Ctrl+2", t("help.shortcuts.actions.heading2")],
+    ["Ctrl+Shift+M", t("help.shortcuts.actions.extractNode")],
     ["Escape", t("help.shortcuts.actions.back")],
   ];
   const mouseActions = [
