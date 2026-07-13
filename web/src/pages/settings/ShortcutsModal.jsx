@@ -25,6 +25,7 @@ const DEFAULT_SHORTCUTS = {
     italic: "Ctrl+I",
     heading1: "Ctrl+1",
     heading2: "Ctrl+2",
+    extractNode: "Ctrl+Shift+M",
   },
   global: {
     search: "Ctrl+K",
@@ -33,6 +34,14 @@ const DEFAULT_SHORTCUTS = {
 };
 
 const LOCKED_SHORTCUTS = ["backToMap"];
+
+function mergeShortcutsWithDefaults(shortcuts) {
+  return {
+    node: { ...DEFAULT_SHORTCUTS.node, ...(shortcuts?.node || {}) },
+    note: { ...DEFAULT_SHORTCUTS.note, ...(shortcuts?.note || {}) },
+    global: { ...DEFAULT_SHORTCUTS.global, ...(shortcuts?.global || {}) },
+  };
+}
 
 export default function ShortcutsModal({ open, onOpenChange }) {
   const { t } = useTranslation();
@@ -50,7 +59,7 @@ export default function ShortcutsModal({ open, onOpenChange }) {
     if (!window.api?.onSettingsChanged) return undefined;
     return window.api.onSettingsChanged((newSettings) => {
       if (newSettings.shortcuts) {
-        setShortcuts(newSettings.shortcuts);
+        setShortcuts(mergeShortcutsWithDefaults(newSettings.shortcuts));
       }
     });
   }, []);
@@ -58,7 +67,7 @@ export default function ShortcutsModal({ open, onOpenChange }) {
   const loadShortcuts = async () => {
     const settings = await window.api.getSettings();
     if (settings.shortcuts) {
-      setShortcuts(settings.shortcuts);
+      setShortcuts(mergeShortcutsWithDefaults(settings.shortcuts));
     } else {
       setShortcuts(DEFAULT_SHORTCUTS);
     }
@@ -176,6 +185,7 @@ export default function ShortcutsModal({ open, onOpenChange }) {
     italic: t("shortcuts.actions.italic"),
     heading1: t("shortcuts.actions.heading1"),
     heading2: t("shortcuts.actions.heading2"),
+    extractNode: t("shortcuts.actions.extractNode"),
   };
 
   const globalLabels = {
