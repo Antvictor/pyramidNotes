@@ -44,6 +44,12 @@ for (const directory of ['en', 'zh']) {
   await copyDirectory(path.join(websiteRoot, directory), path.join(distDir, directory))
 }
 
+await fs.mkdir(path.join(distDir, 'scripts'), { recursive: true })
+await fs.copyFile(
+  path.join(websiteRoot, 'scripts', 'release-contract.mjs'),
+  path.join(distDir, 'scripts', 'release-contract.mjs'),
+)
+
 await copyDirectory(path.join(websiteRoot, 'assets'), path.join(distDir, 'assets'))
 await copyDirectory(path.join(websiteRoot, 'public'), distDir)
 await copyDirectory(
