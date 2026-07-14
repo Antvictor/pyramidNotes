@@ -6,16 +6,18 @@ import type { MouseEvent } from "react";
 import StarterKit from "@tiptap/starter-kit";
 import { Code } from "@tiptap/extension-code";
 import { Markdown } from "tiptap-markdown";
+import {
+  parseInternalNodeReference,
+  resolveInternalNodeTarget,
+  serializeInternalNodeReference,
+  type NodeReferenceTarget,
+} from "./internalNodeReference";
 
-type NodeLookupItem = {
-  id: string;
-  name: string;
-  content?: string;
-};
+type NodeLookupItem = NodeReferenceTarget;
 
 type InternalNodeOptions = {
   nodes: NodeLookupItem[];
-  onOpenNode: (name: string) => void;
+  onOpenNode: (target: NodeLookupItem) => void;
   embedPath: string[];
 };
 
@@ -64,16 +66,17 @@ type MarkdownItLike = {
 
 type InternalNodePMNode = ProseMirrorNode & {
   attrs: {
+    id?: string;
     name?: string;
   };
 };
 
-function openNodeFromLink(event: MouseEvent, target: NodeLookupItem | undefined, name: string, onOpenNode: (name: string) => void) {
+function openNodeFromLink(event: MouseEvent, target: NodeLookupItem | undefined, onOpenNode: (target: NodeLookupItem) => void) {
   if (!target) return;
 
   event.preventDefault();
   event.stopPropagation();
-  onOpenNode(name);
+  onOpenNode(target);
 }
 
 const markdownPreviewExtension = Markdown.configure({
@@ -102,24 +105,30 @@ function registerInternalNodeSyntax(markdownit: unknown) {
     if (end < 0) return false;
     if (silent) return true;
 
-    const name = src.slice(marker.length, end).trim();
+    const reference = parseInternalNodeReference(src.slice(marker.length, end));
+    const { id, name } = reference;
     if (!name) return false;
 
     const token = state.push(embed ? "internal_node_embed" : "internal_node_link", "", 0);
-    token.attrs = [["data-name", encodeName(name)]];
+    token.attrs = [
+      ["data-id", encodeName(id)],
+      ["data-name", encodeName(name)],
+    ];
     token.content = name;
     state.pos += end + 2;
     return true;
   });
 
   md.renderer.rules.internal_node_link = (tokens: MarkdownToken[], idx: number) => {
+    const id = tokens[idx].attrGet("data-id") || "";
     const name = tokens[idx].attrGet("data-name") || "";
-    return `<internal-node-link data-name="${name}">${decodeName(name)}</internal-node-link>`;
+    return `<internal-node-link data-id="${id}" data-name="${name}">${decodeName(name)}</internal-node-link>`;
   };
 
   md.renderer.rules.internal_node_embed = (tokens: MarkdownToken[], idx: number) => {
+    const id = tokens[idx].attrGet("data-id") || "";
     const name = tokens[idx].attrGet("data-name") || "";
-    return `<internal-node-embed data-name="${name}"></internal-node-embed>`;
+    return `<internal-node-embed data-id="${id}" data-name="${name}"></internal-node-embed>`;
   };
 }
 
@@ -131,7 +140,7 @@ function ReadOnlyMarkdownPreview({
 }: {
   content: string;
   nodes: NodeLookupItem[];
-  onOpenNode: (name: string) => void;
+  onOpenNode: (target: NodeLookupItem) => void;
   embedPath: string[];
 }) {
   const editor = useEditor({
@@ -167,6 +176,11 @@ export const InternalNodeLink = Node.create({
 
   addAttributes() {
     return {
+      id: {
+        default: "",
+        parseHTML: (element) => decodeName(element.getAttribute("data-id")),
+        renderHTML: (attributes) => ({ "data-id": encodeName(attributes.id || "") }),
+      },
       name: {
         default: "",
         parseHTML: (element) => decodeName(element.getAttribute("data-name")) || element.textContent?.trim(),
@@ -185,15 +199,16 @@ export const InternalNodeLink = Node.create({
 
   addNodeView() {
     return ReactNodeViewRenderer(({ node, extension }) => {
+      const id = node.attrs.id || "";
       const name = node.attrs.name || "";
       const options = extension.options as InternalNodeOptions;
-      const target = options.nodes.find((item) => item.name === name);
+      const target = resolveInternalNodeTarget(options.nodes, { id, name });
       return (
         <NodeViewWrapper
           as="span"
           className={target ? "internal-node-link" : "internal-node-link internal-node-link-missing"}
           contentEditable={false}
-          onClick={(event) => openNodeFromLink(event, target, name, options.onOpenNode)}
+          onClick={(event: MouseEvent) => openNodeFromLink(event, target, options.onOpenNode)}
         >
           {name}
         </NodeViewWrapper>
@@ -205,7 +220,10 @@ export const InternalNodeLink = Node.create({
     return {
       markdown: {
         serialize(state: MarkdownSerializerState, node: InternalNodePMNode) {
-          state.write(`[[${node.attrs.name || ""}]]`);
+          state.write(serializeInternalNodeReference({
+            id: node.attrs.id || "",
+            name: node.attrs.name || "",
+          }));
         },
         parse: {
           setup(markdownit: unknown) {
@@ -233,6 +251,11 @@ export const InternalNodeEmbed = Node.create({
 
   addAttributes() {
     return {
+      id: {
+        default: "",
+        parseHTML: (element) => decodeName(element.getAttribute("data-id")),
+        renderHTML: (attributes) => ({ "data-id": encodeName(attributes.id || "") }),
+      },
       name: {
         default: "",
         parseHTML: (element) => decodeName(element.getAttribute("data-name")),
@@ -251,9 +274,10 @@ export const InternalNodeEmbed = Node.create({
 
   addNodeView() {
     return ReactNodeViewRenderer(({ node, extension }) => {
+      const id = node.attrs.id || "";
       const name = node.attrs.name || "";
       const options = extension.options as InternalNodeOptions;
-      const target = options.nodes.find((item: NodeLookupItem) => item.name === name);
+      const target = resolveInternalNodeTarget(options.nodes, { id, name });
 
       if (!target) {
         return (
@@ -291,7 +315,10 @@ export const InternalNodeEmbed = Node.create({
     return {
       markdown: {
         serialize(state: MarkdownSerializerState, node: InternalNodePMNode) {
-          state.write(`![[${node.attrs.name || ""}]]`);
+          state.write(serializeInternalNodeReference({
+            id: node.attrs.id || "",
+            name: node.attrs.name || "",
+          }, true));
           state.closeBlock(node);
         },
         parse: {

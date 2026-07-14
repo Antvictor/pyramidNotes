@@ -19,6 +19,7 @@
 - [x] 2.4 If no official extension exists, keep the local implementation within TipTap extension APIs rather than DOM post-processing.
 - [x] 2.5 Keep the existing `tiptap-markdown` pipeline unless a compatibility check proves a Markdown integration migration is safe.
 - [x] 2.6 Add focused tests or verification cases for parse and serialize round trips.
+- [x] 2.7 Persist stable node IDs in new link and embed syntax while retaining legacy name-only parsing.
 
 ## 3. Extraction
 
@@ -30,7 +31,7 @@
 
 ## 4. Navigation
 
-- [x] 4.1 Add internal-link navigation by node name.
+- [x] 4.1 Add internal-link navigation by stable node ID, with name lookup only for legacy references.
 - [x] 4.2 Record internal-link navigation state so Escape can return to the previous note.
 - [x] 4.3 Remove or gate duplicate note-page Escape handlers so exactly one navigation action runs.
 - [x] 4.4 Preserve direct note Escape behavior that returns to the mind map.
@@ -53,6 +54,7 @@
 - [x] 6.7 Render internal links as atom node names without visible brackets.
 - [x] 6.8 Restore incomplete source syntax when deleting an internal link.
 - [x] 6.9 Confirm the active completion item with Enter or Tab and serialize closing `]]`.
+- [x] 6.10 Preserve the selected suggestion ID so duplicate node names resolve to the chosen node.
 
 ## 7. Verification
 

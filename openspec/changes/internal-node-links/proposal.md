@@ -7,9 +7,9 @@ Editing long node content currently has no first-class way to extract selected d
 ## What Changes
 
 - Add an editor command and context-menu action that cuts the current selection into a newly created child node.
-- Replace the extracted range with `[[节点名称]]` in the original node.
-- Render `[[节点名称]]` as a blue clickable internal node link.
-- Render `![[节点名称]]` as a read-only embedded view of that node's content.
+- Replace the extracted range with `[[节点ID|节点名称]]` in the original node.
+- Render ID-backed `[[节点ID|节点名称]]` references as blue clickable internal node links while keeping legacy `[[节点名称]]` references readable.
+- Render ID-backed `![[节点ID|节点名称]]` references as read-only embedded views while keeping legacy name-only embeds readable.
 - Add node-name completion after typing `[[` or `![[`.
 - Change Escape behavior from always returning to the mind map to returning to the previously visited node when navigation came from an internal link.
 - Render embeds as a read-only rendered note preview rather than raw Markdown text.

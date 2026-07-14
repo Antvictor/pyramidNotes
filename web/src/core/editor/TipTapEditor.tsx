@@ -10,20 +10,21 @@ import type { EditorView } from "@tiptap/pm/view";
 import { Markdown } from "tiptap-markdown";
 import type { KeyBinding } from "./extensions/commands";
 import { InternalNodeEmbed, InternalNodeLink } from "./extensions/InternalNodeLink";
+import {
+  parseInternalNodeReference,
+  serializeInternalNodeReference,
+  type NodeReferenceTarget,
+} from "./extensions/internalNodeReference";
 
-type NodeLookupItem = {
-  id: string;
-  name: string;
-  content?: string;
-};
+type NodeLookupItem = NodeReferenceTarget;
 
 interface Props {
   content: string;
   onChange: (v: string) => void;
   keyBindings: KeyBinding[];
   nodes?: NodeLookupItem[];
-  onCreateChildFromSelection?: (nodeName: string, content: string) => Promise<string>;
-  onOpenNode?: (nodeName: string) => void;
+  onCreateChildFromSelection?: (nodeName: string, content: string) => Promise<NodeLookupItem>;
+  onOpenNode?: (target: NodeLookupItem) => void;
 }
 
 type SuggestionState = {
@@ -148,6 +149,7 @@ const InternalNodeTokenNormalizer = Extension.create({
           const replacements: Array<{
             from: number;
             to: number;
+            id: string;
             name: string;
             embed: boolean;
           }> = [];
@@ -159,11 +161,12 @@ const InternalNodeTokenNormalizer = Extension.create({
             tokenPattern.lastIndex = 0;
             let match: RegExpExecArray | null;
             while ((match = tokenPattern.exec(node.text)) !== null) {
-              const name = match[2].trim();
+              const { id, name } = parseInternalNodeReference(match[2]);
               if (!name) continue;
               replacements.push({
                 from: pos + match.index,
                 to: pos + match.index + match[0].length,
+                id,
                 name,
                 embed: match[1] === "!",
               });
@@ -179,9 +182,10 @@ const InternalNodeTokenNormalizer = Extension.create({
               : newState.schema.nodes.internalNodeLink;
             if (!nodeType) continue;
 
-            const internalNode = replacement.embed
-              ? nodeType.create({ name: replacement.name })
-              : nodeType.create({ name: replacement.name });
+            const internalNode = nodeType.create({
+              id: replacement.id,
+              name: replacement.name,
+            });
             tr.replaceRangeWith(replacement.from, replacement.to, internalNode);
           }
 
@@ -228,8 +232,11 @@ function restoreInternalNodeLinkToken(view: EditorView, event: KeyboardEvent) {
   const linkType = schema.nodes.internalNodeLink;
   if (!linkType) return false;
 
-  const replaceLink = (from: number, to: number, node: { attrs: { name?: string } }) => {
-    const fallbackText = `[[${node.attrs.name || ""}]`;
+  const replaceLink = (from: number, to: number, node: { attrs: { id?: string; name?: string } }) => {
+    const fallbackText = serializeInternalNodeReference({
+      id: node.attrs.id || "",
+      name: node.attrs.name || "",
+    }).slice(0, -1);
     const tr = state.tr.replaceWith(from, to, schema.text(fallbackText));
     tr.setSelection(TextSelection.create(tr.doc, from + fallbackText.length));
     view.dispatch(tr);
@@ -272,14 +279,14 @@ function restoreInternalNodeLinkToken(view: EditorView, event: KeyboardEvent) {
   return false;
 }
 
-function insertCompletedInternalNode(view: EditorView, nodeName: string, suggestion: SuggestionState) {
+function insertCompletedInternalNode(view: EditorView, target: NodeLookupItem, suggestion: SuggestionState) {
   const { state } = view;
   const nodeType = suggestion.embed
     ? state.schema.nodes.internalNodeEmbed
     : state.schema.nodes.internalNodeLink;
   if (!nodeType) return false;
 
-  const node = nodeType.create({ name: nodeName });
+  const node = nodeType.create({ id: target.id, name: target.name });
   const tr = state.tr.replaceRangeWith(suggestion.from, suggestion.to, node);
   view.dispatch(tr.scrollIntoView());
   return true;
@@ -438,42 +445,37 @@ export default function TipTapEditor({
     });
   }, []);
 
-  const submitExtraction = useCallback(() => {
+  const submitExtraction = useCallback(async () => {
     const safeNodeName = sanitizeExtractionNodeName(extractionName);
     if (!onCreateChildFromSelection || !extractionDraft || !safeNodeName || isSubmittingExtraction) return;
 
     setIsSubmittingExtraction(true);
-    const nextContent = joinMarkdownParts([
-      extractionDraft.beforeMarkdown,
-      `[[${safeNodeName}]]`,
-      extractionDraft.afterMarkdown,
-    ]);
+    try {
+      const createdNode = await onCreateChildFromSelection(safeNodeName, extractionDraft.markdown);
+      const nextContent = joinMarkdownParts([
+        extractionDraft.beforeMarkdown,
+        serializeInternalNodeReference(createdNode),
+        extractionDraft.afterMarkdown,
+      ]);
 
-    contentRef.current = nextContent;
-
-    onChange(nextContent);
-    closeExtractionDialog();
-    editorRef.current = null;
-    setSuggestion(null);
-    suggestionRef.current = null;
-    setEditorResetKey((key) => key + 1);
-
-    void onCreateChildFromSelection(safeNodeName, extractionDraft.markdown)
-      .then(() => {
-        window.setTimeout(() => {
-          setEditorResetKey((key) => key + 1);
-        }, 0);
-      })
-      .catch((error) => {
-        console.error("Failed to create extracted child node", error);
-      });
+      contentRef.current = nextContent;
+      onChange(nextContent);
+      closeExtractionDialog();
+      editorRef.current = null;
+      setSuggestion(null);
+      suggestionRef.current = null;
+      setEditorResetKey((key) => key + 1);
+    } catch (error) {
+      console.error("Failed to create extracted child node", error);
+      setIsSubmittingExtraction(false);
+    }
   }, [closeExtractionDialog, extractionDraft, extractionName, isSubmittingExtraction, onChange, onCreateChildFromSelection]);
 
-  const completeNode = useCallback((nodeName: string, explicitSuggestion?: SuggestionState | null) => {
+  const completeNode = useCallback((target: NodeLookupItem, explicitSuggestion?: SuggestionState | null) => {
     const editor = editorRef.current;
     const currentSuggestion = explicitSuggestion || suggestionRef.current;
     if (!editor || !currentSuggestion) return;
-    if (!insertCompletedInternalNode(editor.view, nodeName, currentSuggestion)) return;
+    if (!insertCompletedInternalNode(editor.view, target, currentSuggestion)) return;
     suggestionRef.current = null;
     setSuggestion(null);
   }, []);
@@ -527,8 +529,8 @@ export default function TipTapEditor({
       if (event.key === "Enter" || event.key === "Tab") {
         event.preventDefault();
         event.stopPropagation();
-        const nodeName = currentSuggestedNodes[currentActiveIndex]?.name || currentSuggestedNodes[0].name;
-        if (!insertCompletedInternalNode(view, nodeName, currentSuggestion)) return false;
+        const target = currentSuggestedNodes[currentActiveIndex] || currentSuggestedNodes[0];
+        if (!insertCompletedInternalNode(view, target, currentSuggestion)) return false;
         suggestionRef.current = null;
         setSuggestion(null);
         return true;
@@ -680,7 +682,7 @@ export default function TipTapEditor({
               onMouseEnter={() => updateActiveSuggestionIndex(index)}
               onMouseDown={(event) => {
                 event.preventDefault();
-                completeNode(node.name, suggestion);
+                completeNode(node, suggestion);
               }}
             >
               {node.name}

@@ -75,13 +75,14 @@ const Note = ({ shortcuts }) => {
     await db.notes.insert(newNode);
     await window.api.saveFile(`${childId}-${safeName}.md`, yamlStr, content, childId);
     setAllNodes((nodes) => [...nodes, newNode]);
-    return safeName;
+    return newNode;
   };
 
-  const openNodeByName = (nodeName) => {
-    const target = allNodes.find((node) => node.name === nodeName);
-    if (!target) return;
-    navigate(`/note/${target.id}/${target.name}`, { state: { fromNote: id } });
+  const openNode = (target) => {
+    navigate(
+      `/note/${encodeURIComponent(target.id)}/${encodeURIComponent(target.name)}`,
+      { state: { fromNote: id } },
+    );
   };
 
 
@@ -104,7 +105,7 @@ const Note = ({ shortcuts }) => {
           keyBindings={keyBindings}
           nodes={allNodes}
           onCreateChildFromSelection={createChildFromSelection}
-          onOpenNode={openNodeByName}
+          onOpenNode={openNode}
         />
       </div>
 

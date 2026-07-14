@@ -6,7 +6,8 @@ The note editor uses TipTap plus `tiptap-markdown` to store note bodies as Markd
 
 **Goals:**
 
-- Keep internal references as portable Markdown text: `[[Name]]` and `![[Name]]`.
+- Keep internal references as portable Markdown text with stable identity: `[[ID|Name]]` and `![[ID|Name]]`.
+- Continue reading legacy `[[Name]]` and `![[Name]]` references by name.
 - Make selection extraction create a real child node and replace the selection with an internal link.
 - Make internal links navigable and make Escape return to the previous note when navigation came from an internal link.
 - Render embeds as non-editable, WYSIWYG previews of the target note content.
@@ -24,8 +25,9 @@ The note editor uses TipTap plus `tiptap-markdown` to store note bodies as Markd
 
 Internal links use Obsidian-style text syntax:
 
-- `[[Name]]` is an inline internal link.
-- `![[Name]]` is a block embed.
+- `[[ID|Name]]` is an inline internal link whose visible alias is `Name` and whose stable target is `ID`.
+- `![[ID|Name]]` is a block embed with the same target and alias semantics.
+- Legacy `[[Name]]` and `![[Name]]` tokens remain supported when the name is unique. Ambiguous duplicate-name references remain unresolved until the user selects an exact node.
 
 The editor parses these tokens into TipTap nodes and serializes them back to the same Markdown syntax. Files remain editable outside the app.
 
@@ -58,7 +60,7 @@ The naming prompt should use the app's existing dialog style where practical. `w
 
 ### Navigation
 
-Clicking an internal link looks up the first node with the matching name and navigates to its note route. Navigation records that the source was another note. Escape then goes back one browser-history entry; direct note entry still returns to the mind map.
+Clicking an ID-backed internal link resolves the exact node ID and navigates to its note route. An unresolved ID remains broken and MUST NOT fall back to another node with the same name. Legacy name-only links resolve by name only when exactly one node matches; ambiguous duplicates remain unresolved instead of opening an arbitrary node. Navigation records that the source was another note. Escape then goes back one browser-history entry; direct note entry still returns to the mind map.
 
 Escape handling must have one authoritative note-page path. Existing global shortcut hooks and route wrappers should not both compete to handle note-page Escape.
 
@@ -78,10 +80,10 @@ Before implementation, verify whether the project has the package needed for Tip
 
 ## Risks / Trade-offs
 
-- Duplicate node names can make link resolution ambiguous -> duplicate display names are allowed because node IDs keep records and files distinct; name-based links resolve deterministically to the first matching node until aliases or id-based references are introduced.
+- Legacy name-only links remain ambiguous when duplicate names exist -> new completion and extraction flows persist the selected node ID; ambiguous legacy content stays unresolved until the user replaces the reference.
 - Rendering embeds through TipTap recursively can be expensive or complex -> prefer a lightweight read-only Markdown renderer and avoid nested editable editors.
 - Escape is already handled in multiple places -> centralize note-page Escape handling or explicitly gate lower-level handlers so one behavior wins.
-- Name-based links can break after node rename -> link repair is out of scope for this change, but broken links should remain visible and non-destructive.
+- Stored aliases can become stale after node rename, but the stable ID still opens the correct node -> automatic alias repair is out of scope and broken IDs remain visible and non-destructive.
 - Custom syntax can conflict with TipTap Markdown parsing if it is implemented outside extension APIs -> keep parsing, serialization, node views, and suggestions inside TipTap/ProseMirror extension boundaries.
 - Replacing the existing Markdown library could destabilize unrelated Markdown behavior -> keep `tiptap-markdown` unless a targeted compatibility check proves migration is safe.
 - Recursive embeds can freeze rendering -> track the current embed path and render a cycle placeholder when a repeated node is encountered.

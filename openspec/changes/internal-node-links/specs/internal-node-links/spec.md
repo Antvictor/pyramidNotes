@@ -71,12 +71,12 @@ The editor SHALL allow the user to extract the current non-empty selection into 
 
 ### Requirement: Internal node links
 
-The editor SHALL parse `[[节点名称]]` as a theme-colored clickable node name to the matching node, without displaying the surrounding brackets in the editor.
+The editor SHALL parse `[[节点ID|节点名称]]` as a theme-colored clickable node name targeting the exact node ID, without displaying the ID or surrounding brackets. It SHALL continue parsing legacy `[[节点名称]]` references by name.
 
 #### Scenario: Open linked node
 
-- **GIVEN** note content contains `[[目标节点]]`
-- **AND** a node named `目标节点` exists
+- **GIVEN** note content contains `[[target-id|目标节点]]`
+- **AND** a node with ID `target-id` exists
 - **WHEN** the user clicks the rendered link
 - **THEN** the app opens that node's content page
 
@@ -105,7 +105,29 @@ The editor SHALL parse `[[节点名称]]` as a theme-colored clickable node name
 
 - **GIVEN** note content contains an internal link
 - **WHEN** the note is saved
-- **THEN** the Markdown file stores the link as `[[目标节点]]`
+- **THEN** the Markdown file stores the link as `[[节点ID|目标节点]]`
+
+#### Scenario: Open the selected duplicate-name node
+
+- **GIVEN** two nodes have the name `同名节点` but different IDs
+- **WHEN** the user selects the second node from completion and clicks the rendered link
+- **THEN** the Markdown reference stores the second node's ID
+- **AND** the app opens the second node
+
+#### Scenario: Read a legacy name-only link
+
+- **GIVEN** note content contains `[[目标节点]]`
+- **AND** it was saved before ID-backed references were introduced
+- **WHEN** the editor renders the note
+- **THEN** the editor resolves the link by node name when exactly one node matches
+
+#### Scenario: Do not guess an ambiguous legacy link
+
+- **GIVEN** note content contains the legacy reference `[[同名节点]]`
+- **AND** multiple nodes are named `同名节点`
+- **WHEN** the editor renders the note
+- **THEN** the link remains visible but unresolved
+- **AND** clicking it does not open an arbitrary matching node
 
 #### Scenario: Broken link remains visible
 
@@ -117,7 +139,7 @@ The editor SHALL parse `[[节点名称]]` as a theme-colored clickable node name
 
 ### Requirement: Internal node embeds
 
-The editor SHALL parse `![[节点名称]]` as a read-only embedded display of the matching node content rendered in the same visual Markdown style as note content.
+The editor SHALL parse `![[节点ID|节点名称]]` as a read-only embedded display of the exact node ID rendered in the same visual Markdown style as note content. It SHALL continue parsing legacy name-only embeds by name.
 
 #### Scenario: Show embedded node content
 
@@ -138,7 +160,7 @@ The editor SHALL parse `![[节点名称]]` as a read-only embedded display of th
 
 - **GIVEN** note content contains an internal embed
 - **WHEN** the note is saved
-- **THEN** the Markdown file stores the embed as `![[目标节点]]`
+- **THEN** the Markdown file stores the embed as `![[节点ID|目标节点]]`
 
 #### Scenario: Missing embedded node
 
@@ -167,14 +189,14 @@ The editor SHALL show a translucent node-name suggestion list after the user typ
 - **WHEN** the user types `[[` or `![[`
 - **THEN** the app shows matching node names
 - **WHEN** the user selects a node
-- **THEN** the syntax is completed with that node name
+- **THEN** the syntax is completed with that node ID and visible node name
 
 #### Scenario: Completion writes final bracket syntax
 
 - **GIVEN** the suggestion list is open after `[[` or `![[`
 - **WHEN** the user chooses a node by mouse or keyboard
 - **THEN** the editor inserts the matching internal link or embed node
-- **AND** saving the note serializes the node as `[[节点名称]]` or `![[节点名称]]`
+- **AND** saving the note serializes the node as `[[节点ID|节点名称]]` or `![[节点ID|节点名称]]`
 
 #### Scenario: Keyboard completion confirms active item
 
