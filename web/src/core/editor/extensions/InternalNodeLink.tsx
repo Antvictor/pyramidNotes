@@ -71,7 +71,7 @@ type InternalNodePMNode = ProseMirrorNode & {
   };
 };
 
-function openNodeFromLink(event: MouseEvent, target: NodeLookupItem | undefined, onOpenNode: (target: NodeLookupItem) => void) {
+function openNodeFromReference(event: MouseEvent, target: NodeLookupItem | undefined, onOpenNode: (target: NodeLookupItem) => void) {
   if (!target) return;
 
   event.preventDefault();
@@ -208,7 +208,7 @@ export const InternalNodeLink = Node.create({
           as="span"
           className={target ? "internal-node-link" : "internal-node-link internal-node-link-missing"}
           contentEditable={false}
-          onClick={(event: MouseEvent) => openNodeFromLink(event, target, options.onOpenNode)}
+          onClick={(event: MouseEvent) => openNodeFromReference(event, target, options.onOpenNode)}
         >
           {name}
         </NodeViewWrapper>
@@ -298,7 +298,11 @@ export const InternalNodeEmbed = Node.create({
       }
 
       return (
-        <NodeViewWrapper className="internal-node-embed" contentEditable={false}>
+        <NodeViewWrapper
+          className="internal-node-embed"
+          contentEditable={false}
+          onDoubleClick={(event: MouseEvent) => openNodeFromReference(event, target, options.onOpenNode)}
+        >
           <div className="internal-node-embed-title">{name}</div>
           <ReadOnlyMarkdownPreview
             content={target.content || ""}
