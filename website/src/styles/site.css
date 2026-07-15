@@ -624,8 +624,28 @@ button,
   gap: 14px;
 }
 
+.audience-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .info-card {
   background: rgba(252, 250, 246, 0.82);
+}
+
+.audience-card {
+  background:
+    radial-gradient(circle at top right, rgba(44, 121, 90, 0.08), transparent 26%),
+    rgba(252, 250, 246, 0.86);
+}
+
+.audience-card-caution {
+  background:
+    radial-gradient(circle at top right, rgba(145, 106, 44, 0.08), transparent 26%),
+    rgba(252, 250, 246, 0.86);
+}
+
+.audience-card h3 {
+  margin-bottom: 18px;
 }
 
 .list-card {
@@ -749,6 +769,10 @@ button,
   }
 
   .info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .audience-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

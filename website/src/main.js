@@ -196,6 +196,32 @@ function renderScenarioStory(content) {
   `
 }
 
+function renderAudienceSection(content) {
+  return `
+    <section class="section-stack audience-section">
+      ${renderSectionLead(content.audienceSectionTitle, content.audienceSectionIntro)}
+      <div class="section-grid audience-grid">
+        <article class="info-card audience-card">
+          <h3>${content.fitTitle}</h3>
+          <ul class="list-card">
+            ${content.fitPoints.map((item, index) => `
+              <li><span class="list-index">${index + 1}</span><span>${item}</span></li>
+            `).join('')}
+          </ul>
+        </article>
+        <article class="info-card audience-card audience-card-caution">
+          <h3>${content.nonFitTitle}</h3>
+          <ul class="list-card">
+            ${content.nonFitPoints.map((item, index) => `
+              <li><span class="list-index">${index + 1}</span><span>${item}</span></li>
+            `).join('')}
+          </ul>
+        </article>
+      </div>
+    </section>
+  `
+}
+
 function renderInfoLists(content) {
   return `
     <section class="section-stack info-section">
@@ -248,6 +274,7 @@ function renderLocalizedPage(locale, pageKey = locale) {
           ${renderDemoStory(content)}
           ${renderWorkflowSection(content)}
           ${renderScenarioStory(content)}
+          ${renderAudienceSection(content)}
           <section class="section-stack sidebar-section">
             <div class="downloads-layout">
               <article class="download-card recommended">

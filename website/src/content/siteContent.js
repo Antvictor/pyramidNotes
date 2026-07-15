@@ -249,6 +249,20 @@ export const siteContent = {
     workflowSectionTitle: 'Workflow demo',
     scenarioSectionTitle: 'Best-fit scenarios',
     scenarioSectionIntro: 'Pyramid Notes is not trying to replace every note app. It fits best when your material needs a visible structure and long-form writing at the same time.',
+    audienceSectionTitle: 'Suitable workflows',
+    audienceSectionIntro: '',
+    fitTitle: 'Works well for',
+    nonFitTitle: 'Less suitable for',
+    fitPoints: [
+      'Course notes, language learning, or certification prep that naturally form chapters and subtopics.',
+      'Research threads that keep branching into questions, references, and side investigations.',
+      'Technical knowledge bases where you want both stable browsing structure and full-text retrieval.',
+    ],
+    nonFitPoints: [
+      'Mobile-first note capture and quick inbox collection.',
+      'Teams that primarily need cloud collaboration and shared workspaces.',
+      'People who only want lightweight to-do notes or a simple markdown folder viewer.',
+    ],
     requirementsTitle: 'System requirements',
     requirements: [
       'macOS Intel or Apple Silicon',
@@ -294,6 +308,20 @@ export const siteContent = {
     workflowSectionTitle: '流程演示',
     scenarioSectionTitle: '适用场景',
     scenarioSectionIntro: '它不是所有笔记工具的替代品，而是更适合那些既要结构清晰、又要承载长正文内容的整理场景。',
+    audienceSectionTitle: '适合用于',
+    audienceSectionIntro: '',
+    fitTitle: '适合用于',
+    nonFitTitle: '暂时不太适合',
+    fitPoints: [
+      '课程笔记、语言学习、考试整理，这类天然有章节和子主题的内容。',
+      '研究整理、论文线索、问题分叉，这类会不断长出子问题和参考材料的主题。',
+      '技术知识库或长期项目资料，需要一边按结构浏览，一边按正文检索。',
+    ],
+    nonFitPoints: [
+      '以手机随手记录为主的轻量场景。',
+      '强依赖云协作、共享空间、多人同步的团队场景。',
+      '只想要待办清单或简单 Markdown 文件浏览的人。',
+    ],
     requirementsTitle: '系统要求',
     requirements: [
       'macOS Intel 或 Apple Silicon',
