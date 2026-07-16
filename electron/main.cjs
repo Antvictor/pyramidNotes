@@ -26,6 +26,9 @@ app.whenReady().then(async () => {
     await initNode();
 
     applyApplicationMenu(settings.language);
+    if (process.platform === 'darwin') {
+      app.dock.setIcon(path.join(__dirname, 'build/icon.png'));
+    }
     createWindow(settings);
     registerPathIPC();
     registerFileIPC();

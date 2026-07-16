@@ -10,7 +10,8 @@
     "appId": "com.antvictor.pyramid-notes",
     "productName": "Pyramid Notes",
     "directories": {
-      "output": "../release"
+      "output": "../release",
+      "buildResources": "build"
     },
     "files": [
       "**/*"
@@ -35,6 +36,7 @@
       "category": "public.app-category.productivity"
     },
     "win": {
+      "icon": "build/icon.png",
       "target": [
         {
           "target": "nsis",
