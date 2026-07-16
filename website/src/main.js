@@ -29,22 +29,22 @@ function renderLanguageSwitch(activeKey) {
   `
 }
 
-function renderBrandTagline() {
+function renderBrandTagline(content) {
   return `
     <div class="brand">
       <div class="brand-mark">PN</div>
       <div class="brand-copy">
         <h1>Pyramid Notes</h1>
-        <p>Local-first tree notes with Markdown at every node</p>
+        <p>${content.brandTagline}</p>
       </div>
     </div>
   `
 }
 
-function renderTopbar(activeKey) {
+function renderTopbar(activeKey, content) {
   return `
     <header class="topbar">
-      ${renderBrandTagline()}
+      ${renderBrandTagline(content)}
       ${renderLanguageSwitch(activeKey)}
     </header>
   `
@@ -196,6 +196,57 @@ function renderScenarioStory(content) {
   `
 }
 
+function renderWhySection(content) {
+  const section = content.whySection
+
+  return `
+    <section class="section-stack why-section">
+      ${renderSectionLead(section.title, section.intro)}
+      <div class="section-grid why-grid">
+        ${section.points.map((point) => `
+          <article class="info-card why-card">
+            <span class="why-kicker">${point.kicker}</span>
+            <h4>${point.title}</h4>
+            <p>${point.body}</p>
+          </article>
+        `).join('')}
+      </div>
+    </section>
+  `
+}
+
+function renderPrinciplesSection(content) {
+  const section = content.principlesSection
+
+  return `
+    <section class="section-stack principles-section">
+      ${renderSectionLead(section.title, section.intro)}
+      <div class="section-grid principles-grid">
+        ${section.cards.map((card) => `
+          <article class="info-card principle-card">
+            <span class="principle-index">${card.index}</span>
+            <h4>${card.title}</h4>
+            <p>${card.body}</p>
+          </article>
+        `).join('')}
+      </div>
+    </section>
+  `
+}
+
+function renderStorySection(content) {
+  const section = content.storySection
+
+  return `
+    <section class="section-stack founder-section">
+      ${renderSectionLead(section.title, section.intro)}
+      <article class="info-card founder-card">
+        ${section.paragraphs.map((paragraph) => `<p>${paragraph}</p>`).join('')}
+      </article>
+    </section>
+  `
+}
+
 function renderAudienceSection(content) {
   return `
     <section class="section-stack audience-section">
@@ -253,7 +304,7 @@ function renderLocalizedPage(locale, pageKey = locale) {
 
   app.innerHTML = `
     <div class="site-shell">
-      ${renderTopbar(pageKey === 'root' ? locale : pageKey)}
+      ${renderTopbar(pageKey === 'root' ? locale : pageKey, content)}
       <section class="hero">
         <article class="hero-copy hero-panel">
           <div class="eyebrow">${content.alphaBadge}</div>
@@ -271,11 +322,15 @@ function renderLocalizedPage(locale, pageKey = locale) {
       </section>
       <section class="content-layout">
         <div class="content-main">
+          ${renderWhySection(content)}
+          ${renderPrinciplesSection(content)}
           ${renderDemoStory(content)}
           ${renderWorkflowSection(content)}
           ${renderScenarioStory(content)}
           ${renderAudienceSection(content)}
+          ${renderStorySection(content)}
           <section class="section-stack sidebar-section">
+            ${renderSectionLead(content.downloadSectionTitle, content.downloadSectionIntro)}
             <div class="downloads-layout">
               <article class="download-card recommended">
                 <h3 id="recommended-title">${content.primaryCtaLabel}</h3>
@@ -577,7 +632,7 @@ async function hydrateReleaseState(locale) {
   const labels = targetLabels[locale]
   const recommendedEntry = recommendedTarget ? metadata.targets[recommendedTarget] : null
 
-  versionPill.textContent = `${content.versionPrefix}: ${metadata.name}${metadata.prerelease ? ' · Alpha' : ''}`
+  versionPill.textContent = `${content.versionPrefix}: ${metadata.name}${metadata.prerelease ? ` · ${content.prereleaseLabel}` : ''}`
   recommendedTitle.textContent = content.primaryCtaLabel
 
   if (recommendedEntry && recommendedTarget) {

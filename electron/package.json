@@ -18,6 +18,10 @@
     ],
     "extraResources": [
       {
+        "from": "build/icon.png",
+        "to": "runtime-assets/icon.png"
+      },
+      {
         "from": "sqlite-plugins",
         "to": "sqlite-plugins"
       }

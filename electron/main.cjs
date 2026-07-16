@@ -6,6 +6,7 @@ const { createWindow } = require('./window/window.cjs')
 const { initializeDatabase, closeDatabase } = require('./db/db.cjs')
 const { initNode } = require('./nodes/initNode')
 const { loadSettings, getCachedSettings } = require('./common/settings.cjs')
+const { resolveAppIconPath } = require('./common/assets.cjs')
 const { registerSettingsIPC } = require('./ipc/settings.cjs')
 const { registerCaptureIPC } = require('./ipc/capture.cjs')
 const { applyApplicationMenu } = require('./common/locale.cjs')
@@ -27,7 +28,7 @@ app.whenReady().then(async () => {
 
     applyApplicationMenu(settings.language);
     if (process.platform === 'darwin') {
-      app.dock.setIcon(path.join(__dirname, 'build/icon.png'));
+      app.dock.setIcon(resolveAppIconPath());
     }
     createWindow(settings);
     registerPathIPC();

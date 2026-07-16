@@ -199,9 +199,9 @@ const chineseScenarioSteps = [
 export const siteContent = {
   root: {
     productName: 'Pyramid Notes',
-    headline: 'A locally-oriented tree-structured knowledge management tool.',
+    headline: 'Build knowledge as a tree, not a pile of files.',
     intro:
-      'Pyramid Notes organizes knowledge as a tree, with each node holding its own note body. It was built to make a personal knowledge system easier to maintain, and to avoid ending up with many notes that never connect into a system.',
+      'Pyramid Notes is a local-first knowledge management tool for people who want their notes, research, and long-term material to grow into a durable knowledge system.',
     recommendationIntro: {
       zh: '根据你的浏览器语言，推荐先进入中文页面。',
       en: 'Based on your browser language, the English page is the better starting point.',
@@ -209,12 +209,12 @@ export const siteContent = {
     cards: {
       zh: {
         title: '中文下载页',
-        body: '查看真实中文界面、安装说明和当前 Alpha 下载入口。',
+        body: '查看真实中文界面、安装说明和当前抢先体验版下载入口。',
         cta: '进入中文页',
       },
       en: {
         title: 'English download page',
-        body: 'Inspect the real English interface, workflow, and current release guidance.',
+        body: 'Inspect the interface, positioning, and current Early Access download guidance.',
         cta: 'Open English page',
       },
     },
@@ -224,15 +224,16 @@ export const siteContent = {
     languageCode: 'en',
     languageName: 'English',
     productName: 'Pyramid Notes',
-    alphaBadge: 'Early Alpha',
+    brandTagline: 'Local-first knowledge management for long-term thinking',
+    alphaBadge: 'Early Access',
     headline:
-      'A locally-oriented tree-structured knowledge management tool.',
+      'Let knowledge grow like thinking, not pile up like files.',
     intro:
-      'Pyramid Notes is a structure-first desktop app for organizing knowledge as a tree. The tree keeps the system visible, and each node carries the full Markdown note.',
+      'Notes keep accumulating, but they do not automatically become a system. Pyramid Notes is a local-first knowledge management tool that helps you organize ideas, research, and study material into an evolving tree structure.',
     alphaCopy:
-      'It started from a simple problem: notes kept accumulating, but the system behind them kept getting weaker. The current Alpha already supports the core loop: browse the tree, open a node, write in Markdown, return to the structure, and search across names or note content.',
+      'The tree holds the knowledge structure itself, while each node opens as a full Markdown document. It is built for long-term learning, technical accumulation, and research that keeps branching over time.',
     primaryCtaIdle: 'Checking latest release',
-    primaryCtaLabel: 'Download recommended build',
+    primaryCtaLabel: 'Download Early Access',
     fallbackTitle: 'Automatic recommendation unavailable',
     fallbackBody:
       'Release metadata could not be loaded right now. You can still open GitHub Releases and choose a build manually.',
@@ -244,15 +245,60 @@ export const siteContent = {
     manualPrimary: 'Primary installer',
     manualSecondary: 'Secondary asset',
     unavailableLabel: 'unavailable',
-    demoSectionTitle: 'Product walkthrough',
-    demoSectionIntro: 'See how Pyramid Notes handles structure, search, editing, and reorganization in the actual desktop interface.',
-    workflowSectionTitle: 'Workflow demo',
-    scenarioSectionTitle: 'Best-fit scenarios',
-    scenarioSectionIntro: 'Pyramid Notes is not trying to replace every note app. It fits best when your material needs a visible structure and long-form writing at the same time.',
+    prereleaseLabel: 'Early Access',
+    whySection: {
+      title: 'Why Pyramid Notes exists',
+      intro: 'Many note tools make recording easier, but they do not solve what happens after months of accumulation.',
+      points: [
+        {
+          kicker: 'Problem',
+          title: 'Notes keep growing, but the structure keeps fading',
+          body: 'A few files are manageable. After enough articles, excerpts, and side notes, you know something was recorded, but not where it belongs in the bigger picture.',
+        },
+        {
+          kicker: 'Response',
+          title: 'Start with structure, then fill in the content',
+          body: 'Pyramid Notes treats the tree as the knowledge system itself. Content still matters, but it lives inside a stable topic map instead of becoming a disconnected pile.',
+        },
+      ],
+    },
+    principlesSection: {
+      title: 'From taking notes to building a knowledge system',
+      intro: 'The goal is not to collect more files. The goal is to keep knowledge understandable as it grows.',
+      cards: [
+        {
+          index: '01',
+          title: 'Build the map before filling the archive',
+          body: 'The tree is not a folder shell. Chapters, themes, subtopics, and research directions can all become part of the visible structure.',
+        },
+        {
+          index: '02',
+          title: 'Each node is a full Markdown knowledge unit',
+          body: 'A node is not just a title. It can hold headings, lists, code, references, and longer note bodies in the exact place where that idea belongs.',
+        },
+        {
+          index: '03',
+          title: 'Knowledge changes, so structure must change too',
+          body: 'As understanding deepens, old categories stop fitting. Moving a subtree should feel normal, not like rebuilding everything from scratch.',
+        },
+        {
+          index: '04',
+          title: 'Search should return content and context',
+          body: 'Finding a paragraph matters. Seeing where it sits inside the larger system matters too. Search and structure work together instead of competing.',
+        },
+      ],
+    },
+    demoSectionTitle: 'How the product works in practice',
+    demoSectionIntro: 'The interface keeps the structure visible while you browse, search, edit, and reorganize real material in the desktop app.',
+    workflowSectionTitle: 'Interface tour',
+    scenarioSectionTitle: 'Built for long-term knowledge work',
+    scenarioSectionIntro: 'Pyramid Notes is not trying to replace every note app. It fits when your material needs a structure that can keep evolving over time.',
     audienceSectionTitle: 'Suitable workflows',
-    audienceSectionIntro: '',
+    audienceSectionIntro: 'Use it when structure and long-form content both matter. Avoid it when the job is mainly quick capture, cloud collaboration, or very lightweight note browsing.',
     fitTitle: 'Works well for',
     nonFitTitle: 'Less suitable for',
+    downloadSectionTitle: 'Start building your knowledge system',
+    downloadSectionIntro: 'This Early Access release is for people who want to try Pyramid Notes in real work and see whether a structure-first local workflow fits their material.',
     fitPoints: [
       'Course notes, language learning, or certification prep that naturally form chapters and subtopics.',
       'Research threads that keep branching into questions, references, and side investigations.',
@@ -269,12 +315,21 @@ export const siteContent = {
       'Windows x64 or Windows 32-bit environments that still rely on the shared installer path',
       'Local filesystem access for Markdown note storage',
     ],
+    storySection: {
+      title: 'Why I built it',
+      intro: 'Pyramid Notes started as a way to solve a personal knowledge problem rather than to become a general-purpose note platform.',
+      paragraphs: [
+        'As study and work material kept accumulating, normal folders stopped expressing the relationships between topics. Links alone were useful, but they still did not provide a stable structure.',
+        'So I started building a different model: use a tree to keep knowledge relationships visible, and use Markdown inside each node to hold the actual content.',
+        'Pyramid Notes is not meant to replace every note tool. It exists for people who want a local-first way to build and maintain a long-term knowledge system.',
+      ],
+    },
     installTitle: 'Install notes',
     installSteps: [
       'Download the recommended build for your platform.',
       'On macOS, open the DMG and move the app into Applications.',
       'On Windows, run the installer or use the portable ZIP if you prefer a manual location.',
-      'The first launch is Alpha software: expect rough edges and keep backups of important material.',
+      'This is still Early Access software: expect rough edges and keep backups of important material.',
     ],
     media: localeMedia.en,
     demoSteps: localeMedia.en.demoSteps,
@@ -284,14 +339,15 @@ export const siteContent = {
     languageCode: 'zh',
     languageName: '简体中文',
     productName: 'Pyramid Notes',
-    alphaBadge: '早期 Alpha',
-    headline: '一款本地优先的树结构知识管理工具',
+    brandTagline: '面向长期知识积累的本地优先知识管理工具',
+    alphaBadge: '抢先体验版',
+    headline: '让知识像思维一样生长，而不是堆成一堆文件。',
     intro:
-      'Pyramid Notes 是一个结构优先的知识整理工具。它先用树状结构把知识体系组织起来，再由节点承载对应的 Markdown 正文。',
+      '笔记会越来越多，但不会自动变成体系。Pyramid Notes 是一个本地优先的知识管理工具，帮助你把零散的想法、学习笔记和长期积累的资料整理成可以持续生长的树状知识结构。',
     alphaCopy:
-      '这个项目最初就是为了整理自己的知识体系，避免笔记越记越多，最后只剩很多零散内容。当前 Alpha 已经覆盖核心闭环：浏览树、进入节点写 Markdown、回到结构继续整理，再按节点名或正文搜索内容。',
+      '树状结构负责承载知识体系本身，每个节点再展开为完整 Markdown 正文。它更适合长期学习、技术积累、研究整理，以及那些会不断分叉、不断重构的主题。',
     primaryCtaIdle: '正在检查最新版本',
-    primaryCtaLabel: '下载推荐版本',
+    primaryCtaLabel: '下载抢先体验版',
     fallbackTitle: '自动推荐暂时不可用',
     fallbackBody:
       '当前无法读取发布元数据。你仍然可以前往 GitHub Releases 页面手动选择下载包。',
@@ -303,15 +359,60 @@ export const siteContent = {
     manualPrimary: '默认安装包',
     manualSecondary: '二级下载项',
     unavailableLabel: '暂不可用',
-    demoSectionTitle: '功能演示',
-    demoSectionIntro: '从真实界面里看结构、搜索、编辑和调整分支这几个核心环节是怎样连接在一起的。',
-    workflowSectionTitle: '流程演示',
-    scenarioSectionTitle: '适用场景',
-    scenarioSectionIntro: '它不是所有笔记工具的替代品，而是更适合那些既要结构清晰、又要承载长正文内容的整理场景。',
+    prereleaseLabel: '抢先体验版',
+    whySection: {
+      title: '为什么需要 Pyramid Notes？',
+      intro: '很多笔记工具解决的是“记录”，但没有解决“长期组织”。',
+      points: [
+        {
+          kicker: '问题',
+          title: '笔记越来越多，但知识越来越难找',
+          body: '刚开始几个文件就够了。半年后会变成几十篇文章、几百条记录和大量收藏摘录。你知道自己记过，却不知道它应该属于哪里。',
+        },
+        {
+          kicker: '选择',
+          title: '先建立知识结构，再填充具体内容',
+          body: 'Pyramid Notes 不是先堆文件再靠回忆整理，而是先让知识拥有位置，再让 Markdown 正文承载表达，让内容之间保持稳定关联。',
+        },
+      ],
+    },
+    principlesSection: {
+      title: '从记录，到构建知识体系',
+      intro: '目标不是多记一点，而是在内容持续增长之后，仍然知道自己正在构建什么。',
+      cards: [
+        {
+          index: '01',
+          title: '先建立地图，再记录内容',
+          body: '树不是文件夹，而是你的知识结构。章节、主题、子问题、研究方向都可以自然形成层级。',
+        },
+        {
+          index: '02',
+          title: '每个节点，都是完整的知识单元',
+          body: '节点不是简单标题。它拥有自己的 Markdown 正文，代码、列表、总结、长段内容都可以直接存在于对应位置。',
+        },
+        {
+          index: '03',
+          title: '知识会变化，所以结构也应该容易变化',
+          body: '随着学习深入，原来的分类会失效。你可以移动整棵子树，重新组织知识体系，而不是推倒重来。',
+        },
+        {
+          index: '04',
+          title: '找到内容，也找到它的位置',
+          body: '搜索解决“找到”，结构解决“理解”。全文搜索和树结构一起工作，让你不仅找到答案，也回到它所属的知识体系。',
+        },
+      ],
+    },
+    demoSectionTitle: '产品如何在真实界面里工作',
+    demoSectionIntro: '从真实桌面界面里看结构、搜索、编辑和分支调整是怎样连成一个完整工作流的。',
+    workflowSectionTitle: '界面导览',
+    scenarioSectionTitle: '更适合长期积累的人',
+    scenarioSectionIntro: '它不是为了替代所有笔记工具，而是为那些希望建立长期知识体系的人提供另一种组织方式。',
     audienceSectionTitle: '适合用于',
-    audienceSectionIntro: '',
+    audienceSectionIntro: '当你需要结构与正文同时存在，它会比较合适；如果核心需求是随手记录、云协作或极轻量浏览，它暂时不是目标方案。',
     fitTitle: '适合用于',
     nonFitTitle: '暂时不太适合',
+    downloadSectionTitle: '开始构建你的知识体系',
+    downloadSectionIntro: '当前版本是持续演化中的抢先体验版，适合想在真实学习、研究或技术整理中先试用 Pyramid Notes 的用户。',
     fitPoints: [
       '课程笔记、语言学习、考试整理，这类天然有章节和子主题的内容。',
       '研究整理、论文线索、问题分叉，这类会不断长出子问题和参考材料的主题。',
@@ -328,12 +429,21 @@ export const siteContent = {
       'Windows x64，或仍需要 32 位安装路径的 Windows 环境',
       '本地文件系统读写权限，用于存放 Markdown 笔记',
     ],
+    storySection: {
+      title: '为什么创造 Pyramid Notes？',
+      intro: '这个项目最初只是为了解决自己的问题，而不是为了做一个面向所有人的笔记平台。',
+      paragraphs: [
+        '随着学习和工作积累，笔记越来越多。传统文件夹很难表达知识之间的关系，单纯依赖链接也无法提供稳定结构。',
+        '所以我尝试设计另一种方式：用树保存知识关系，用 Markdown 保存每个节点里的具体内容。',
+        'Pyramid Notes 不是为了替代所有笔记工具，而是为那些想建立长期知识体系的人提供一个本地优先的选择。',
+      ],
+    },
     installTitle: '安装提示',
     installSteps: [
       '先下载适合自己平台的推荐安装包。',
       '在 macOS 上，打开 DMG 并把应用拖入 Applications。',
       '在 Windows 上，可以运行安装程序，也可以选择便携 ZIP 手动解压。',
-      '当前仍是 Alpha 软件，建议先用演示数据或备份后的笔记目录体验。',
+      '当前仍是抢先体验版，建议先用演示数据或备份后的笔记目录体验。',
     ],
     media: localeMedia.zh,
     demoSteps: localeMedia.zh.demoSteps,

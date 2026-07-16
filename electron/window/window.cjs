@@ -1,15 +1,15 @@
 const { BrowserWindow, app } = require("electron");
 const path = require("path");
 const { resolveLanguage, getWindowTitle } = require("../common/locale.cjs");
+const { resolveAppIconPath } = require("../common/assets.cjs");
 
 function createWindow(settings = {}) {
   const language = resolveLanguage(settings.language, [app.getLocale()]);
-  const iconPath = path.join(__dirname, "../build/icon.png");
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
     title: getWindowTitle(language),
-    icon: iconPath,
+    icon: resolveAppIconPath(),
     webPreferences: {
       preload: path.join(__dirname, "../preload.cjs"),
     }
