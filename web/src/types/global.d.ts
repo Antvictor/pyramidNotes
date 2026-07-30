@@ -20,6 +20,9 @@ interface PyramidApi {
   }) => Promise<string | null>;
   onSettingsChanged: (callback: (settings: PyramidSettings) => void) => () => void;
   getVersion?: () => string;
+  saveAttachmentFromBase64: (base64Data: string, noteName: string, extension: string) => Promise<{ fileName: string } | { error: string }>;
+  saveAttachmentFromPath: (sourcePath: string, noteName: string) => Promise<{ fileName: string } | { error: string }>;
+  readAttachment: (fileName: string) => Promise<{ base64: string; mimeType: string } | { error: string }>;
   [key: string]: unknown;
 }
 

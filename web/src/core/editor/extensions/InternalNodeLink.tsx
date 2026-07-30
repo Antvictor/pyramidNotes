@@ -12,6 +12,8 @@ import {
   serializeInternalNodeReference,
   type NodeReferenceTarget,
 } from "./internalNodeReference";
+import { isImageReference } from "./attachmentUtils";
+import { InternalImageEmbed } from "./InternalImageEmbed";
 
 type NodeLookupItem = NodeReferenceTarget;
 
@@ -109,6 +111,15 @@ function registerInternalNodeSyntax(markdownit: unknown) {
     const { id, name } = reference;
     if (!name) return false;
 
+    // For ![[...]], check if it's an image reference (but not if it has an explicit id)
+    if (embed && !reference.id && isImageReference(name)) {
+      const token = state.push("internal_image", "", 0);
+      token.attrs = [["data-src", name]];
+      token.content = name;
+      state.pos += end + 2;
+      return true;
+    }
+
     const token = state.push(embed ? "internal_node_embed" : "internal_node_link", "", 0);
     token.attrs = [
       ["data-id", encodeName(id)],
@@ -129,6 +140,11 @@ function registerInternalNodeSyntax(markdownit: unknown) {
     const id = tokens[idx].attrGet("data-id") || "";
     const name = tokens[idx].attrGet("data-name") || "";
     return `<internal-node-embed data-id="${id}" data-name="${name}"></internal-node-embed>`;
+  };
+
+  md.renderer.rules.internal_image = (tokens: MarkdownToken[], idx: number) => {
+    const src = tokens[idx].attrGet("data-src") || "";
+    return `<internal-image-embed data-src="${src}"></internal-image-embed>`;
   };
 }
 
@@ -151,6 +167,7 @@ function ReadOnlyMarkdownPreview({
       Code,
       InternalNodeLink.configure({ nodes, onOpenNode, embedPath }),
       InternalNodeEmbed.configure({ nodes, onOpenNode, embedPath }),
+      InternalImageEmbed,
       markdownPreviewExtension,
     ],
     content,

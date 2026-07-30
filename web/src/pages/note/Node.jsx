@@ -104,6 +104,8 @@ const Note = ({ shortcuts }) => {
           onChange={saveFile}
           keyBindings={keyBindings}
           nodes={allNodes}
+          noteName={name}
+          noteId={id}
           onCreateChildFromSelection={createChildFromSelection}
           onOpenNode={openNode}
         />

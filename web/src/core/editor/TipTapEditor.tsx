@@ -5,11 +5,14 @@ import { Extension } from "@tiptap/core";
 import { EditorProvider, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Code } from "@tiptap/extension-code";
+import Image from "@tiptap/extension-image";
 import { NodeSelection, Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { Markdown } from "tiptap-markdown";
 import type { KeyBinding } from "./extensions/commands";
 import { InternalNodeEmbed, InternalNodeLink } from "./extensions/InternalNodeLink";
+import { InternalImageEmbed } from "./extensions/InternalImageEmbed";
+import { isImageReference, sanitizeFileName } from "./extensions/attachmentUtils";
 import {
   parseInternalNodeReference,
   serializeInternalNodeReference,
@@ -23,6 +26,8 @@ interface Props {
   onChange: (v: string) => void;
   keyBindings: KeyBinding[];
   nodes?: NodeLookupItem[];
+  noteName?: string;
+  noteId?: string;
   onCreateChildFromSelection?: (nodeName: string, content: string) => Promise<NodeLookupItem>;
   onOpenNode?: (target: NodeLookupItem) => void;
 }
@@ -177,6 +182,15 @@ const InternalNodeTokenNormalizer = Extension.create({
 
           const tr = newState.tr;
           for (const replacement of replacements.reverse()) {
+            // For ![[...]], check if it's an image reference first
+            if (replacement.embed && !replacement.id && isImageReference(replacement.name)) {
+              const imageType = newState.schema.nodes.internalImageEmbed;
+              if (!imageType) continue;
+              const imageNode = imageType.create({ src: replacement.name });
+              tr.replaceRangeWith(replacement.from, replacement.to, imageNode);
+              continue;
+            }
+
             const nodeType = replacement.embed
               ? newState.schema.nodes.internalNodeEmbed
               : newState.schema.nodes.internalNodeLink;
@@ -297,6 +311,8 @@ export default function TipTapEditor({
   onChange,
   keyBindings,
   nodes = [],
+  noteName,
+  noteId,
   onCreateChildFromSelection,
   onOpenNode,
 }: Props) {
@@ -319,6 +335,8 @@ export default function TipTapEditor({
   useEffect(() => {
     contentRef.current = content;
   }, [content]);
+
+  const safeNoteName = useMemo(() => sanitizeFileName(noteName || 'untitled'), [noteName]);
 
   const markdownExtension = useMemo(() => Markdown.configure({
     html: false,
@@ -344,9 +362,12 @@ export default function TipTapEditor({
   const openNode = useMemo(() => onOpenNode || (() => {}), [onOpenNode]);
   const internalNodeLink = useMemo(() => InternalNodeLink.configure({ nodes, onOpenNode: openNode }), [nodes, openNode]);
   const internalNodeEmbed = useMemo(() => InternalNodeEmbed.configure({ nodes, onOpenNode: openNode }), [nodes, openNode]);
+  const tiptapImage = useMemo(() => Image.configure({ allowBase64: false, inline: false }), []);
+  const internalImageEmbed = useMemo(() => InternalImageEmbed.configure({ noteName: safeNoteName }), [safeNoteName]);
+
   const extensions = useMemo(
-    () => [starterKit, Code, internalNodeLink, internalNodeEmbed, completionExtension, InternalNodeTokenNormalizer, markdownExtension],
-    [starterKit, internalNodeLink, internalNodeEmbed, completionExtension, markdownExtension],
+    () => [starterKit, Code, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, InternalNodeTokenNormalizer, markdownExtension],
+    [starterKit, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, markdownExtension],
   );
 
   const handleUpdate = useCallback(({ editor }: { editor: Editor }) => {
@@ -655,6 +676,64 @@ export default function TipTapEditor({
             },
           },
           handleKeyDown: (view, event) => handleEditorKeyDown(view, event),
+          handlePaste: (view, event) => {
+            const files = event.clipboardData?.files;
+            const hasImageFiles = files && files.length > 0 && Array.from(files).some((f) => f.type.startsWith("image/"));
+
+            if (hasImageFiles) {
+              const imageFiles = Array.from(files!).filter((f) => f.type.startsWith("image/"));
+
+              event.preventDefault();
+
+              (async () => {
+                for (const file of imageFiles) {
+                  const ext = (file.name.split(".").pop() || "png").toLowerCase();
+                  try {
+                    const base64 = await new Promise<string>((resolve, reject) => {
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        const dataUrl = reader.result as string;
+                        resolve(dataUrl.replace(/^data:[^;]+;base64,/, ""));
+                      };
+                      reader.onerror = () => reject(reader.error);
+                      reader.readAsDataURL(file);
+                    });
+
+                    const result = await window.api.saveAttachmentFromBase64(base64, safeNoteName, ext);
+                    if ("error" in result) continue;
+
+                    const { state, dispatch } = view;
+                    const imageType = state.schema.nodes.internalImageEmbed;
+                    if (!imageType) continue;
+
+                    const imageNode = imageType.create({ src: result.fileName });
+                    const tr = state.tr.replaceSelectionWith(imageNode);
+                    dispatch(tr);
+                  } catch (err) {
+                    console.error("Failed to paste image:", err);
+                  }
+                }
+              })();
+
+              return true;
+            }
+
+            // Check for image URL paste
+            const text = event.clipboardData?.getData("text/plain")?.trim();
+            if (text && /^https?:\/\/\S+\.(png|jpg|jpeg|gif|webp|bmp|svg)(\?\S*)?$/i.test(text)) {
+              event.preventDefault();
+              const { state, dispatch } = view;
+              const imageType = state.schema.nodes.image;
+              if (imageType) {
+                const imageNode = imageType.create({ src: text });
+                const tr = state.tr.replaceSelectionWith(imageNode);
+                dispatch(tr);
+              }
+              return true;
+            }
+
+            return false;
+          },
         }}
       >
         <div className="min-h-full" />

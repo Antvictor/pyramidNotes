@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron')
 const path = require('path')
 const { registerFileIPC } = require('./ipc/file.cjs')
+const { registerAttachmentIPC } = require('./ipc/attachment.cjs')
 const { registerPathIPC } = require('./ipc/userPath.cjs')
 const { createWindow } = require('./window/window.cjs')
 const { initializeDatabase, closeDatabase } = require('./db/db.cjs')
@@ -33,6 +34,7 @@ app.whenReady().then(async () => {
     createWindow(settings);
     registerPathIPC();
     registerFileIPC();
+    registerAttachmentIPC();
     registerSettingsIPC();
     registerCaptureIPC();
 

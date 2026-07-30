@@ -44,6 +44,17 @@ function resolveStoragePath() {
 }
 
 /**
+ * 获取附件图片存储目录路径
+ * 返回 {storagePath}/attachment/img/，确保目录存在
+ */
+function resolveAttachmentDir() {
+  const storagePath = resolveStoragePath();
+  const attachmentDir = path.join(storagePath, 'attachment', 'img');
+  require('fs').mkdirSync(attachmentDir, { recursive: true });
+  return attachmentDir;
+}
+
+/**
  * 检测文件或目录的访问权限
  * @param {string} filePath - 文件或目录路径
  * @returns {Promise<{read: boolean, write: boolean}>} 权限检测结果
@@ -130,6 +141,7 @@ async function validateStoragePath(storagePath) {
 
 module.exports = {
   resolveStoragePath,
+  resolveAttachmentDir,
   checkFilePermission,
   classifyError,
   validateStoragePath,

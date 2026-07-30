@@ -209,6 +209,32 @@
   margin: 2em 0;
 }
 
+/* Internal Image Embed */
+.internal-image-embed {
+  margin: 1em 0;
+  display: block;
+}
+
+.internal-image-embed-img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+}
+
+.internal-image-embed-error {
+  padding: 1em;
+  border: 1px dashed var(--color-blockquote-border);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius);
+  font-style: italic;
+}
+
+.internal-image-embed-loading {
+  padding: 1em;
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
 /* Images */
 .cm-md-inline img,
 .prose img {

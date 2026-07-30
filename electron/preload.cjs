@@ -21,4 +21,7 @@ contextBridge.exposeInMainWorld('api', {
     openSystemSettings: () => ipcRenderer.invoke('openSystemSettings'),
     reloadDatabase: (newStoragePath) => ipcRenderer.invoke('reloadDatabase', newStoragePath),
     onSettingsChanged: (callback) => subscribeToIpc('settings-changed', callback),
+    saveAttachmentFromBase64: (base64Data, noteName, extension) => ipcRenderer.invoke('saveAttachmentFromBase64', base64Data, noteName, extension),
+    saveAttachmentFromPath: (sourcePath, noteName) => ipcRenderer.invoke('saveAttachmentFromPath', sourcePath, noteName),
+    readAttachment: (fileName) => ipcRenderer.invoke('readAttachment', fileName),
 })
