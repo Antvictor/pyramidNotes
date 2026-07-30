@@ -36,9 +36,9 @@ async function findFileByNoteId(dataPath, noteId) {
 function registerFileIPC() {
     const buildMarkdown = (yamlData, content) => {
         const safeContent = typeof content === 'string' ? content : '';
-        const safeYaml = typeof yamlData === 'object' ? yamlData : {};
-
-        return matter.stringify(safeContent, safeYaml);
+        const safeYaml = typeof yamlData === 'object' && yamlData !== null ? yamlData : {};
+        const yamlStr = yaml.stringify(safeYaml).trim();
+        return `---\n${yamlStr}\n---\n${safeContent}`;
     }
 
     ipcMain.handle("openFile", async (event, fileName) => {

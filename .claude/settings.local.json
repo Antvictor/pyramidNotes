@@ -99,7 +99,9 @@
       "Bash(mv win32-x64/simple.dll win32-x64/libsimple.dll)",
       "Bash(mv win32-x86/simple.dll win32-x86/libsimple.dll)",
       "Bash(mv win32-arm64/simple.dll win32-arm64/libsimple.dll)",
-      "Bash(pip3 show *)"
+      "Bash(pip3 show *)",
+      "Bash(open *)",
+      "Skill(opsx:archive)"
     ]
   }
 }
