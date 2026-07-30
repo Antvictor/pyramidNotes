@@ -1,8 +1,6 @@
 import { HashRouter as Router, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import Sidebar from "./pages/Sidebar";
-import Home from "./pages/Home";
-import About from "./pages/About";
 import Settings from "./pages/settings/Settings";
 import MindMap from "./pages/MindMap";
 import Node from "./pages/note/Node"
@@ -98,7 +96,6 @@ function AppContent() {
                   setSearchOpen={setSearchOpen}
                 />
               } />
-              <Route path="/about" element={<About />} />
               <Route path="/settings" element={<Settings shortcuts={shortcuts} />} />
               <Route path="/note/:id/:name" element={
                 <NodeWrapper

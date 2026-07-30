@@ -15,6 +15,7 @@ const Note = ({ shortcuts }) => {
   const [fileName, setFileName] = useState("");
   const [ready, setReady] = useState(false);
   const [allNodes, setAllNodes] = useState([]);
+  const [noteFontSize, setNoteFontSize] = useState(16);
   const navigate = useNavigate();
 
   // Build keyBindings from shortcuts
@@ -37,6 +38,11 @@ const Note = ({ shortcuts }) => {
 
     const loadFile = async () => {
       setReady(false);
+      // Load settings for font config
+      const s = await window.api.getSettings();
+      if (s.noteFontSize) {
+        setNoteFontSize(s.noteFontSize);
+      }
       // 1. 获取 Electron userData 路径
       const fileName = `${id}-${name}.md`;
       setFileName(fileName);
@@ -53,6 +59,16 @@ const Note = ({ shortcuts }) => {
 
     loadFile();
   }, [id, name]);
+
+  // Listen for settings changes (e.g., note font size)
+  useEffect(() => {
+    if (!window.api?.onSettingsChanged) return;
+    return window.api.onSettingsChanged((newSettings) => {
+      if (newSettings.noteFontSize) {
+        setNoteFontSize(newSettings.noteFontSize);
+      }
+    });
+  }, []);
 
   const saveFile = async (content) => {
     if (fileName) {
@@ -106,6 +122,7 @@ const Note = ({ shortcuts }) => {
           nodes={allNodes}
           noteName={name}
           noteId={id}
+          noteFontSize={noteFontSize}
           onCreateChildFromSelection={createChildFromSelection}
           onOpenNode={openNode}
         />

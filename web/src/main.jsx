@@ -20,6 +20,11 @@ async function bootstrap() {
 
   themeService.setThemeMode(settings.theme || 'system');
 
+  // Apply system font size
+  if (settings.systemFontSize) {
+    document.documentElement.style.fontSize = settings.systemFontSize + 'px';
+  }
+
   try {
     await initializeI18n(settings.language, navigator.languages);
   } catch (error) {

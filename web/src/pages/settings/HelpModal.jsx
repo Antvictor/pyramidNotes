@@ -154,6 +154,12 @@ export default function HelpModal({ open, onOpenChange }) {
         <div style={text}>
           <strong>{t("help.operations.shortcutsTitle")}</strong> — {t("help.operations.shortcutsBody")}
         </div>
+        <div style={text}>
+          <strong>{t("help.operations.nodeRefTitle")}</strong> — {t("help.operations.nodeRefBody")}
+        </div>
+        <div style={text}>
+          <strong>{t("help.operations.imageRefTitle")}</strong> — {t("help.operations.imageRefBody")}
+        </div>
       </DialogContent>
     </Dialog>
   );

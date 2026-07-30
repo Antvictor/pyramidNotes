@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { House, Settings, FileQuestionMark, Search } from 'lucide-react';
+import { House, Settings, Search } from 'lucide-react';
 import { useTranslation } from "react-i18next";
 
 const Sidebar = () => {
@@ -31,9 +31,6 @@ const Sidebar = () => {
       </Link>
       <Link to="/?search=1" style={linkStyle("/")} aria-label={t("navigation.search")}>
         <Search />
-      </Link>
-      <Link to="/about" style={linkStyle("/about")} aria-label={t("navigation.about")}>
-        <FileQuestionMark />
       </Link>
       <Link to="/settings" style={linkStyle("/settings")} aria-label={t("navigation.settings")} data-tutorial-id="sidebar-settings">
         <Settings />

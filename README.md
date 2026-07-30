@@ -68,6 +68,16 @@ Press `Ctrl+K` to open the search dialog. Two modes available:
 #### Customize shortcuts
 Open Settings (gear icon) → Shortcuts. Click any shortcut to rebind it.
 
+#### Node references
+Link to other nodes directly in the editor:
+- `[[node name]]` — inline link that opens the target node on click
+- `![[node name]]` — embeds the full content of another node, double-click to navigate
+
+#### Image references
+- **Copy & paste** an image into the editor to save it as an attachment, automatically referenced via `![[image-name.png]]`
+- `![[image-name.png]]` — display a local attachment image
+- `![](https://example.com/image.jpg)` — display an image from a URL
+
 ---
 
 <a id="chinese"></a>
@@ -133,6 +143,16 @@ Open Settings (gear icon) → Shortcuts. Click any shortcut to rebind it.
 
 #### 自定义快捷键
 打开设置（齿轮图标）→ 快捷键，点击任意快捷键即可重新绑定。
+
+#### 节点引用
+在编辑器中直接引用其他节点：
+- `[[节点名称]]` — 内联链接，点击可打开目标节点
+- `![[节点名称]]` — 嵌入其他节点的完整内容，双击可跳转
+
+#### 图片引用
+- **复制粘贴**图片到编辑器，自动保存为附件并通过 `![[图片名.png]]` 引用
+- `![[图片名.png]]` — 显示本地附件图片
+- `![](https://example.com/image.jpg)` — 显示网络图片
 
 ---
 

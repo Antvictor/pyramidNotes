@@ -7,6 +7,8 @@ interface PyramidSettings {
   language?: "system" | "zh-CN" | "en";
   shortcuts?: Record<string, Record<string, string>>;
   tutorialVersion?: string;
+  systemFontSize?: number;
+  noteFontSize?: number;
 }
 
 interface PyramidApi {

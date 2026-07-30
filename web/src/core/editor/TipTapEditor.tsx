@@ -30,6 +30,7 @@ interface Props {
   noteId?: string;
   onCreateChildFromSelection?: (nodeName: string, content: string) => Promise<NodeLookupItem>;
   onOpenNode?: (target: NodeLookupItem) => void;
+  noteFontSize?: number;
 }
 
 type SuggestionState = {
@@ -315,6 +316,7 @@ export default function TipTapEditor({
   noteId,
   onCreateChildFromSelection,
   onOpenNode,
+  noteFontSize = 16,
 }: Props) {
   const editorRef = useRef<Editor | null>(null);
   const editorRootRef = useRef<HTMLDivElement | null>(null);
@@ -638,7 +640,7 @@ export default function TipTapEditor({
   return (
     <div
       ref={editorRootRef}
-      style={{ height: "100%", width: "100%", overflowY: "auto", overflowX: "hidden", position: "relative" }}
+      style={{ height: "100%", width: "100%", overflowY: "auto", overflowX: "hidden", position: "relative", "--note-font-size": noteFontSize + "px" } as React.CSSProperties}
       onClick={() => setContextMenu(null)}
       onMouseDownCapture={(event) => {
         if (isEditorFloatingUiTarget(event.target)) return;
@@ -664,6 +666,7 @@ export default function TipTapEditor({
         editorProps={{
           attributes: {
             class: "outline-none min-h-full p-4 prose prose-sm max-w-none dark:prose-invert",
+            style: `font-size: var(--note-font-size)`,
           },
           handleDOMEvents: {
             contextmenu: (_view, event) => {

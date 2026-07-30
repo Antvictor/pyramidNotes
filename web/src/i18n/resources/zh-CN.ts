@@ -15,14 +15,7 @@ const zhCN = {
   navigation: {
     mindMap: '思维导图',
     search: '搜索',
-    about: '关于',
     settings: '设置',
-  },
-  home: {
-    title: '欢迎使用 Pyramid Notes',
-  },
-  about: {
-    description: '一款以树状结构为导向，通过可视化思维导图关联完整 Markdown 文档的笔记工具。',
   },
   editor: {
     loading: '正在加载笔记…',
@@ -86,7 +79,7 @@ const zhCN = {
     title: '设置',
     sections: {
       basic: '基本信息',
-      commonOperations: '常用操作',
+      systemSettings: '系统设置',
       other: '其他',
     },
     theme: {
@@ -110,6 +103,23 @@ const zhCN = {
       system: '跟随系统',
       zhCN: '简体中文',
       english: 'English',
+    },
+    systemFontSize: {
+      label: '系统字体大小',
+      hint: '影响界面文字显示大小',
+    },
+    noteFontSize: {
+      label: '笔记字体大小',
+      hint: '影响笔记正文及标题，标题按以下比例缩放',
+    },
+    headingRatios: {
+      title: '标题缩放比例',
+      h1: '一级标题 2×',
+      h2: '二级标题 1.75×',
+      h3: '三级标题 1.5×',
+      h4: '四级标题 1.25×',
+      h5: '五级标题 1.125×',
+      h6: '六级标题 1×（与正文同大小）',
     },
   },
   shortcuts: {
@@ -178,7 +188,11 @@ const zhCN = {
       searchTitle: '搜索',
       searchBody: '按 Ctrl+K 打开搜索。节点搜索按名称查找，全文搜索查找笔记正文。',
       shortcutsTitle: '自定义快捷键',
-      shortcutsBody: '打开“设置 → 快捷键”，选择任意快捷键并录入新的按键组合。',
+      shortcutsBody: '打开”设置 → 快捷键”，选择任意快捷键并录入新的按键组合。',
+      nodeRefTitle: '节点引用',
+      nodeRefBody: '输入 [[节点名称]] 创建内联链接，点击可跳转。输入 ![[节点名称]] 嵌入节点完整内容，双击可跳转。',
+      imageRefTitle: '图片引用',
+      imageRefBody: '复制图片后粘贴到编辑器自动保存为附件。使用 ![[图片名.png]] 引用本地图片，或 ![](链接) 引用网络图片。',
     },
   },
   tutorial: {

@@ -15,14 +15,7 @@ const en = {
   navigation: {
     mindMap: 'Mind map',
     search: 'Search',
-    about: 'About',
     settings: 'Settings',
-  },
-  home: {
-    title: 'Welcome to Pyramid Notes',
-  },
-  about: {
-    description: 'A tree-oriented note-taking tool that connects full Markdown documents through a visual mind map.',
   },
   editor: {
     loading: 'Loading note…',
@@ -86,7 +79,7 @@ const en = {
     title: 'Settings',
     sections: {
       basic: 'Basic information',
-      commonOperations: 'Common operations',
+      systemSettings: 'System settings',
       other: 'Other',
     },
     theme: {
@@ -110,6 +103,23 @@ const en = {
       system: 'Follow system',
       zhCN: '简体中文',
       english: 'English',
+    },
+    systemFontSize: {
+      label: 'System font size',
+      hint: 'Base font size for the application UI',
+    },
+    noteFontSize: {
+      label: 'Note font size',
+      hint: 'Editor body font size, headings scale proportionally',
+    },
+    headingRatios: {
+      title: 'Heading scale ratios',
+      h1: 'Heading 1 — 2×',
+      h2: 'Heading 2 — 1.75×',
+      h3: 'Heading 3 — 1.5×',
+      h4: 'Heading 4 — 1.25×',
+      h5: 'Heading 5 — 1.125×',
+      h6: 'Heading 6 — 1× (same as body)',
     },
   },
   shortcuts: {
@@ -179,6 +189,10 @@ const en = {
       searchBody: 'Press Ctrl+K. Node search finds titles; full-text search finds content inside notes.',
       shortcutsTitle: 'Customize shortcuts',
       shortcutsBody: 'Open Settings → Keyboard shortcuts, then select a shortcut to record a new binding.',
+      nodeRefTitle: 'Node references',
+      nodeRefBody: 'Type [[node name]] for an inline link that opens the target on click. Type ![[node name]] to embed a node\'s full content, double-click to navigate.',
+      imageRefTitle: 'Image references',
+      imageRefBody: 'Copy an image and paste it into the editor to save it as an attachment. Use ![[image.png]] for local images, or ![](url) for web images.',
     },
   },
   tutorial: {
