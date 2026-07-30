@@ -69,6 +69,32 @@ workflow 和 `release-metadata.json` 都按同一规则设置 `prerelease`。
 
 ### 6. 发布说明模板
 
+### v1.0.0-alpha.7
+
+**更新内容**
+
+- 新增图片引用：复制图片后粘贴自动保存到附件目录，通过 `![[图片名.png]]` 引用显示；复制图片网络地址后通过 `![](url)` 引用显示
+- 新增节点引用：`[[节点名称]]` 创建内联链接，点击可跳转；`![[节点名称]]` 嵌入节点完整内容，双击可跳转
+- 新增系统字体大小配置：设置 → 系统设置中可调整系统 UI 字体大小（px）
+- 新增笔记字体大小配置：设置 → 系统设置中可调整笔记正文大小，标题按比例同步缩放（h1: 2×, h2: 1.75×, h3: 1.5×, h4: 1.25×, h5: 1.125×, h6: 1×）
+- 优化使用说明：新增节点引用和图片引用功能说明
+- 优化侧边栏：移除无用的关于页
+
+**安装包**
+
+| 平台 | 文件 | 说明 |
+|------|------|------|
+| macOS Intel | Pyramid Notes-1.0.0-alpha.7.dmg | 拖拽安装 |
+| macOS Intel | Pyramid Notes-1.0.0-alpha.7-mac.zip | 解压即用 |
+| macOS Apple Silicon | Pyramid Notes-1.0.0-alpha.7-arm64.dmg | 拖拽安装 |
+| macOS Apple Silicon | Pyramid Notes-1.0.0-alpha.7-arm64-mac.zip | 解压即用 |
+| Windows x64 | Pyramid Notes Setup 1.0.0-alpha.7.exe | 默认安装程序 |
+| Windows ia32 | Pyramid Notes Setup 1.0.0-alpha.7.exe | 默认安装程序 |
+| Windows x64 | Pyramid Notes-1.0.0-alpha.7-win.zip | 解压即用 |
+| Windows ia32 | Pyramid Notes-1.0.0-alpha.7-ia32-win.zip | 解压即用 |
+
+### 模板
+
 ```markdown
 **更新内容**
 
@@ -80,12 +106,12 @@ workflow 和 `release-metadata.json` 都按同一规则设置 `prerelease`。
 
 | 平台 | 文件 | 说明 |
 |------|------|------|
-| macOS Intel | Pyramid Notes-1.0.0-alpha.dmg | 拖拽安装 |
-| macOS Intel | Pyramid Notes-1.0.0-alpha-mac.zip | 解压即用 |
-| macOS Apple Silicon | Pyramid Notes-1.0.0-alpha-arm64.dmg | 拖拽安装 |
-| macOS Apple Silicon | Pyramid Notes-1.0.0-alpha-arm64-mac.zip | 解压即用 |
-| Windows x64 | Pyramid Notes Setup 1.0.0-alpha.exe | 默认安装程序 |
-| Windows ia32 | Pyramid Notes Setup 1.0.0-alpha.exe | 默认安装程序 |
-| Windows x64 | Pyramid Notes-1.0.0-alpha-win.zip | 解压即用 |
-| Windows ia32 | Pyramid Notes-1.0.0-alpha-ia32-win.zip | 解压即用 |
+| macOS Intel | Pyramid Notes-<version>.dmg | 拖拽安装 |
+| macOS Intel | Pyramid Notes-<version>-mac.zip | 解压即用 |
+| macOS Apple Silicon | Pyramid Notes-<version>-arm64.dmg | 拖拽安装 |
+| macOS Apple Silicon | Pyramid Notes-<version>-arm64-mac.zip | 解压即用 |
+| Windows x64 | Pyramid Notes Setup <version>.exe | 默认安装程序 |
+| Windows ia32 | Pyramid Notes Setup <version>.exe | 默认安装程序 |
+| Windows x64 | Pyramid Notes-<version>-win.zip | 解压即用 |
+| Windows ia32 | Pyramid Notes-<version>-ia32-win.zip | 解压即用 |
 ```

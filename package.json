@@ -1,7 +1,7 @@
 {
   "name": "pyramid-notes-root",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.0-alpha.7",
   "scripts": {
     "dev": "pnpm -r run dev",
     "build": "pnpm -r run build",
