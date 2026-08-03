@@ -28,6 +28,10 @@ const en = {
     rename: 'Rename node',
     move: 'Move node',
     delete: 'Delete node',
+    focus: 'Focus',
+    focusMode: 'Focus Mode',
+    globalMode: 'Global Mode',
+    focusedOn: 'Focused on',
   },
   search: {
     dialogTitle: 'Search notes',
@@ -120,6 +124,13 @@ const en = {
       h4: 'Heading 4 — 1.25×',
       h5: 'Heading 5 — 1.125×',
       h6: 'Heading 6 — 1× (same as body)',
+    },
+    nodeSpacing: {
+      label: 'Node spacing',
+      hint: 'Spacing between nodes on the home tree view',
+      compact: 'Compact',
+      normal: 'Normal',
+      loose: 'Loose',
     },
   },
   shortcuts: {

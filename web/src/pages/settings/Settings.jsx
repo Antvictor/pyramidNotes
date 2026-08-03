@@ -13,6 +13,7 @@ const Settings = () => {
     language: "system",
     systemFontSize: 16,
     noteFontSize: 16,
+    nodeSpacing: "normal",
   });
   const [version, setVersion] = useState("");
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
@@ -91,6 +92,11 @@ const Settings = () => {
     const num = Math.max(12, Math.min(32, parseInt(value) || 16));
     setSettings((prev) => ({ ...prev, noteFontSize: num }));
     await window.api.saveSettings({ noteFontSize: num });
+  };
+
+  const handleNodeSpacingChange = async (value) => {
+    setSettings((prev) => ({ ...prev, nodeSpacing: value }));
+    await window.api.saveSettings({ nodeSpacing: value });
   };
 
   const languages = [
@@ -282,6 +288,38 @@ const Settings = () => {
                 }}
               />
               <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>px</span>
+            </div>
+          </div>
+
+          <div style={rowStyle}>
+            <div>
+              <span style={labelStyle}>{t("settings.nodeSpacing.label")}</span>
+              <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 2 }}>
+                {t("settings.nodeSpacing.hint")}
+              </div>
+            </div>
+            <div style={controlStyle}>
+              {(["compact", "normal", "loose"]).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => handleNodeSpacingChange(mode)}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: 6,
+                    border: "1px solid var(--border)",
+                    background:
+                      settings.nodeSpacing === mode
+                        ? "var(--link-color)"
+                        : "var(--bg-primary)",
+                    color:
+                      settings.nodeSpacing === mode ? "white" : "var(--text-primary)",
+                    cursor: "pointer",
+                    fontSize: 13,
+                  }}
+                >
+                  {t(`settings.nodeSpacing.${mode}`)}
+                </button>
+              ))}
             </div>
           </div>
 

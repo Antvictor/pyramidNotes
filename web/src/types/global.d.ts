@@ -9,6 +9,7 @@ interface PyramidSettings {
   tutorialVersion?: string;
   systemFontSize?: number;
   noteFontSize?: number;
+  nodeSpacing?: 'compact' | 'normal' | 'loose';
 }
 
 interface PyramidApi {

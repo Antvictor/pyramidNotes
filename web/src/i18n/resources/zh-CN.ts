@@ -28,6 +28,10 @@ const zhCN = {
     rename: '修改节点',
     move: '移动节点',
     delete: '删除节点',
+    focus: '聚焦',
+    focusMode: '聚焦模式',
+    globalMode: '全局模式',
+    focusedOn: '已聚焦',
   },
   search: {
     dialogTitle: '搜索笔记',
@@ -120,6 +124,13 @@ const zhCN = {
       h4: '四级标题 1.25×',
       h5: '五级标题 1.125×',
       h6: '六级标题 1×（与正文同大小）',
+    },
+    nodeSpacing: {
+      label: '节点间距',
+      hint: '首页树形图节点之间的疏密程度',
+      compact: '紧凑',
+      normal: '正常',
+      loose: '宽松',
     },
   },
   shortcuts: {

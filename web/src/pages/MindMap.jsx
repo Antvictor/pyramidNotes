@@ -16,6 +16,7 @@ import {
   useNodesState,
   useEdgesState,
   useReactFlow,
+  useNodesInitialized,
   NodeToolbar,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -38,33 +39,55 @@ import { useTranslation } from "react-i18next";
 
 const nodeTypes = { custom: NodeCustom };
 
+const SPACING_PRESETS = {
+  compact:  { gapBase: 20, hGap: 30 },
+  normal:   { gapBase: 30, hGap: 40 },
+  loose:    { gapBase: 60, hGap: 60 },
+};
+
 /**
  * 动态树布局（按子树宽度分配 X），避免分支多时互相遮盖。
  *
  * 思路：
- * - 第 1 遍 DFS 计算每个节点的“子树宽度”（subtreeWidth）
+ * - 第 1 遍 DFS 计算每个节点的"子树宽度"（subtreeWidth）
  * - 第 2 遍 DFS 按子树宽度给每个孩子分配不重叠的区间，并取区间中心作为孩子的 X
+ *
+ * @param {Array} nodes - 笔记数据
+ * @param {string} rootId - 根节点 id
+ * @param {number} startX - 根节点起始 X
+ * @param {number} startY - 根节点起始 Y
+ * @param {Map} nodeSizes - ReactFlow 测量的节点尺寸 Map<id, {width, height}>
+ * @param {Object} spacingPreset - 间距预设 { gapBase, hGap }
  */
-function layoutTree(nodes, rootId, startX, startY, levelGap = 110) {
-  // 这些值越大，节点越不容易挤在一起（可以按 UI 再调）
-  const NODE_MIN_WIDTH = 30; // 估算的节点最小宽度（px）
-  const H_GAP = 40; // 同层兄弟子树之间的最小间距（px），原来 36，缩为约 1/3
+function layoutTree(nodes, rootId, startX, startY, nodeSizes, spacingPreset) {
+  const { gapBase, hGap: H_GAP } = spacingPreset || SPACING_PRESETS.normal;
+
+  // 计算最大节点高度，用于 levelGap 动态调整
+  let maxMeasuredHeight = 40;
+  if (nodeSizes) {
+    nodeSizes.forEach((s) => {
+      if (s.height > maxMeasuredHeight) maxMeasuredHeight = s.height;
+    });
+  }
+  const levelGap = gapBase + maxMeasuredHeight;
 
   const nodeMap = new Map();
   nodes.forEach((n) => nodeMap.set(n.id, { ...n, children: [] }));
   nodes.forEach((n) => {
-    // top 表示“父节点 id”；根节点 top === "0"
     if (n.top && n.top !== "0") nodeMap.get(n.top)?.children.push(nodeMap.get(n.id));
   });
 
-  const widthMap = new Map(); // id -> subtreeWidth
-  const positions = new Map(); // id -> {x,y}
+  const widthMap = new Map();
+  const positions = new Map();
 
   const getNodeWidth = (node) => {
-    // 基于文本长度粗略估算（避免长标题更容易挤）
+    if (nodeSizes) {
+      const measured = nodeSizes.get(node.id);
+      if (measured?.width) return measured.width;
+    }
     const text = `${node?.name ?? ""}`;
-    const estimated = Math.min(220, NODE_MIN_WIDTH + text.length * 8);
-    return Math.max(NODE_MIN_WIDTH, estimated);
+    const estimated = Math.min(220, 30 + text.length * 8);
+    return Math.max(30, estimated);
   };
 
   const calcWidth = (node) => {
@@ -110,6 +133,50 @@ function layoutTree(nodes, rootId, startX, startY, levelGap = 110) {
   return positions;
 }
 
+function getDescendantIdsSync(nodeId, nodeMap) {
+  const result = [nodeId];
+  const children = nodeMap.get(nodeId)?.children || [];
+  for (const child of children) {
+    result.push(...getDescendantIdsSync(child.id, nodeMap));
+  }
+  return result;
+}
+
+// ReactFlow 测量完成后用实测尺寸重新布局
+function LayoutOnMeasured({ nodeSpacing, displayedNotes, focusNodeId, setNodes }) {
+  const { getNodes } = useReactFlow();
+  const nodesInitialized = useNodesInitialized({ includeHiddenNodes: false });
+
+  useEffect(() => {
+    if (!nodesInitialized || !displayedNotes?.length) return;
+
+    const currentNodes = getNodes();
+    const nodeSizes = new Map();
+    currentNodes.forEach(n => {
+      if (n.measured?.width && n.measured?.height) {
+        nodeSizes.set(n.id, { width: n.measured.width, height: n.measured.height });
+      }
+    });
+
+    if (nodeSizes.size === 0) return;
+
+    const rootId = focusNodeId !== "1"
+      ? focusNodeId
+      : displayedNotes.find(n => n.top === "0")?.id;
+    if (!rootId) return;
+
+    const preset = SPACING_PRESETS[nodeSpacing] || SPACING_PRESETS.normal;
+    const posMap = layoutTree(displayedNotes, rootId, 50, 50, nodeSizes, preset);
+
+    setNodes(nds => nds.map(n => ({
+      ...n,
+      position: posMap.get(n.id) || n.position
+    })));
+  }, [nodesInitialized, nodeSpacing, focusNodeId]);
+
+  return null;
+}
+
 function matchKey(shortcutStr, e) {
   if (!shortcutStr) return false;
   const isMod = e.ctrlKey || e.metaKey;
@@ -147,6 +214,8 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const [moveSource, setMoveSource] = useState(null);
   const [permissionError, setPermissionError] = useState(null);
   const [searchParams] = useSearchParams();
+  const [nodeSpacing, setNodeSpacing] = useState('normal');
+  const [focusNodeId, setFocusNodeId] = useState("1");
   const navigate = useNavigate();
 
   const clickTimerRef = useRef(null);
@@ -168,7 +237,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       // Ctrl+N - 新建节点 (no guard needed - works without selection)
       if (matchKey(shortcuts.node?.newNode, e)) {
         e.preventDefault();
-        requestCreateNode(selectedNode?.id || "1");
+        requestCreateNode(selectedNode?.id || focusNodeId);
         return;
       }
       // F2 - 修改节点 (requires selection)
@@ -312,6 +381,10 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       _internalDeleteNode(deleteConfirmation.id, deleteConfirmation.name);
     }
 
+    if (deleteConfirmation.id === focusNodeId) {
+      setFocusNodeId("1");
+    }
+
     setDeleteConfirmation(null);
     clearSelectedNode();
   };
@@ -364,6 +437,11 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   };
 
   useEffect(() => {
+    if (window.api?.getSettings) {
+      window.api.getSettings().then((s) => {
+        if (s?.nodeSpacing) setNodeSpacing(s.nodeSpacing);
+      });
+    }
     db.notes.select().then((res) => {
       // 调用electron api，扫描数据目录下的markdown，并根据yaml头构建节点数据，然后存入sqlite; 最后从sqlite读取节点数据进行展示
       console.log("res:", res);
@@ -390,13 +468,18 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   useEffect(() => {
     if (!window.api?.onSettingsChanged) return undefined;
     return window.api.onSettingsChanged((newSettings) => {
-      console.log("Settings changed, reloading notes for storagePath:", newSettings.storagePath);
-      db.notes.select().then((res) => {
-        console.log("Reloaded notes:", res);
-        if (res && res.length > 0) {
-          setNotesData(res);
-        }
-      });
+      if (newSettings.nodeSpacing) {
+        setNodeSpacing(newSettings.nodeSpacing);
+      }
+      if (newSettings.storagePath) {
+        console.log("Settings changed, reloading notes for storagePath:", newSettings.storagePath);
+        db.notes.select().then((res) => {
+          console.log("Reloaded notes:", res);
+          if (res && res.length > 0) {
+            setNotesData(res);
+          }
+        });
+      }
     });
   }, []);
 
@@ -414,14 +497,31 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   // memo化 nodeTypes 避免每次渲染都创建
   const memoNodeTypes = useMemo(() => nodeTypes, []);
 
+  const displayedNotes = useMemo(() => {
+    if (!notesData) return null;
+    if (focusNodeId === "1") return notesData;
+    const nodeMap = new Map();
+    notesData.forEach(n => nodeMap.set(n.id, { ...n, children: [] }));
+    notesData.forEach(n => {
+      if (n.top && n.top !== "0") nodeMap.get(n.top)?.children.push(nodeMap.get(n.id));
+    });
+    const visibleIds = new Set(getDescendantIdsSync(focusNodeId, nodeMap));
+    return notesData.filter(n => visibleIds.has(n.id));
+  }, [notesData, focusNodeId]);
+
   // 添加连接
   useEffect(() => {
-    if (!notesData) return;
+    if (!displayedNotes) return;
 
-    let rootNode = notesData.find((n) => "0" === n.top);
+    let rootNode;
+    if (focusNodeId === "1") {
+      rootNode = displayedNotes.find((n) => "0" === n.top);
+    } else {
+      rootNode = displayedNotes.find((n) => n.id === focusNodeId);
+    }
 
-    // 没有 root 节点时的处理
-    if (!rootNode && !creatingRootRef.current) {
+    // 没有 root 节点时的处理（仅全局模式）
+    if (!rootNode && !creatingRootRef.current && focusNodeId === "1") {
       creatingRootRef.current = true;
       const newRoot = {
         id: "1",
@@ -435,9 +535,9 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       db.notes.insert(newRoot);
       saveNode(newRoot);
 
-      if (notesData.length > 0) {
+      if (displayedNotes.length > 0) {
         // 有孤儿节点：全部收编到新 root 下
-        const updated = notesData.map(n => {
+        const updated = displayedNotes.map(n => {
           db.notes.update({ id: n.id }, { top: "1" });
           return { ...n, top: "1" };
         });
@@ -448,10 +548,13 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       return;
     }
 
+    if (!rootNode) return;
+
     const rootId = rootNode.id;
     creatingRootRef.current = false;
-    const posMap = layoutTree(notesData, rootId, 50, 50);
-    const initNodes = notesData.map((n) => ({
+    const preset = SPACING_PRESETS[nodeSpacing] || SPACING_PRESETS.normal;
+    const posMap = layoutTree(displayedNotes, rootId, 50, 50, null, preset);
+    const initNodes = displayedNotes.map((n) => ({
       id: n.id,
       type: "custom",
       // NodeSearch 默认用 node.data.label 搜索，这里补上 label 字段
@@ -460,9 +563,10 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       position: posMap.get(n.id) || { x: Math.random() * 400, y: Math.random() * 400 },
     }));
 
+    const displayedIds = new Set(displayedNotes.map(n => n.id));
     const initEdges = [];
-    (notesData || []).forEach((e) => {
-      if (e.top && e.top !== "0") {
+    (displayedNotes || []).forEach((e) => {
+      if (e.top && e.top !== "0" && displayedIds.has(e.top)) {
         initEdges.push({
           id: `e${e.top}-${e.id}`,
           source: e.top,
@@ -472,7 +576,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           style: { stroke: 'var(--link-color)', strokeWidth: 2 },
         });
       };
-      if (e.left) {
+      if (e.left && displayedIds.has(e.left)) {
         initEdges.push({
           id: `e${e.left}-${e.id}`,
           source: e.left,
@@ -486,7 +590,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
 
     setNodes(initNodes);
     setEdges(initEdges);
-  }, [notesData, setEdges, setNodes]);
+  }, [displayedNotes, setEdges, setNodes]);
 
   // 添加连接
   const onConnect = useCallback(
@@ -499,7 +603,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     x: 0,
     y: 0,
     type: "",
-    nodeId: "1",
+    nodeId: focusNodeId,
     title: ""
   });
 
@@ -512,10 +616,10 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       x: e.clientX,
       y: e.clientY,
       type: "pane",
-      nodeId: "1",
+      nodeId: focusNodeId,
       title: ""
     });
-  }, []);
+  }, [focusNodeId]);
 
   // 右键节点
   const onNodeContextMenu = useCallback((e, node) => {
@@ -634,6 +738,55 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     >
       <ReactFlowProvider>
         <CenterOnSelected />
+        <LayoutOnMeasured nodeSpacing={nodeSpacing} displayedNotes={displayedNotes} focusNodeId={focusNodeId} setNodes={setNodes} />
+        <div style={{
+          position: 'absolute',
+          bottom: 20,
+          left: 120,
+          display: 'flex',
+          flexDirection: 'row',
+          gap: 8,
+          zIndex: 10,
+        }}>
+          <button
+            onClick={() => {
+              if (selectedNode) {
+                setFocusNodeId(selectedNode.id);
+              }
+            }}
+            disabled={!selectedNode || selectedNode.id === focusNodeId}
+            style={{
+              padding: '6px 12px',
+              borderRadius: 6,
+              border: '1px solid var(--border)',
+              background: 'var(--bg-primary)',
+              color: (!selectedNode || selectedNode.id === focusNodeId) ? 'var(--text-secondary)' : 'var(--text-primary)',
+              cursor: (!selectedNode || selectedNode.id === focusNodeId) ? 'default' : 'pointer',
+              fontSize: 12,
+              opacity: (!selectedNode || selectedNode.id === focusNodeId) ? 0.4 : 1,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {t("nodeMenu.focusMode")}
+          </button>
+          <button
+            onClick={() => setFocusNodeId("1")}
+            disabled={focusNodeId === "1"}
+            style={{
+              padding: '6px 12px',
+              borderRadius: 6,
+              border: '1px solid var(--border)',
+              background: 'var(--bg-primary)',
+              color: focusNodeId === "1" ? 'var(--text-secondary)' : 'var(--text-primary)',
+              cursor: focusNodeId === "1" ? 'default' : 'pointer',
+              fontSize: 12,
+              opacity: focusNodeId === "1" ? 0.4 : 1,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {t("nodeMenu.globalMode")}
+          </button>
+        </div>
         <ReactFlow
           nodes={nodes}
           edges={edges}
