@@ -40,9 +40,9 @@ import { useTranslation } from "react-i18next";
 const nodeTypes = { custom: NodeCustom };
 
 const SPACING_PRESETS = {
-  compact:  { gapBase: 20, hGap: 30 },
-  normal:   { gapBase: 30, hGap: 40 },
-  loose:    { gapBase: 60, hGap: 60 },
+  compact:  { gapBase: 60, hGap: 60 },
+  normal:   { gapBase: 80, hGap: 70 },
+  loose:    { gapBase: 100, hGap: 80 },
 };
 
 /**
@@ -62,15 +62,6 @@ const SPACING_PRESETS = {
 function layoutTree(nodes, rootId, startX, startY, nodeSizes, spacingPreset) {
   const { gapBase, hGap: H_GAP } = spacingPreset || SPACING_PRESETS.normal;
 
-  // 计算最大节点高度，用于 levelGap 动态调整
-  let maxMeasuredHeight = 40;
-  if (nodeSizes) {
-    nodeSizes.forEach((s) => {
-      if (s.height > maxMeasuredHeight) maxMeasuredHeight = s.height;
-    });
-  }
-  const levelGap = gapBase + maxMeasuredHeight;
-
   const nodeMap = new Map();
   nodes.forEach((n) => nodeMap.set(n.id, { ...n, children: [] }));
   nodes.forEach((n) => {
@@ -80,19 +71,22 @@ function layoutTree(nodes, rootId, startX, startY, nodeSizes, spacingPreset) {
   const widthMap = new Map();
   const positions = new Map();
 
-  const getNodeWidth = (node) => {
+  const getNodeSize = (node) => {
     if (nodeSizes) {
-      const measured = nodeSizes.get(node.id);
-      if (measured?.width) return measured.width;
+      const m = nodeSizes.get(node.id);
+      if (m?.width && m?.height) return m;
     }
     const text = `${node?.name ?? ""}`;
-    const estimated = Math.min(220, 30 + text.length * 8);
-    return Math.max(30, estimated);
+    const lines = Math.max(1, Math.ceil(text.length / 8));
+    return {
+      width: Math.max(30, Math.min(220, 30 + text.length * 8)),
+      height: 18 + 21 * lines,
+    };
   };
 
   const calcWidth = (node) => {
     const children = node.children || [];
-    const selfWidth = getNodeWidth(node);
+    const selfWidth = getNodeSize(node).width;
     if (!children.length) {
       widthMap.set(node.id, selfWidth);
       return selfWidth;
@@ -105,21 +99,21 @@ function layoutTree(nodes, rootId, startX, startY, nodeSizes, spacingPreset) {
     return subtreeWidth;
   };
 
-  const place = (node, depth, centerX) => {
-    const y = startY + depth * levelGap;
+  const place = (node, centerX, y) => {
+    const size = getNodeSize(node);
     positions.set(node.id, { x: centerX, y });
 
     const children = node.children || [];
     if (!children.length) return;
 
-    // 当前节点的子树宽度，决定孩子整体占用区间
-    const subtreeWidth = widthMap.get(node.id) ?? getNodeWidth(node);
+    const childY = y + size.height + gapBase;
+    const subtreeWidth = widthMap.get(node.id) ?? size.width;
     let cursorLeft = centerX - subtreeWidth / 2;
 
     children.forEach((child) => {
-      const w = widthMap.get(child.id) ?? getNodeWidth(child);
+      const w = widthMap.get(child.id) ?? getNodeSize(child).width;
       const childCenterX = cursorLeft + w / 2;
-      place(child, depth + 1, childCenterX);
+      place(child, childCenterX, childY);
       cursorLeft += w + H_GAP;
     });
   };
@@ -127,7 +121,7 @@ function layoutTree(nodes, rootId, startX, startY, nodeSizes, spacingPreset) {
   const rootNode = nodeMap.get(rootId);
   if (rootNode) {
     calcWidth(rootNode);
-    place(rootNode, 0, startX);
+    place(rootNode, startX, startY);
   }
 
   return positions;
@@ -150,29 +144,33 @@ function LayoutOnMeasured({ nodeSpacing, displayedNotes, focusNodeId, setNodes }
   useEffect(() => {
     if (!nodesInitialized || !displayedNotes?.length) return;
 
-    const currentNodes = getNodes();
-    const nodeSizes = new Map();
-    currentNodes.forEach(n => {
-      if (n.measured?.width && n.measured?.height) {
-        nodeSizes.set(n.id, { width: n.measured.width, height: n.measured.height });
-      }
-    });
+    const timer = setTimeout(() => {
+      const currentNodes = getNodes();
+      const nodeSizes = new Map();
+      currentNodes.forEach(n => {
+        if (n.measured?.width && n.measured?.height) {
+          nodeSizes.set(n.id, { width: n.measured.width, height: n.measured.height });
+        }
+      });
 
-    if (nodeSizes.size === 0) return;
+      if (nodeSizes.size === 0) return;
 
-    const rootId = focusNodeId !== "1"
-      ? focusNodeId
-      : displayedNotes.find(n => n.top === "0")?.id;
-    if (!rootId) return;
+      const rootId = focusNodeId !== "1"
+        ? focusNodeId
+        : displayedNotes.find(n => n.top === "0")?.id;
+      if (!rootId) return;
 
-    const preset = SPACING_PRESETS[nodeSpacing] || SPACING_PRESETS.normal;
-    const posMap = layoutTree(displayedNotes, rootId, 50, 50, nodeSizes, preset);
+      const preset = SPACING_PRESETS[nodeSpacing] || SPACING_PRESETS.normal;
+      const posMap = layoutTree(displayedNotes, rootId, 50, 50, nodeSizes, preset);
 
-    setNodes(nds => nds.map(n => ({
-      ...n,
-      position: posMap.get(n.id) || n.position
-    })));
-  }, [nodesInitialized, nodeSpacing, focusNodeId]);
+      setNodes(nds => nds.map(n => ({
+        ...n,
+        position: posMap.get(n.id) || n.position
+      })));
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [nodesInitialized, nodeSpacing, focusNodeId, displayedNotes]);
 
   return null;
 }
@@ -227,7 +225,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     if (!shortcuts) return;
     const handler = (e) => {
       if (!shortcuts) return;
-      if (visible) return;
+      if (visible || searchOpen || moveSource) return;
       // Ctrl+K - 搜索 (no selection required)
       if (matchKey(shortcuts.global?.search, e)) {
         e.preventDefault();
@@ -257,7 +255,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [shortcuts, selectedNode, visible]);
+  }, [shortcuts, selectedNode, visible, searchOpen, moveSource]);
 
   const addNote = (note) => {
     setNotesData((prevData) => [...prevData, note]);
