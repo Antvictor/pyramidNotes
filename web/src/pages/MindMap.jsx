@@ -68,7 +68,6 @@ function layoutTree(nodes, rootId, startX, startY, nodeSizes, spacingPreset) {
     if (n.top && n.top !== "0") nodeMap.get(n.top)?.children.push(nodeMap.get(n.id));
   });
 
-  const widthMap = new Map();
   const positions = new Map();
 
   const getNodeSize = (node) => {
@@ -84,45 +83,59 @@ function layoutTree(nodes, rootId, startX, startY, nodeSizes, spacingPreset) {
     };
   };
 
-  const calcWidth = (node) => {
-    const children = node.children || [];
-    const selfWidth = getNodeSize(node).width;
-    if (!children.length) {
-      widthMap.set(node.id, selfWidth);
-      return selfWidth;
+  // 子树左右偏移量（距节点中心的距离），支持非对称子树
+  const subL = new Map(), subR = new Map();
+  function calcBounds(node) {
+    const ch = node.children || [];
+    const ownW = getNodeSize(node).width;
+    if (!ch.length) { subL.set(node.id, ownW / 2); subR.set(node.id, ownW / 2); return; }
+
+    ch.forEach(calcBounds);
+    const owns = ch.map((c) => getNodeSize(c).width);
+    const tight = owns.reduce((s, w) => s + w, 0) + H_GAP * (ch.length - 1);
+    let cur = -tight / 2;
+    const xs = ch.map((_, i) => { const x = cur + owns[i] / 2; cur += owns[i] + H_GAP; return x; });
+
+    for (let i = 1; i < ch.length; i++) {
+      if (!ch[i - 1].children?.length || !ch[i].children?.length) continue;
+      const r = xs[i - 1] + subR.get(ch[i - 1].id);
+      const l = xs[i] - subL.get(ch[i].id);
+      if (r + H_GAP > l) { const sh = r + H_GAP - l; for (let j = i; j < xs.length; j++) xs[j] += sh; }
     }
-    const childWidths = children.map(calcWidth);
-    const childrenTotal =
-      childWidths.reduce((sum, w) => sum + w, 0) + H_GAP * Math.max(0, children.length - 1);
-    const subtreeWidth = Math.max(selfWidth, childrenTotal);
-    widthMap.set(node.id, subtreeWidth);
-    return subtreeWidth;
-  };
+
+    let L = Infinity, R = -Infinity;
+    for (let i = 0; i < ch.length; i++) {
+      L = Math.min(L, xs[i] - subL.get(ch[i].id));
+      R = Math.max(R, xs[i] + subR.get(ch[i].id));
+    }
+    subL.set(node.id, Math.max(ownW / 2, -L));
+    subR.set(node.id, Math.max(ownW / 2, R));
+  }
 
   const place = (node, centerX, y) => {
-    const size = getNodeSize(node);
+    const sz = getNodeSize(node);
     positions.set(node.id, { x: centerX, y });
+    const ch = node.children || [];
+    if (!ch.length) return;
 
-    const children = node.children || [];
-    if (!children.length) return;
+    const childY = y + sz.height + gapBase;
+    const owns = ch.map((c) => getNodeSize(c).width);
+    const tight = owns.reduce((s, w) => s + w, 0) + H_GAP * (ch.length - 1);
+    let cur = centerX - tight / 2;
+    const xs = ch.map((_, i) => { const x = cur + owns[i] / 2; cur += owns[i] + H_GAP; return x; });
 
-    const childY = y + size.height + gapBase;
-    const subtreeWidth = widthMap.get(node.id) ?? size.width;
-    let cursorLeft = centerX - subtreeWidth / 2;
+    for (let i = 1; i < ch.length; i++) {
+      if (!ch[i - 1].children?.length || !ch[i].children?.length) continue;
+      const r = xs[i - 1] + subR.get(ch[i - 1].id);
+      const l = xs[i] - subL.get(ch[i].id);
+      if (r + H_GAP > l) { const sh = r + H_GAP - l; for (let j = i; j < xs.length; j++) xs[j] += sh; }
+    }
 
-    children.forEach((child) => {
-      const w = widthMap.get(child.id) ?? getNodeSize(child).width;
-      const childCenterX = cursorLeft + w / 2;
-      place(child, childCenterX, childY);
-      cursorLeft += w + H_GAP;
-    });
+    ch.forEach((c, i) => place(c, xs[i], childY));
   };
 
   const rootNode = nodeMap.get(rootId);
-  if (rootNode) {
-    calcWidth(rootNode);
-    place(rootNode, startX, startY);
-  }
+  if (rootNode) { calcBounds(rootNode); place(rootNode, startX, startY); }
 
   return positions;
 }
