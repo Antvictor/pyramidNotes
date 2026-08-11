@@ -76,10 +76,12 @@ function layoutTree(nodes, rootId, startX, startY, nodeSizes, spacingPreset) {
       if (m?.width && m?.height) return m;
     }
     const text = `${node?.name ?? ""}`;
-    const lines = Math.max(1, Math.ceil(text.length / 8));
+    const nodeMaxWidth = 100, padX = 16, padY = 16;
+    const charsPerLine = Math.max(1, Math.floor((nodeMaxWidth - padX) / 8));
+    const lines = Math.max(1, Math.ceil(text.length / charsPerLine));
     return {
       width: Math.max(30, Math.min(220, 30 + text.length * 8)),
-      height: 18 + 21 * lines,
+      height: padY + 24 * lines,
     };
   };
 
@@ -114,7 +116,7 @@ function layoutTree(nodes, rootId, startX, startY, nodeSizes, spacingPreset) {
 
   const place = (node, centerX, y) => {
     const sz = getNodeSize(node);
-    positions.set(node.id, { x: centerX, y });
+    positions.set(node.id, { x: centerX - sz.width / 2, y });
     const ch = node.children || [];
     if (!ch.length) return;
 
@@ -135,7 +137,30 @@ function layoutTree(nodes, rootId, startX, startY, nodeSizes, spacingPreset) {
   };
 
   const rootNode = nodeMap.get(rootId);
-  if (rootNode) { calcBounds(rootNode); place(rootNode, startX, startY); }
+  if (rootNode) {
+    calcBounds(rootNode);
+    place(rootNode, startX, startY);
+
+    const rootCh = rootNode.children || [];
+    if (rootCh.length > 0) {
+      let minX = Infinity, maxX = -Infinity;
+      for (const ch of rootCh) {
+        const chPos = positions.get(ch.id);
+        if (!chPos) continue;
+        const chSz = getNodeSize(ch);
+        const chCenterX = chPos.x + chSz.width / 2;
+        const left = chCenterX - (subL.get(ch.id) || chSz.width / 2);
+        const right = chCenterX + (subR.get(ch.id) || chSz.width / 2);
+        minX = Math.min(minX, left);
+        maxX = Math.max(maxX, right);
+      }
+      if (minX < Infinity) {
+        const rootMid = (minX + maxX) / 2;
+        const rootSz = getNodeSize(rootNode);
+        positions.set(rootNode.id, { x: rootMid - rootSz.width / 2, y: startY });
+      }
+    }
+  }
 
   return positions;
 }
