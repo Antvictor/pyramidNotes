@@ -13,54 +13,38 @@ export default function NodeCustom({ data }) {
     onExpandOneLevel, onExpandAll, onCollapseNode,
   } = data;
 
-  const btnBase = {
-    padding: '0px 4px',
-    fontSize: 9,
-    borderRadius: 2,
-    border: '1px solid var(--border)',
-    background: 'transparent',
-    color: 'var(--text-secondary)',
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-    lineHeight: '14px',
-    opacity: 0.55,
-  };
-
   const showButtons = hasHiddenChildren || isExpanded;
 
   return (
     <div
       style={{
-        padding: '6px 8px',
         background: 'var(--bg-primary)',
         border: isSelected ? '2px solid var(--link-color)' : '1px solid var(--border)',
         borderRadius: 4,
         cursor: 'pointer',
         minWidth: 40,
-        maxWidth: 100,
         textAlign: 'center',
         color: 'var(--text-primary)',
         transition: 'border-color 0.2s, border-width 0.2s',
+        overflow: 'hidden',
       }}
     >
-      <div style={{ marginBottom: showButtons ? 4 : 0 }}>{data.name}</div>
+      <div style={{ padding: '6px 8px' }}>{data.name}</div>
       {showButtons && (
-        <>
-          <div style={{
-            width: '100%', height: 0,
-            borderTop: '1px solid var(--border)',
-            opacity: 0.5,
-            marginBottom: 4,
-          }} />
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            justifyContent: 'center', flexWrap: 'nowrap',
-            opacity: 0.65,
-          }}>
+        <div style={{
+          display: 'flex', alignItems: 'center',
+          borderTop: '1px solid var(--border)',
+          background: 'var(--bg-markdown)',
+        }}>
           {isExpanded ? (
             <button
               onClick={(e) => { e.stopPropagation(); onCollapseNode?.(data.id); }}
-              style={btnBase}
+              style={{
+                flex: 1, padding: '2px 4px', fontSize: 9,
+                border: 'none', background: 'transparent',
+                color: 'var(--text-secondary)', cursor: 'pointer',
+                lineHeight: '16px',
+              }}
             >
               {t("mindMap.collapse")}
             </button>
@@ -68,26 +52,41 @@ export default function NodeCustom({ data }) {
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); onExpandOneLevel?.(data.id); }}
-                style={btnBase}
+                style={{
+                  flex: 1, padding: '2px 4px', fontSize: 9,
+                  border: 'none', borderRight: '1px solid var(--border)',
+                  background: 'transparent',
+                  color: 'var(--text-secondary)', cursor: 'pointer',
+                  lineHeight: '16px',
+                }}
               >
                 {t("mindMap.expand")}
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); onExpandAll?.(data.id); }}
-                style={btnBase}
+                style={{
+                  flex: 1, padding: '2px 4px', fontSize: 9,
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'var(--text-secondary)', cursor: 'pointer',
+                  lineHeight: '16px',
+                }}
               >
                 {t("mindMap.expandAll")}
               </button>
             </>
           )}
-          <span style={{
-            fontSize: 9, color: 'var(--text-secondary)', opacity: 0.45,
-            whiteSpace: 'nowrap',
-          }}>
-            {descendantCount}
-          </span>
         </div>
-        </>
+      )}
+      {showButtons && descendantCount > 0 && (
+        <div style={{
+          fontSize: 9, color: 'var(--text-secondary)',
+          opacity: 0.45, paddingBottom: 2,
+          borderTop: '1px solid var(--border)',
+          background: 'var(--bg-markdown)',
+        }}>
+          {descendantCount}
+        </div>
       )}
       <Handle id="top" type="target" position={Position.Top} isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
       <Handle id="left" type="target" position={Position.Left} isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
