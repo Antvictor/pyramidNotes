@@ -43,16 +43,20 @@ export default function NodeCustom({ data }) {
         transition: 'border-color 0.2s, border-width 0.2s',
       }}
     >
-      <div>{data.name}</div>
+      <div style={{ marginBottom: showButtons ? 4 : 0 }}>{data.name}</div>
       {showButtons && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          justifyContent: 'center', flexWrap: 'nowrap',
-          marginTop: 2,
-          paddingTop: 2,
-          borderTop: '1px solid var(--border)',
-          opacity: 0.7,
-        }}>
+        <>
+          <div style={{
+            width: '100%', height: 0,
+            borderTop: '1px solid var(--border)',
+            opacity: 0.5,
+            marginBottom: 4,
+          }} />
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            justifyContent: 'center', flexWrap: 'nowrap',
+            opacity: 0.65,
+          }}>
           {isExpanded ? (
             <button
               onClick={(e) => { e.stopPropagation(); onCollapseNode?.(data.id); }}
@@ -83,6 +87,7 @@ export default function NodeCustom({ data }) {
             {descendantCount}
           </span>
         </div>
+        </>
       )}
       <Handle id="top" type="target" position={Position.Top} isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
       <Handle id="left" type="target" position={Position.Left} isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
