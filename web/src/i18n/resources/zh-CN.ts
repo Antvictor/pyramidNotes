@@ -22,6 +22,9 @@ const zhCN = {
   },
   mindMap: {
     rootFallback: '根节点',
+    expand: '展开',
+    collapse: '折叠',
+    expandAll: '全部',
   },
   nodeMenu: {
     create: '创建节点',

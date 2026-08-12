@@ -98,11 +98,15 @@ function layoutTree(nodes, rootId, startX, startY, nodeSizes, spacingPreset) {
     let cur = -tight / 2;
     const xs = ch.map((_, i) => { const x = cur + owns[i] / 2; cur += owns[i] + H_GAP; return x; });
 
+    let lastWithChildren = ch[0].children?.length ? 0 : -1;
     for (let i = 1; i < ch.length; i++) {
-      if (!ch[i - 1].children?.length || !ch[i].children?.length) continue;
-      const r = xs[i - 1] + subR.get(ch[i - 1].id);
-      const l = xs[i] - subL.get(ch[i].id);
-      if (r + H_GAP > l) { const sh = r + H_GAP - l; for (let j = i; j < xs.length; j++) xs[j] += sh; }
+      if (!ch[i].children?.length) continue;
+      if (lastWithChildren >= 0) {
+        const r = xs[lastWithChildren] + subR.get(ch[lastWithChildren].id);
+        const l = xs[i] - subL.get(ch[i].id);
+        if (r + H_GAP > l) { const sh = r + H_GAP - l; for (let j = i; j < xs.length; j++) xs[j] += sh; }
+      }
+      lastWithChildren = i;
     }
 
     let L = Infinity, R = -Infinity;
@@ -126,11 +130,15 @@ function layoutTree(nodes, rootId, startX, startY, nodeSizes, spacingPreset) {
     let cur = centerX - tight / 2;
     const xs = ch.map((_, i) => { const x = cur + owns[i] / 2; cur += owns[i] + H_GAP; return x; });
 
+    let lastWithChildren2 = ch[0].children?.length ? 0 : -1;
     for (let i = 1; i < ch.length; i++) {
-      if (!ch[i - 1].children?.length || !ch[i].children?.length) continue;
-      const r = xs[i - 1] + subR.get(ch[i - 1].id);
-      const l = xs[i] - subL.get(ch[i].id);
-      if (r + H_GAP > l) { const sh = r + H_GAP - l; for (let j = i; j < xs.length; j++) xs[j] += sh; }
+      if (!ch[i].children?.length) continue;
+      if (lastWithChildren2 >= 0) {
+        const r = xs[lastWithChildren2] + subR.get(ch[lastWithChildren2].id);
+        const l = xs[i] - subL.get(ch[i].id);
+        if (r + H_GAP > l) { const sh = r + H_GAP - l; for (let j = i; j < xs.length; j++) xs[j] += sh; }
+      }
+      lastWithChildren2 = i;
     }
 
     ch.forEach((c, i) => place(c, xs[i], childY));
@@ -174,15 +182,39 @@ function getDescendantIdsSync(nodeId, nodeMap) {
   return result;
 }
 
+function computeDepths(rootId, nodeMap) {
+  const depths = new Map();
+  function dfs(nodeId, depth) {
+    depths.set(nodeId, depth);
+    const node = nodeMap.get(nodeId);
+    if (node?.children) {
+      for (const child of node.children) dfs(child.id, depth + 1);
+    }
+  }
+  if (nodeMap.has(rootId)) dfs(rootId, 0);
+  return depths;
+}
+
+function countDescendants(nodeId, nodeMap) {
+  let count = 0;
+  const node = nodeMap.get(nodeId);
+  if (!node?.children) return 0;
+  for (const child of node.children) {
+    count += 1 + countDescendants(child.id, nodeMap);
+  }
+  return count;
+}
+
 // ReactFlow 测量完成后用实测尺寸重新布局
 function LayoutOnMeasured({ nodeSpacing, displayedNotes, focusNodeId, setNodes }) {
   const { getNodes } = useReactFlow();
   const nodesInitialized = useNodesInitialized({ includeHiddenNodes: false });
+  const retryRef = useRef(0);
 
   useEffect(() => {
     if (!nodesInitialized || !displayedNotes?.length) return;
 
-    const timer = setTimeout(() => {
+    const doLayout = () => {
       const currentNodes = getNodes();
       const nodeSizes = new Map();
       currentNodes.forEach(n => {
@@ -190,6 +222,14 @@ function LayoutOnMeasured({ nodeSpacing, displayedNotes, focusNodeId, setNodes }
           nodeSizes.set(n.id, { width: n.measured.width, height: n.measured.height });
         }
       });
+
+      // 等待所有节点都测量完毕
+      if (nodeSizes.size < currentNodes.length && retryRef.current < 5) {
+        retryRef.current++;
+        timer = setTimeout(doLayout, 150);
+        return;
+      }
+      retryRef.current = 0;
 
       if (nodeSizes.size === 0) return;
 
@@ -205,7 +245,9 @@ function LayoutOnMeasured({ nodeSpacing, displayedNotes, focusNodeId, setNodes }
         ...n,
         position: posMap.get(n.id) || n.position
       })));
-    }, 100);
+    };
+
+    let timer = setTimeout(doLayout, 200);
 
     return () => clearTimeout(timer);
   }, [nodesInitialized, nodeSpacing, focusNodeId, displayedNotes]);
@@ -252,7 +294,113 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const [searchParams] = useSearchParams();
   const [nodeSpacing, setNodeSpacing] = useState('normal');
   const [focusNodeId, setFocusNodeId] = useState("1");
+  const [loadedNodeIds, setLoadedNodeIds] = useState(() => new Set());
+  const [expandedNodeIds, setExpandedNodeIds] = useState(() => new Set());
   const navigate = useNavigate();
+
+  // 切换聚焦模式时重置
+  useEffect(() => {
+    setLoadedNodeIds(new Set());
+    setExpandedNodeIds(new Set());
+  }, [focusNodeId]);
+
+  const allNotesNodeMap = useMemo(() => {
+    if (!notesData) return null;
+    const nodeMap = new Map();
+    notesData.forEach(n => nodeMap.set(n.id, { ...n, children: [] }));
+    notesData.forEach(n => {
+      if (n.top && n.top !== '0') {
+        const parent = nodeMap.get(n.top);
+        if (parent) parent.children.push(nodeMap.get(n.id));
+      }
+    });
+    return nodeMap;
+  }, [notesData]);
+
+  const expandOneLevel = useCallback((nodeId) => {
+    if (!allNotesNodeMap) return;
+    const node = allNotesNodeMap.get(nodeId);
+    if (!node?.children?.length) return;
+    setLoadedNodeIds(prev => {
+      const next = new Set(prev);
+      for (const child of node.children) next.add(child.id);
+      return next;
+    });
+    setExpandedNodeIds(prev => {
+      const next = new Set(prev);
+      next.add(nodeId);
+      return next;
+    });
+    setSelectedNode({ id: nodeId, name: node.name });
+  }, [allNotesNodeMap, setSelectedNode]);
+
+  const expandAll = useCallback((nodeId) => {
+    if (!allNotesNodeMap) return;
+    const node = allNotesNodeMap.get(nodeId);
+    const descIds = getDescendantIdsSync(nodeId, allNotesNodeMap);
+    setLoadedNodeIds(prev => {
+      const next = new Set(prev);
+      for (const id of descIds) next.add(id);
+      return next;
+    });
+    setExpandedNodeIds(prev => {
+      const next = new Set(prev);
+      next.add(nodeId);
+      return next;
+    });
+    if (node) setSelectedNode({ id: nodeId, name: node.name });
+  }, [allNotesNodeMap, setSelectedNode]);
+
+  const collapseNode = useCallback((nodeId) => {
+    if (!allNotesNodeMap) return;
+    const node = allNotesNodeMap.get(nodeId);
+    const descIds = getDescendantIdsSync(nodeId, allNotesNodeMap);
+    const childIds = new Set(descIds.filter(id => id !== nodeId));
+    setLoadedNodeIds(prev => {
+      const next = new Set(prev);
+      for (const id of childIds) next.delete(id);
+      return next;
+    });
+    setExpandedNodeIds(prev => {
+      const next = new Set(prev);
+      next.delete(nodeId);
+      for (const id of childIds) next.delete(id);
+      return next;
+    });
+    if (node) setSelectedNode({ id: nodeId, name: node.name });
+  }, [allNotesNodeMap, setSelectedNode]);
+
+  // 初始加载前三层
+  useEffect(() => {
+    if (!allNotesNodeMap || !notesData) return;
+    const effectiveRootId = focusNodeId === '1'
+      ? notesData.find(n => n.top === '0')?.id
+      : focusNodeId;
+    if (!effectiveRootId) return;
+
+    let pool = notesData;
+    if (focusNodeId !== '1') {
+      const subtreeIds = new Set(getDescendantIdsSync(focusNodeId, allNotesNodeMap));
+      pool = notesData.filter(n => subtreeIds.has(n.id));
+    }
+
+    const poolMap = new Map();
+    pool.forEach(n => poolMap.set(n.id, { ...n, children: [] }));
+    pool.forEach(n => {
+      if (n.top && n.top !== '0') {
+        const parent = poolMap.get(n.top);
+        if (parent) parent.children.push(poolMap.get(n.id));
+      }
+    });
+
+    const depthMap = computeDepths(effectiveRootId, poolMap);
+    const ids = new Set();
+    for (const [id, depth] of depthMap) {
+      if (depth <= 2) ids.add(id);
+    }
+    setLoadedNodeIds(ids);
+    setExpandedNodeIds(new Set());
+  }, [allNotesNodeMap, focusNodeId]);
 
   const clickTimerRef = useRef(null);
   const lastClickRef = useRef(null);
@@ -534,16 +682,19 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const memoNodeTypes = useMemo(() => nodeTypes, []);
 
   const displayedNotes = useMemo(() => {
-    if (!notesData) return null;
-    if (focusNodeId === "1") return notesData;
-    const nodeMap = new Map();
-    notesData.forEach(n => nodeMap.set(n.id, { ...n, children: [] }));
-    notesData.forEach(n => {
-      if (n.top && n.top !== "0") nodeMap.get(n.top)?.children.push(nodeMap.get(n.id));
-    });
-    const visibleIds = new Set(getDescendantIdsSync(focusNodeId, nodeMap));
-    return notesData.filter(n => visibleIds.has(n.id));
-  }, [notesData, focusNodeId]);
+    if (!notesData || !allNotesNodeMap) return null;
+
+    let pool = notesData;
+    if (focusNodeId !== '1') {
+      const subtreeIds = new Set(getDescendantIdsSync(focusNodeId, allNotesNodeMap));
+      pool = notesData.filter(n => subtreeIds.has(n.id));
+    }
+
+    // loadedNodeIds 为空时（初始加载中），先跳过过滤，等 useEffect 填充
+    if (loadedNodeIds.size === 0) return pool;
+
+    return pool.filter(n => loadedNodeIds.has(n.id));
+  }, [notesData, focusNodeId, loadedNodeIds, allNotesNodeMap]);
 
   // 添加连接
   useEffect(() => {
@@ -556,8 +707,10 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       rootNode = displayedNotes.find((n) => n.id === focusNodeId);
     }
 
-    // 没有 root 节点时的处理（仅全局模式）
+    // 没有 root 节点时的处理（仅全局模式，且数据库中确实无root）
     if (!rootNode && !creatingRootRef.current && focusNodeId === "1") {
+      const dbHasRoot = notesData?.some(n => n.top === "0");
+      if (dbHasRoot) return;
       creatingRootRef.current = true;
       const newRoot = {
         id: "1",
@@ -590,19 +743,41 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     creatingRootRef.current = false;
     const preset = SPACING_PRESETS[nodeSpacing] || SPACING_PRESETS.normal;
     const posMap = layoutTree(displayedNotes, rootId, 50, 50, null, preset);
+
+    const displayedIds = new Set(displayedNotes.map(n => n.id));
+    const descCountMap = new Map();
+    const hiddenChildrenMap = new Map();
+
+    for (const n of displayedNotes) {
+      const allDescIds = allNotesNodeMap
+        ? getDescendantIdsSync(n.id, allNotesNodeMap).filter(id => id !== n.id)
+        : [];
+      descCountMap.set(n.id, allDescIds.length);
+      // 有隐藏后代 = 全量后代中存在但未加载的
+      hiddenChildrenMap.set(n.id, allDescIds.some(id => !loadedNodeIds.has(id)));
+    }
+
     const initNodes = displayedNotes.map((n) => ({
       id: n.id,
       type: "custom",
-      // NodeSearch 默认用 node.data.label 搜索，这里补上 label 字段
-      data: { name: n.name, label: n.name, ...n },
-      // position: n.position || { x: Math.random() * 400, y: Math.random() * 400 },
+      data: {
+        name: n.name,
+        label: n.name,
+        ...n,
+        descendantCount: descCountMap.get(n.id) || 0,
+        hasHiddenChildren: hiddenChildrenMap.get(n.id) || false,
+        isExpanded: expandedNodeIds.has(n.id),
+        onExpandOneLevel: expandOneLevel,
+        onExpandAll: expandAll,
+        onCollapseNode: collapseNode,
+      },
       position: posMap.get(n.id) || { x: Math.random() * 400, y: Math.random() * 400 },
     }));
 
-    const displayedIds = new Set(displayedNotes.map(n => n.id));
+    const displayedIdsEdge = new Set(displayedNotes.map(n => n.id));
     const initEdges = [];
     (displayedNotes || []).forEach((e) => {
-      if (e.top && e.top !== "0" && displayedIds.has(e.top)) {
+      if (e.top && e.top !== "0" && displayedIdsEdge.has(e.top)) {
         initEdges.push({
           id: `e${e.top}-${e.id}`,
           source: e.top,
@@ -612,7 +787,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           style: { stroke: 'var(--link-color)', strokeWidth: 2 },
         });
       };
-      if (e.left && displayedIds.has(e.left)) {
+      if (e.left && displayedIdsEdge.has(e.left)) {
         initEdges.push({
           id: `e${e.left}-${e.id}`,
           source: e.left,
@@ -626,7 +801,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
 
     setNodes(initNodes);
     setEdges(initEdges);
-  }, [displayedNotes, setEdges, setNodes]);
+  }, [displayedNotes, setEdges, setNodes, allNotesNodeMap, loadedNodeIds, expandedNodeIds, expandOneLevel, expandAll, collapseNode]);
 
   // 添加连接
   const onConnect = useCallback(
@@ -764,6 +939,20 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     return null;
   };
 
+  const breadcrumbPath = useMemo(() => {
+    if (!allNotesNodeMap || focusNodeId === '1') return null;
+    const segments = [];
+    let current = allNotesNodeMap.get(focusNodeId);
+    const visited = new Set();
+    while (current && !visited.has(current.id)) {
+      visited.add(current.id);
+      segments.unshift({ id: current.id, name: current.name || t('mindMap.rootFallback') });
+      if (current.top === '0' || !allNotesNodeMap.has(current.top)) break;
+      current = allNotesNodeMap.get(current.top);
+    }
+    return segments;
+  }, [focusNodeId, allNotesNodeMap, t]);
+
   return (
     <div
       style={{
@@ -775,6 +964,48 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       <ReactFlowProvider>
         <CenterOnSelected />
         <LayoutOnMeasured nodeSpacing={nodeSpacing} displayedNotes={displayedNotes} focusNodeId={focusNodeId} setNodes={setNodes} />
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 4,
+          padding: '6px 12px', fontSize: 13,
+          color: 'var(--text-secondary)', userSelect: 'none',
+          flexWrap: 'wrap',
+        }}>
+          {focusNodeId === '1' ? (
+            <span style={{ color: 'var(--text-primary)', fontWeight: 600, padding: '2px 6px' }}>
+              {t('mindMap.rootFallback')}
+            </span>
+          ) : (
+            breadcrumbPath?.map((seg, idx) => {
+              const isLast = idx === breadcrumbPath.length - 1;
+              return (
+                <span key={seg.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {idx > 0 && <span style={{ opacity: 0.5, margin: '0 2px' }}>&gt;</span>}
+                  {isLast ? (
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 600, padding: '2px 6px', borderRadius: 3 }}>
+                      {seg.name}
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setSelectedNode({ id: seg.id, name: seg.name });
+                        setFocusNodeId(seg.id);
+                      }}
+                      style={{
+                        background: 'none', border: 'none', color: 'var(--link-color)',
+                        cursor: 'pointer', fontSize: 13, padding: '2px 6px', borderRadius: 3,
+                        textDecoration: 'none',
+                      }}
+                      onMouseEnter={(e) => { e.target.style.textDecoration = 'underline'; e.target.style.background = 'var(--bg-markdown)'; }}
+                      onMouseLeave={(e) => { e.target.style.textDecoration = 'none'; e.target.style.background = 'none'; }}
+                    >
+                      {seg.name}
+                    </button>
+                  )}
+                </span>
+              );
+            })
+          )}
+        </div>
         <div style={{
           position: 'absolute',
           bottom: 20,

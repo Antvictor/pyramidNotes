@@ -22,6 +22,9 @@ const en = {
   },
   mindMap: {
     rootFallback: 'root',
+    expand: 'Expand',
+    collapse: 'Collapse',
+    expandAll: 'Show all',
   },
   nodeMenu: {
     create: 'Create node',
