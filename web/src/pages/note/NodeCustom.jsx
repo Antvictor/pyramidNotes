@@ -76,16 +76,15 @@ export default function NodeCustom({ data }) {
               </button>
             </>
           )}
-        </div>
-      )}
-      {showButtons && descendantCount > 0 && (
-        <div style={{
-          fontSize: 9, color: 'var(--text-secondary)',
-          opacity: 0.45, paddingBottom: 2,
-          borderTop: '1px solid var(--border)',
-          background: 'var(--bg-markdown)',
-        }}>
-          {descendantCount}
+          <span style={{
+            fontSize: 9, color: 'var(--text-secondary)',
+            opacity: 0.45, padding: '0 4px',
+            borderLeft: '1px solid var(--border)',
+            lineHeight: '16px',
+            minWidth: 16, textAlign: 'center',
+          }}>
+            {descendantCount}
+          </span>
         </div>
       )}
       <Handle id="top" type="target" position={Position.Top} isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
