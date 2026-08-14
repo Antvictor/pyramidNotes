@@ -20,6 +20,12 @@ const zhCN = {
   editor: {
     loading: '正在加载笔记…',
   },
+  find: {
+    findPlaceholder: '搜索',
+    replacePlaceholder: '替换为',
+    replace: '替换',
+    replaceAll: '全部替换',
+  },
   mindMap: {
     rootFallback: '根节点',
     expand: '展开',

@@ -20,6 +20,12 @@ const en = {
   editor: {
     loading: 'Loading note…',
   },
+  find: {
+    findPlaceholder: 'Find',
+    replacePlaceholder: 'Replace with',
+    replace: 'Replace',
+    replaceAll: 'Replace all',
+  },
   mindMap: {
     rootFallback: 'root',
     expand: 'Expand',
