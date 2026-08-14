@@ -551,12 +551,16 @@ export default function TipTapEditor({
 
   const applySearch = useCallback((query: string, cs: boolean, rx: boolean) => {
     const editor = editorRef.current;
-    if (!editor) return;
-    editor.commands.setCaseSensitive(cs);
-    editor.commands.setUseRegex(rx);
-    editor.commands.setSearchTerm(query);
-    const storage = editor.storage.findAndReplace as { results?: Array<{ from: number; to: number }>; currentIndex?: number | null };
-    setMatchInfo({ count: storage.results?.length ?? 0, current: storage.currentIndex ?? null });
+    if (!editor || editor.isDestroyed) return;
+    try {
+      editor.commands.setCaseSensitive(cs);
+      editor.commands.setUseRegex(rx);
+      editor.commands.setSearchTerm(query);
+      const storage = editor.storage.findAndReplace as { results?: Array<{ from: number; to: number }>; currentIndex?: number | null };
+      setMatchInfo({ count: storage.results?.length ?? 0, current: storage.currentIndex ?? null });
+    } catch {
+      // 编辑器未就绪时忽略
+    }
   }, []);
 
   const handleFindQueryChange = useCallback((v: string) => {
