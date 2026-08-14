@@ -11,6 +11,7 @@ import { NodeSelection, Plugin, PluginKey, TextSelection } from "@tiptap/pm/stat
 import type { EditorView } from "@tiptap/pm/view";
 import { Markdown } from "tiptap-markdown";
 import { useTranslation } from "react-i18next";
+import "./find-replace.css";
 import type { KeyBinding } from "./extensions/commands";
 import { InternalNodeEmbed, InternalNodeLink } from "./extensions/InternalNodeLink";
 import { InternalImageEmbed } from "./extensions/InternalImageEmbed";
@@ -841,28 +842,28 @@ export default function TipTapEditor({
           if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); goToNext(); }
           if (e.key === "Enter" && e.shiftKey) { e.preventDefault(); e.stopPropagation(); goToPrevious(); }
         }}>
-          <input ref={findInputRef} value={findQuery}
-            onChange={(e) => handleFindQueryChange(e.target.value)}
-            placeholder={t("find.findPlaceholder")} />
+          <div className="editor-find-row">
+            <input ref={findInputRef} value={findQuery}
+              onChange={(e) => handleFindQueryChange(e.target.value)}
+              placeholder={t("find.findPlaceholder")} />
+            <button type="button" onClick={toggleCaseSensitive} className={caseSensitive ? "is-active" : ""}>Aa</button>
+            <button type="button" onClick={toggleRegex} className={useRegex ? "is-active" : ""}>.*</button>
+            <button type="button" onClick={goToPrevious}>↑</button>
+            <button type="button" onClick={goToNext}>↓</button>
+            <span className="find-count">
+              {matchInfo.count > 0 ? `${(matchInfo.current ?? 0) + 1}/${matchInfo.count}` : "0/0"}
+            </span>
+            <button type="button" className="find-close" onClick={closeFindPanel}>×</button>
+          </div>
           {findMode === "replace" && (
-            <input ref={replaceInputRef} value={replaceQuery}
-              onChange={(e) => { setReplaceQuery(e.target.value); editorRef.current?.commands.setReplaceTerm(e.target.value); }}
-              placeholder={t("find.replacePlaceholder")} />
-          )}
-          <button type="button" onClick={toggleCaseSensitive} className={caseSensitive ? "is-active" : ""}>Aa</button>
-          <button type="button" onClick={toggleRegex} className={useRegex ? "is-active" : ""}>.*</button>
-          <button type="button" onClick={goToPrevious}>↑</button>
-          <button type="button" onClick={goToNext}>↓</button>
-          <span className="find-count">
-            {matchInfo.count > 0 ? `${(matchInfo.current ?? 0) + 1}/${matchInfo.count}` : "0/0"}
-          </span>
-          {findMode === "replace" && (
-            <>
+            <div className="editor-find-row">
+              <input ref={replaceInputRef} value={replaceQuery}
+                onChange={(e) => { setReplaceQuery(e.target.value); editorRef.current?.commands.setReplaceTerm(e.target.value); }}
+                placeholder={t("find.replacePlaceholder")} />
               <button type="button" onClick={replaceCurrent}>{t("find.replace")}</button>
               <button type="button" onClick={replaceAll}>{t("find.replaceAll")}</button>
-            </>
+            </div>
           )}
-          <button type="button" className="find-close" onClick={closeFindPanel}>×</button>
         </div>
       )}
       {contextMenu && (
