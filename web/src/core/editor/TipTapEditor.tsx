@@ -535,23 +535,28 @@ export default function TipTapEditor({
     updateActiveSuggestionIndex((index) => Math.min(index, Math.max(0, suggestedNodes.length - 1)));
   }, [suggestedNodes, updateActiveSuggestionIndex]);
 
+  const getActiveEditor = useCallback(() => {
+    const editor = editorRef.current;
+    return editor && !editor.isDestroyed ? editor : null;
+  }, []);
+
   const openFindPanel = useCallback((mode: "find" | "replace") => {
     setFindMode(mode);
     setTimeout(() => (mode === "replace" ? replaceInputRef : findInputRef).current?.focus(), 0);
   }, []);
 
   const closeFindPanel = useCallback(() => {
-    const editor = editorRef.current;
+    const editor = getActiveEditor();
     setFindMode(null);
     setFindQuery("");
     setReplaceQuery("");
     editor?.commands.clearSearch();
     editor?.chain().focus().run();
-  }, []);
+  }, [getActiveEditor]);
 
   const applySearch = useCallback((query: string, cs: boolean, rx: boolean) => {
-    const editor = editorRef.current;
-    if (!editor || editor.isDestroyed) return;
+    const editor = getActiveEditor();
+    if (!editor) return;
     try {
       editor.commands.setCaseSensitive(cs);
       editor.commands.setUseRegex(rx);
@@ -561,7 +566,7 @@ export default function TipTapEditor({
     } catch {
       // 编辑器未就绪时忽略
     }
-  }, []);
+  }, [getActiveEditor]);
 
   const handleFindQueryChange = useCallback((v: string) => {
     setFindQuery(v);
@@ -569,31 +574,35 @@ export default function TipTapEditor({
   }, [applySearch, caseSensitive, useRegex]);
 
   const goToNext = useCallback(() => {
-    const editor = editorRef.current;
-    editor?.commands.goToNextResult();
-    const storage = editor?.storage.findAndReplace as { results?: Array<{ from: number; to: number }>; currentIndex?: number | null } | undefined;
-    setMatchInfo({ count: storage?.results?.length ?? 0, current: storage?.currentIndex ?? null });
-  }, []);
+    const editor = getActiveEditor();
+    if (!editor) return;
+    editor.commands.goToNextResult();
+    const storage = editor.storage.findAndReplace as { results?: Array<{ from: number; to: number }>; currentIndex?: number | null };
+    setMatchInfo({ count: storage.results?.length ?? 0, current: storage.currentIndex ?? null });
+  }, [getActiveEditor]);
 
   const goToPrevious = useCallback(() => {
-    const editor = editorRef.current;
-    editor?.commands.goToPreviousResult();
-    const storage = editor?.storage.findAndReplace as { results?: Array<{ from: number; to: number }>; currentIndex?: number | null } | undefined;
-    setMatchInfo({ count: storage?.results?.length ?? 0, current: storage?.currentIndex ?? null });
-  }, []);
+    const editor = getActiveEditor();
+    if (!editor) return;
+    editor.commands.goToPreviousResult();
+    const storage = editor.storage.findAndReplace as { results?: Array<{ from: number; to: number }>; currentIndex?: number | null };
+    setMatchInfo({ count: storage.results?.length ?? 0, current: storage.currentIndex ?? null });
+  }, [getActiveEditor]);
 
   const replaceCurrent = useCallback(() => {
-    const editor = editorRef.current;
-    editor?.commands.replace();
-    const storage = editor?.storage.findAndReplace as { results?: Array<{ from: number; to: number }>; currentIndex?: number | null } | undefined;
-    setMatchInfo({ count: storage?.results?.length ?? 0, current: storage?.currentIndex ?? null });
-  }, []);
+    const editor = getActiveEditor();
+    if (!editor) return;
+    editor.commands.replace();
+    const storage = editor.storage.findAndReplace as { results?: Array<{ from: number; to: number }>; currentIndex?: number | null };
+    setMatchInfo({ count: storage.results?.length ?? 0, current: storage.currentIndex ?? null });
+  }, [getActiveEditor]);
 
   const replaceAll = useCallback(() => {
-    const editor = editorRef.current;
-    editor?.commands.replaceAll();
+    const editor = getActiveEditor();
+    if (!editor) return;
+    editor.commands.replaceAll();
     setMatchInfo({ count: 0, current: null });
-  }, []);
+  }, [getActiveEditor]);
 
   const toggleCaseSensitive = useCallback(() => {
     const next = !caseSensitive;
@@ -862,7 +871,7 @@ export default function TipTapEditor({
           {findMode === "replace" && (
             <div className="editor-find-row">
               <input ref={replaceInputRef} value={replaceQuery}
-                onChange={(e) => { setReplaceQuery(e.target.value); editorRef.current?.commands.setReplaceTerm(e.target.value); }}
+                onChange={(e) => { setReplaceQuery(e.target.value); getActiveEditor()?.commands.setReplaceTerm(e.target.value); }}
                 placeholder={t("find.replacePlaceholder")} />
               <button type="button" onClick={replaceCurrent}>{t("find.replace")}</button>
               <button type="button" onClick={replaceAll}>{t("find.replaceAll")}</button>
