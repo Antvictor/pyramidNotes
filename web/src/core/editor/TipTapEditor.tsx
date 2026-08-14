@@ -11,6 +11,7 @@ import { NodeSelection, Plugin, PluginKey, TextSelection } from "@tiptap/pm/stat
 import type { EditorView } from "@tiptap/pm/view";
 import { Markdown } from "tiptap-markdown";
 import { useTranslation } from "react-i18next";
+import FindReplaceBar, { type FindReplaceBarHandle } from "./FindReplaceBar";
 import "./find-replace.css";
 import type { KeyBinding } from "./extensions/commands";
 import { InternalNodeEmbed, InternalNodeLink } from "./extensions/InternalNodeLink";
@@ -336,14 +337,7 @@ export default function TipTapEditor({
   const [extractionName, setExtractionName] = useState("");
   const [isSubmittingExtraction, setIsSubmittingExtraction] = useState(false);
   const [editorResetKey, setEditorResetKey] = useState(0);
-  const [findMode, setFindMode] = useState<"find" | "replace" | null>(null);
-  const [findQuery, setFindQuery] = useState("");
-  const [replaceQuery, setReplaceQuery] = useState("");
-  const [caseSensitive, setCaseSensitive] = useState(false);
-  const [useRegex, setUseRegex] = useState(false);
-  const [matchInfo, setMatchInfo] = useState<{ count: number; current: number | null }>({ count: 0, current: null });
-  const findInputRef = useRef<HTMLInputElement | null>(null);
-  const replaceInputRef = useRef<HTMLInputElement | null>(null);
+  const findBarRef = useRef<FindReplaceBarHandle | null>(null);
 
   // Update contentRef when content prop changes
   useEffect(() => {
@@ -535,98 +529,17 @@ export default function TipTapEditor({
     updateActiveSuggestionIndex((index) => Math.min(index, Math.max(0, suggestedNodes.length - 1)));
   }, [suggestedNodes, updateActiveSuggestionIndex]);
 
-  const getActiveEditor = useCallback(() => {
-    const editor = editorRef.current;
-    return editor && !editor.isDestroyed ? editor : null;
-  }, []);
-
-  const openFindPanel = useCallback((mode: "find" | "replace") => {
-    setFindMode(mode);
-    setTimeout(() => (mode === "replace" ? replaceInputRef : findInputRef).current?.focus(), 0);
-  }, []);
-
-  const closeFindPanel = useCallback(() => {
-    const editor = getActiveEditor();
-    setFindMode(null);
-    setFindQuery("");
-    setReplaceQuery("");
-    editor?.commands.clearSearch();
-    editor?.chain().focus().run();
-  }, [getActiveEditor]);
-
-  const applySearch = useCallback((query: string, cs: boolean, rx: boolean) => {
-    const editor = getActiveEditor();
-    if (!editor) return;
-    try {
-      editor.commands.setCaseSensitive(cs);
-      editor.commands.setUseRegex(rx);
-      editor.commands.setSearchTerm(query);
-      const storage = editor.storage.findAndReplace as { results?: Array<{ from: number; to: number }>; currentIndex?: number | null };
-      setMatchInfo({ count: storage.results?.length ?? 0, current: storage.currentIndex ?? null });
-    } catch {
-      // 编辑器未就绪时忽略
-    }
-  }, [getActiveEditor]);
-
-  const handleFindQueryChange = useCallback((v: string) => {
-    setFindQuery(v);
-    applySearch(v, caseSensitive, useRegex);
-  }, [applySearch, caseSensitive, useRegex]);
-
-  const goToNext = useCallback(() => {
-    const editor = getActiveEditor();
-    if (!editor) return;
-    editor.commands.goToNextResult();
-    const storage = editor.storage.findAndReplace as { results?: Array<{ from: number; to: number }>; currentIndex?: number | null };
-    setMatchInfo({ count: storage.results?.length ?? 0, current: storage.currentIndex ?? null });
-  }, [getActiveEditor]);
-
-  const goToPrevious = useCallback(() => {
-    const editor = getActiveEditor();
-    if (!editor) return;
-    editor.commands.goToPreviousResult();
-    const storage = editor.storage.findAndReplace as { results?: Array<{ from: number; to: number }>; currentIndex?: number | null };
-    setMatchInfo({ count: storage.results?.length ?? 0, current: storage.currentIndex ?? null });
-  }, [getActiveEditor]);
-
-  const replaceCurrent = useCallback(() => {
-    const editor = getActiveEditor();
-    if (!editor) return;
-    editor.commands.replace();
-    const storage = editor.storage.findAndReplace as { results?: Array<{ from: number; to: number }>; currentIndex?: number | null };
-    setMatchInfo({ count: storage.results?.length ?? 0, current: storage.currentIndex ?? null });
-  }, [getActiveEditor]);
-
-  const replaceAll = useCallback(() => {
-    const editor = getActiveEditor();
-    if (!editor) return;
-    editor.commands.replaceAll();
-    setMatchInfo({ count: 0, current: null });
-  }, [getActiveEditor]);
-
-  const toggleCaseSensitive = useCallback(() => {
-    const next = !caseSensitive;
-    setCaseSensitive(next);
-    applySearch(findQuery, next, useRegex);
-  }, [applySearch, caseSensitive, useRegex, findQuery]);
-
-  const toggleRegex = useCallback(() => {
-    const next = !useRegex;
-    setUseRegex(next);
-    applySearch(findQuery, caseSensitive, next);
-  }, [applySearch, caseSensitive, useRegex, findQuery]);
-
   const handleEditorKeyDown = useCallback((view: EditorView, event: KeyboardEvent) => {
     const editor = editorRef.current;
 
     if ((event.ctrlKey || event.metaKey) && (event.key === "f" || event.key === "F")) {
       event.preventDefault();
-      openFindPanel("find");
+      findBarRef.current?.open("find");
       return true;
     }
     if ((event.ctrlKey || event.metaKey) && (event.key === "r" || event.key === "R")) {
       event.preventDefault();
-      openFindPanel("replace");
+      findBarRef.current?.open("replace");
       return true;
     }
 
@@ -696,7 +609,7 @@ export default function TipTapEditor({
     }
 
     return false;
-  }, [completeNode, getExtractionDraft, keyBindings, openExtractionDialog, updateActiveSuggestionIndex, openFindPanel]);
+  }, [completeNode, getExtractionDraft, keyBindings, openExtractionDialog, updateActiveSuggestionIndex]);
 
   const handleEditorWrapperKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {
     const extractBinding = keyBindings.find((binding) => binding.action === "extractNode");
@@ -848,37 +761,8 @@ export default function TipTapEditor({
         }}
       >
         <div className="min-h-full" />
+        <FindReplaceBar ref={findBarRef} />
       </EditorProvider>
-      {findMode && (
-        <div className="editor-find-bar" onKeyDown={(e) => {
-          if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeFindPanel(); }
-          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); goToNext(); }
-          if (e.key === "Enter" && e.shiftKey) { e.preventDefault(); e.stopPropagation(); goToPrevious(); }
-        }}>
-          <div className="editor-find-row">
-            <input ref={findInputRef} value={findQuery}
-              onChange={(e) => handleFindQueryChange(e.target.value)}
-              placeholder={t("find.findPlaceholder")} />
-            <button type="button" onClick={toggleCaseSensitive} className={caseSensitive ? "is-active" : ""}>Aa</button>
-            <button type="button" onClick={toggleRegex} className={useRegex ? "is-active" : ""}>.*</button>
-            <button type="button" onClick={goToPrevious}>↑</button>
-            <button type="button" onClick={goToNext}>↓</button>
-            <span className="find-count">
-              {matchInfo.count > 0 ? `${(matchInfo.current ?? 0) + 1}/${matchInfo.count}` : "0/0"}
-            </span>
-            <button type="button" className="find-close" onClick={closeFindPanel}>×</button>
-          </div>
-          {findMode === "replace" && (
-            <div className="editor-find-row">
-              <input ref={replaceInputRef} value={replaceQuery}
-                onChange={(e) => { setReplaceQuery(e.target.value); getActiveEditor()?.commands.setReplaceTerm(e.target.value); }}
-                placeholder={t("find.replacePlaceholder")} />
-              <button type="button" onClick={replaceCurrent}>{t("find.replace")}</button>
-              <button type="button" onClick={replaceAll}>{t("find.replaceAll")}</button>
-            </div>
-          )}
-        </div>
-      )}
       {contextMenu && (
         <button
           type="button"

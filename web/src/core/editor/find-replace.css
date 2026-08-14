@@ -1,7 +1,7 @@
 /* Find & Replace Bar (IDEA 风格) */
 
 .editor-find-bar {
-  position: absolute;
+  position: fixed;
   top: 8px;
   right: 24px;
   z-index: 1000;
