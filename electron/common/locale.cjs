@@ -106,8 +106,8 @@ function buildApplicationMenu(language) {
     {
       label: labels.view,
       submenu: [
-        { role: 'reload', label: labels.reload },
-        { role: 'forceReload', label: labels.forceReload },
+        { role: 'reload', label: labels.reload, accelerator: 'CmdOrCtrl+Shift+F5' },
+        { role: 'forceReload', label: labels.forceReload, accelerator: 'CmdOrCtrl+Shift+Alt+F5' },
         { role: 'toggleDevTools', label: labels.toggleDevTools },
         { type: 'separator' },
         { role: 'resetZoom', label: labels.resetZoom },
