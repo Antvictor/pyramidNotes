@@ -6,9 +6,11 @@ import { EditorProvider, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Code } from "@tiptap/extension-code";
 import Image from "@tiptap/extension-image";
+import FindAndReplace from "@tiptap/extension-find-and-replace";
 import { NodeSelection, Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { Markdown } from "tiptap-markdown";
+import { useTranslation } from "react-i18next";
 import type { KeyBinding } from "./extensions/commands";
 import { InternalNodeEmbed, InternalNodeLink } from "./extensions/InternalNodeLink";
 import { InternalImageEmbed } from "./extensions/InternalImageEmbed";
@@ -318,6 +320,7 @@ export default function TipTapEditor({
   onOpenNode,
   noteFontSize = 16,
 }: Props) {
+  const { t } = useTranslation();
   const editorRef = useRef<Editor | null>(null);
   const editorRootRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef(content);
@@ -332,6 +335,14 @@ export default function TipTapEditor({
   const [extractionName, setExtractionName] = useState("");
   const [isSubmittingExtraction, setIsSubmittingExtraction] = useState(false);
   const [editorResetKey, setEditorResetKey] = useState(0);
+  const [findMode, setFindMode] = useState<"find" | "replace" | null>(null);
+  const [findQuery, setFindQuery] = useState("");
+  const [replaceQuery, setReplaceQuery] = useState("");
+  const [caseSensitive, setCaseSensitive] = useState(false);
+  const [useRegex, setUseRegex] = useState(false);
+  const [matchInfo, setMatchInfo] = useState<{ count: number; current: number | null }>({ count: 0, current: null });
+  const findInputRef = useRef<HTMLInputElement | null>(null);
+  const replaceInputRef = useRef<HTMLInputElement | null>(null);
 
   // Update contentRef when content prop changes
   useEffect(() => {
@@ -352,6 +363,10 @@ export default function TipTapEditor({
   }), []);
 
   const starterKit = useMemo(() => StarterKit.configure({ code: false }), []);
+  const findAndReplace = useMemo(() => FindAndReplace.configure({
+    searchDebounceMs: 0,
+    injectCSS: false,
+  }), []);
   const completionExtension = useMemo(() => InternalNodeCompletion.configure({
     onChange: (nextSuggestion) => {
       if (sameSuggestion(suggestionRef.current, nextSuggestion)) return;
@@ -368,8 +383,8 @@ export default function TipTapEditor({
   const internalImageEmbed = useMemo(() => InternalImageEmbed.configure({ noteName: safeNoteName }), [safeNoteName]);
 
   const extensions = useMemo(
-    () => [starterKit, Code, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, InternalNodeTokenNormalizer, markdownExtension],
-    [starterKit, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, markdownExtension],
+    () => [starterKit, Code, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, InternalNodeTokenNormalizer, markdownExtension, findAndReplace],
+    [starterKit, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, markdownExtension, findAndReplace],
   );
 
   const handleUpdate = useCallback(({ editor }: { editor: Editor }) => {
@@ -519,8 +534,87 @@ export default function TipTapEditor({
     updateActiveSuggestionIndex((index) => Math.min(index, Math.max(0, suggestedNodes.length - 1)));
   }, [suggestedNodes, updateActiveSuggestionIndex]);
 
+  const openFindPanel = useCallback((mode: "find" | "replace") => {
+    setFindMode(mode);
+    setTimeout(() => (mode === "replace" ? replaceInputRef : findInputRef).current?.focus(), 0);
+  }, []);
+
+  const closeFindPanel = useCallback(() => {
+    const editor = editorRef.current;
+    setFindMode(null);
+    setFindQuery("");
+    setReplaceQuery("");
+    editor?.commands.clearSearch();
+    editor?.chain().focus().run();
+  }, []);
+
+  const applySearch = useCallback((query: string, cs: boolean, rx: boolean) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.commands.setCaseSensitive(cs);
+    editor.commands.setUseRegex(rx);
+    editor.commands.setSearchTerm(query);
+    const storage = editor.storage.findAndReplace as { results?: Array<{ from: number; to: number }>; currentIndex?: number | null };
+    setMatchInfo({ count: storage.results?.length ?? 0, current: storage.currentIndex ?? null });
+  }, []);
+
+  const handleFindQueryChange = useCallback((v: string) => {
+    setFindQuery(v);
+    applySearch(v, caseSensitive, useRegex);
+  }, [applySearch, caseSensitive, useRegex]);
+
+  const goToNext = useCallback(() => {
+    const editor = editorRef.current;
+    editor?.commands.goToNextResult();
+    const storage = editor?.storage.findAndReplace as { results?: Array<{ from: number; to: number }>; currentIndex?: number | null } | undefined;
+    setMatchInfo({ count: storage?.results?.length ?? 0, current: storage?.currentIndex ?? null });
+  }, []);
+
+  const goToPrevious = useCallback(() => {
+    const editor = editorRef.current;
+    editor?.commands.goToPreviousResult();
+    const storage = editor?.storage.findAndReplace as { results?: Array<{ from: number; to: number }>; currentIndex?: number | null } | undefined;
+    setMatchInfo({ count: storage?.results?.length ?? 0, current: storage?.currentIndex ?? null });
+  }, []);
+
+  const replaceCurrent = useCallback(() => {
+    const editor = editorRef.current;
+    editor?.commands.replace();
+    const storage = editor?.storage.findAndReplace as { results?: Array<{ from: number; to: number }>; currentIndex?: number | null } | undefined;
+    setMatchInfo({ count: storage?.results?.length ?? 0, current: storage?.currentIndex ?? null });
+  }, []);
+
+  const replaceAll = useCallback(() => {
+    const editor = editorRef.current;
+    editor?.commands.replaceAll();
+    setMatchInfo({ count: 0, current: null });
+  }, []);
+
+  const toggleCaseSensitive = useCallback(() => {
+    const next = !caseSensitive;
+    setCaseSensitive(next);
+    applySearch(findQuery, next, useRegex);
+  }, [applySearch, caseSensitive, useRegex, findQuery]);
+
+  const toggleRegex = useCallback(() => {
+    const next = !useRegex;
+    setUseRegex(next);
+    applySearch(findQuery, caseSensitive, next);
+  }, [applySearch, caseSensitive, useRegex, findQuery]);
+
   const handleEditorKeyDown = useCallback((view: EditorView, event: KeyboardEvent) => {
     const editor = editorRef.current;
+
+    if ((event.ctrlKey || event.metaKey) && (event.key === "f" || event.key === "F")) {
+      event.preventDefault();
+      openFindPanel("find");
+      return true;
+    }
+    if ((event.ctrlKey || event.metaKey) && (event.key === "r" || event.key === "R")) {
+      event.preventDefault();
+      openFindPanel("replace");
+      return true;
+    }
 
     if (restoreInternalNodeLinkToken(view, event)) return true;
 
@@ -588,7 +682,7 @@ export default function TipTapEditor({
     }
 
     return false;
-  }, [completeNode, getExtractionDraft, keyBindings, openExtractionDialog, updateActiveSuggestionIndex]);
+  }, [completeNode, getExtractionDraft, keyBindings, openExtractionDialog, updateActiveSuggestionIndex, openFindPanel]);
 
   const handleEditorWrapperKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {
     const extractBinding = keyBindings.find((binding) => binding.action === "extractNode");
@@ -741,6 +835,36 @@ export default function TipTapEditor({
       >
         <div className="min-h-full" />
       </EditorProvider>
+      {findMode && (
+        <div className="editor-find-bar" onKeyDown={(e) => {
+          if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeFindPanel(); }
+          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); goToNext(); }
+          if (e.key === "Enter" && e.shiftKey) { e.preventDefault(); e.stopPropagation(); goToPrevious(); }
+        }}>
+          <input ref={findInputRef} value={findQuery}
+            onChange={(e) => handleFindQueryChange(e.target.value)}
+            placeholder={t("find.findPlaceholder")} />
+          {findMode === "replace" && (
+            <input ref={replaceInputRef} value={replaceQuery}
+              onChange={(e) => { setReplaceQuery(e.target.value); editorRef.current?.commands.setReplaceTerm(e.target.value); }}
+              placeholder={t("find.replacePlaceholder")} />
+          )}
+          <button type="button" onClick={toggleCaseSensitive} className={caseSensitive ? "is-active" : ""}>Aa</button>
+          <button type="button" onClick={toggleRegex} className={useRegex ? "is-active" : ""}>.*</button>
+          <button type="button" onClick={goToPrevious}>↑</button>
+          <button type="button" onClick={goToNext}>↓</button>
+          <span className="find-count">
+            {matchInfo.count > 0 ? `${(matchInfo.current ?? 0) + 1}/${matchInfo.count}` : "0/0"}
+          </span>
+          {findMode === "replace" && (
+            <>
+              <button type="button" onClick={replaceCurrent}>{t("find.replace")}</button>
+              <button type="button" onClick={replaceAll}>{t("find.replaceAll")}</button>
+            </>
+          )}
+          <button type="button" className="find-close" onClick={closeFindPanel}>×</button>
+        </div>
+      )}
       {contextMenu && (
         <button
           type="button"
