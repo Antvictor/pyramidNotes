@@ -1,12 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 
 import {
-  type BuiltInEdge,
-  useReactFlow,
-  type Node,
-} from "@xyflow/react";
-
-import {
   Command,
   CommandDialog,
   CommandEmpty,
@@ -71,7 +65,6 @@ export function NodeSearchInternal({
   const [searchResults, setSearchResults] = useState<NodeSearchResult[]>([]);
   const [fullTextSearchResults, setFullTextSearchResults] = useState<FullTextSearchResult[]>([]);
   const [searchString, setSearchString] = useState<string>("");
-  const { getNodes, fitView, setNodes } = useReactFlow<Node<BuiltInEdge>, BuiltInEdge>();
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const requestSeqRef = useRef(0);
@@ -147,35 +140,23 @@ export function NodeSearchInternal({
     [searchString, runSearch],
   );
 
-  const defaultOnSelectNode = useCallback(
-    (result: NodeSearchResult) => {
-      const node = getNodes().find((n) => n.id === result.id);
-      if (!node) return;
-      setNodes((nodes) =>
-        nodes.map((n) => (n.id === node.id ? { ...n, selected: true } : n)),
-      );
-      fitView({ nodes: [node], duration: 500 });
-    },
-    [getNodes, fitView, setNodes],
-  );
-
   const onSelect = useCallback(
     (result: NodeSearchResult) => {
-      (onSelectNode || defaultOnSelectNode)?.(result);
+      onSelectNode?.(result);
       setSearchString("");
       onOpenChange?.(false);
     },
-    [onSelectNode, defaultOnSelectNode, onOpenChange],
+    [onSelectNode, onOpenChange],
   );
 
   // 处理全文搜索结果的选择
   const onSelectFullTextResult = useCallback(
     (result: FullTextSearchResult) => {
-      (onSelectNode || defaultOnSelectNode)?.({ id: result.id, name: result.name });
+      onSelectNode?.({ id: result.id, name: result.name });
       setSearchString("");
       onOpenChange?.(false);
     },
-    [onSelectNode, defaultOnSelectNode, onOpenChange],
+    [onSelectNode, onOpenChange],
   );
 
   return (

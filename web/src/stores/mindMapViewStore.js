@@ -19,4 +19,17 @@ export const useMindMapViewStore = create((set) => ({
     })),
 
   setInitializedFocusId: (id) => set({ initializedFocusId: id }),
+
+  // 揭示新建节点：叶子只加载（不展开，避免空节点显示折叠按钮），祖先链加载+展开
+  revealNodeIds: (leafId, ancestors) =>
+    set((s) => {
+      const loadedNodeIds = new Set(s.loadedNodeIds);
+      const expandedNodeIds = new Set(s.expandedNodeIds);
+      loadedNodeIds.add(leafId);
+      for (const id of ancestors) {
+        loadedNodeIds.add(id);
+        expandedNodeIds.add(id);
+      }
+      return { loadedNodeIds, expandedNodeIds };
+    }),
 }));

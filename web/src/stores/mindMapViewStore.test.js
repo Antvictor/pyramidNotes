@@ -32,4 +32,12 @@ describe("mindMapViewStore", () => {
     useMindMapViewStore.getState().setFocusNodeId("42");
     expect(useMindMapViewStore.getState().focusNodeId).toBe("42");
   });
+
+  it("revealNodeIds loads leaf and expands ancestors only", () => {
+    useMindMapViewStore.getState().setLoadedNodeIds(new Set(["a"]));
+    useMindMapViewStore.getState().revealNodeIds("leaf", ["p1", "root"]);
+    const state = useMindMapViewStore.getState();
+    expect([...state.loadedNodeIds]).toEqual(["a", "leaf", "p1", "root"]);
+    expect([...state.expandedNodeIds]).toEqual(["p1", "root"]);
+  });
 });

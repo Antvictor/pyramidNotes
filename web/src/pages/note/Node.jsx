@@ -1,10 +1,15 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import TipTapEditor from "../../core/editor/TipTapEditor";
 import { useTranslation } from "react-i18next";
 import { nanoid } from "nanoid";
 import db from "../db/db";
 import { buildChildNodeRecord } from "./extractionUtils";
+import { NodeSearchDialog } from "@/components/node-search";
+import OpenPrompt from "../commons/OpenPrompt";
+import { matchShortcut } from "../../hooks/useShortcuts";
+import { computeAncestorChain } from "../treeUtils";
+import { useMindMapViewStore } from "@/stores/mindMapViewStore";
 
 
 const Note = ({ shortcuts }) => {
@@ -17,6 +22,9 @@ const Note = ({ shortcuts }) => {
   const [allNodes, setAllNodes] = useState([]);
   const [noteFontSize, setNoteFontSize] = useState(16);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [newNodePromptVisible, setNewNodePromptVisible] = useState(false);
 
   // Build keyBindings from shortcuts
   const keyBindings = shortcuts?.note ? [
@@ -101,6 +109,54 @@ const Note = ({ shortcuts }) => {
     );
   };
 
+  const handleSelectSearchResult = ({ id: targetId, name: targetName }) => {
+    navigate(`/note/${encodeURIComponent(targetId)}/${encodeURIComponent(targetName)}`);
+  };
+
+  const handleNewChild = async (nodeName) => {
+    setNewNodePromptVisible(false);
+    const newNode = await createChildFromSelection(nodeName, "");
+    const nodeMap = new Map(allNodes.map((n) => [n.id, n]));
+    const displayRootId = allNodes.find((n) => n.top === '0')?.id;
+    if (displayRootId) {
+      const parentChain = computeAncestorChain(id, displayRootId, nodeMap);
+      useMindMapViewStore.getState().revealNodeIds(newNode.id, parentChain);
+    }
+    navigate(
+      `/note/${encodeURIComponent(newNode.id)}/${encodeURIComponent(newNode.name)}`,
+      { state: { fromNote: id } },
+    );
+  };
+
+  useEffect(() => {
+    if (!shortcuts) return;
+    const handler = (e) => {
+      if (matchShortcut(e, shortcuts.global?.backToMap)) {
+        e.preventDefault();
+        if (searchOpen) { setSearchOpen(false); return; }
+        if (newNodePromptVisible) { setNewNodePromptVisible(false); return; }
+        if (location.state?.fromNote) {
+          navigate(-1);
+        } else {
+          navigate('/');
+        }
+        return;
+      }
+      if (searchOpen || newNodePromptVisible) return;
+      if (matchShortcut(e, shortcuts.global?.search)) {
+        e.preventDefault();
+        setSearchOpen(true);
+        return;
+      }
+      if (matchShortcut(e, shortcuts.node?.newNode)) {
+        e.preventDefault();
+        setNewNodePromptVisible(true);
+        return;
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [shortcuts, searchOpen, newNodePromptVisible, location.state, navigate]);
 
   return (
     // <StrictMode>
@@ -125,6 +181,18 @@ const Note = ({ shortcuts }) => {
           noteFontSize={noteFontSize}
           onCreateChildFromSelection={createChildFromSelection}
           onOpenNode={openNode}
+        />
+        <NodeSearchDialog
+          open={searchOpen}
+          onOpenChange={setSearchOpen}
+          onSelectNode={handleSelectSearchResult}
+        />
+        <OpenPrompt
+          visible={newNodePromptVisible}
+          id={id}
+          title=""
+          onOk={(parentId, nodeName) => handleNewChild(nodeName)}
+          onCancel={() => setNewNodePromptVisible(false)}
         />
       </div>
 

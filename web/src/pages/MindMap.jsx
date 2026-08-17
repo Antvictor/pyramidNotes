@@ -906,8 +906,17 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       saveNode(newNodeDb);
       // 创建新节点的 markdown 文件, 把这两个合成一个方法
       addNote(newNodeDb);
+      if (allNotesNodeMap) {
+        const displayRootId = focusNodeId === '1'
+          ? notesData.find((n) => n.top === '0')?.id
+          : focusNodeId;
+        if (displayRootId) {
+          const parentChain = computeAncestorChain(`${parent}`, displayRootId, allNotesNodeMap);
+          useMindMapViewStore.getState().revealNodeIds(`${id}`, parentChain);
+        }
+      }
     },
-    []
+    [allNotesNodeMap, focusNodeId, notesData]
   );
   const saveNode = async (node) => {
     const yamlStr = { id: node.id, alias: "", title: node.name, left: node.left, top: node.top };

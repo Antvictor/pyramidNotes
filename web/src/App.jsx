@@ -97,13 +97,7 @@ function AppContent() {
                 />
               } />
               <Route path="/settings" element={<Settings shortcuts={shortcuts} />} />
-              <Route path="/note/:id/:name" element={
-                <NodeWrapper
-                  selectedNode={selectedNode}
-                  setSelectedNode={setSelectedNode}
-                  shortcuts={shortcuts}
-                />
-              } />
+              <Route path="/note/:id/:name" element={<Node shortcuts={shortcuts} />} />
             </Routes>
           </TutorialController>
         </div>
@@ -169,39 +163,6 @@ function MindMapWrapper({ selectedNode, setSelectedNode, clearSelectedNode, shor
       setSearchOpen={setSearchOpen}
     />
   );
-}
-
-// Wrapper for Node that handles shortcuts
-function NodeWrapper({ selectedNode, setSelectedNode, shortcuts }) {
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    const handler = (e) => {
-      // Escape - return to MindMap
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        if (location.state?.fromNote) {
-          navigate(-1);
-        } else {
-          navigate('/');
-        }
-        return;
-      }
-
-      // Ctrl+N - create new child node
-      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
-        e.preventDefault();
-        // This will be handled - the parent is selectedNode or current note's node
-        return;
-      }
-    };
-
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [location.state, navigate]);
-
-  return <Node selectedNode={selectedNode} setSelectedNode={setSelectedNode} shortcuts={shortcuts} />;
 }
 
 function App() {

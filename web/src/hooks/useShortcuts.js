@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSelectedNode } from '../contexts/SelectedNodeContext';
 
-function matchShortcut(e, shortcutStr) {
+export function matchShortcut(e, shortcutStr) {
   if (!shortcutStr) return false;
 
   const isMod = e.ctrlKey || e.metaKey;
