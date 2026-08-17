@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import {
   type BuiltInEdge,
@@ -24,6 +24,12 @@ import {
 import db from "@/pages/db/db.js";
 import { useTranslation } from "react-i18next";
 
+// 节点搜索结果（轻量，无需完整 ReactFlow Node）
+export interface NodeSearchResult {
+  id: string;
+  name: string;
+}
+
 // 全文搜索结果类型
 export interface FullTextSearchResult {
   id: string;
@@ -32,14 +38,23 @@ export interface FullTextSearchResult {
   snippets: string;
 }
 
+function filterByScope<T extends { id: string }>(
+  list: T[],
+  scopeNodeIds?: Set<string>,
+): T[] {
+  return scopeNodeIds ? list.filter((r) => scopeNodeIds.has(r.id)) : list;
+}
+
 export interface NodeSearchProps {
   className?: string;
-  // The function to search for nodes, should return an array of nodes that match the search string
-  // By default, it will check for lowercase string inclusion.
-  onSearch?: (searchString: string) => Node<BuiltInEdge>[] | undefined;
-  // The function to select a node, should set the node as selected and fit the view to the node
-  // By default, it will set the node as selected and fit the view to the node.
-  onSelectNode?: (node: Node<BuiltInEdge>) => void | undefined;
+  // 若提供，两个 Tab 的搜索结果都只保留这些 id 对应的节点（聚焦模式子树过滤）
+  scopeNodeIds?: Set<string>;
+  // 节点名搜索；默认走 SQL searchByName 查全量
+  onSearch?: (
+    searchString: string,
+  ) => NodeSearchResult[] | Promise<NodeSearchResult[]> | undefined;
+  // 选中回调，接收轻量结果
+  onSelectNode?: (result: NodeSearchResult) => void | undefined;
   open?: boolean | undefined;
   onOpenChange?: ((open: boolean) => void) | undefined;
 }
@@ -49,95 +64,104 @@ export function NodeSearchInternal({
   onSelectNode,
   open,
   onOpenChange,
+  scopeNodeIds,
 }: NodeSearchProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"node" | "fulltext">("node");
-  const [searchResults, setSearchResults] = useState<Node<BuiltInEdge>[]>([]);
+  const [searchResults, setSearchResults] = useState<NodeSearchResult[]>([]);
   const [fullTextSearchResults, setFullTextSearchResults] = useState<FullTextSearchResult[]>([]);
   const [searchString, setSearchString] = useState<string>("");
   const { getNodes, fitView, setNodes } = useReactFlow<Node<BuiltInEdge>, BuiltInEdge>();
 
-  const defaultOnSearch = useCallback(
-    (searchString: string) => {
-      const nodes = getNodes();
-      const results = nodes.filter((node) =>
-        (node.data.label as string)
-          .toLowerCase()
-          .includes(searchString.toLowerCase()),
-      );
-      return results;
-    },
-    [getNodes],
-  );
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const requestSeqRef = useRef(0);
 
-  // 全文搜索方法
-  const fullTextSearch = useCallback(
-    async (keyword: string) => {
-      if (!keyword || keyword.trim().length === 0) {
-        setFullTextSearchResults([]);
-        return;
-      }
-      try {
-        const results = await db.notes.search(keyword.trim());
-        setFullTextSearchResults((results || []) as FullTextSearchResult[]);
-      } catch (error) {
-        console.error("Full text search error:", error);
-        setFullTextSearchResults([]);
-      }
+  const defaultOnSearch = useCallback(
+    async (keyword: string): Promise<NodeSearchResult[]> => {
+      const rows = (await db.notes.searchByName(keyword)) ?? [];
+      return rows.map((r) => ({ id: r.id, name: r.name }));
     },
     [],
   );
 
-  const onChange = useCallback(
-    (searchString: string) => {
-      setSearchString(searchString);
-      if (searchString.length > 0) {
-        onOpenChange?.(true);
-        // 根据当前激活的 tab 执行不同的搜索
-        if (activeTab === "node") {
-          const results = (onSearch || defaultOnSearch)(searchString) ?? [];
-          setSearchResults(results);
-        } else {
-          fullTextSearch(searchString);
+  // 全文搜索
+  const fullTextSearch = useCallback(
+    async (keyword: string, seq: number) => {
+      try {
+        const results = await db.notes.search(keyword);
+        if (seq === requestSeqRef.current) {
+          setFullTextSearchResults(filterByScope((results || []) as FullTextSearchResult[], scopeNodeIds));
         }
-      } else {
-        setSearchResults([]);
-        setFullTextSearchResults([]);
+      } catch (error) {
+        console.error("Full text search error:", error);
+        if (seq === requestSeqRef.current) setFullTextSearchResults([]);
       }
     },
-    [activeTab, onSearch, defaultOnSearch, fullTextSearch, onOpenChange],
+    [scopeNodeIds],
   );
 
-  // 当 tab 切换时，重新执行搜索
+  const runSearch = useCallback(
+    (keyword: string, tab: "node" | "fulltext") => {
+      const seq = ++requestSeqRef.current;
+      if (tab === "node") {
+        Promise.resolve((onSearch || defaultOnSearch)(keyword))
+          .then((res) => {
+            if (seq === requestSeqRef.current) {
+              setSearchResults(filterByScope(res ?? [], scopeNodeIds));
+            }
+          })
+          .catch(() => {
+            if (seq === requestSeqRef.current) setSearchResults([]);
+          });
+      } else {
+        fullTextSearch(keyword, seq);
+      }
+    },
+    [onSearch, defaultOnSearch, fullTextSearch, scopeNodeIds],
+  );
+
+  const onChange = useCallback(
+    (value: string) => {
+      setSearchString(value);
+      const kw = value.trim();
+      if (!kw) {
+        requestSeqRef.current++;
+        setSearchResults([]);
+        setFullTextSearchResults([]);
+        return;
+      }
+      onOpenChange?.(true);
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => runSearch(kw, activeTab), 300);
+    },
+    [runSearch, activeTab, onOpenChange],
+  );
+
+  // 切换 tab 后，如果有搜索词，重新执行对应类型的搜索
   const onTabChange = useCallback(
     (value: "node" | "fulltext") => {
       setActiveTab(value);
-      // 切换 tab 后，如果有搜索词，重新执行对应类型的搜索
-      if (searchString.length > 0) {
-        if (value === "node") {
-          const results = (onSearch || defaultOnSearch)(searchString) ?? [];
-          setSearchResults(results);
-        } else {
-          fullTextSearch(searchString);
-        }
-      }
+      const kw = searchString.trim();
+      if (kw) runSearch(kw, value);
     },
-    [searchString, onSearch, defaultOnSearch, fullTextSearch],
+    [searchString, runSearch],
   );
 
   const defaultOnSelectNode = useCallback(
-    (node: Node<BuiltInEdge>) => {
+    (result: NodeSearchResult) => {
+      const node = getNodes().find((n) => n.id === result.id);
+      if (!node) return;
       setNodes((nodes) =>
         nodes.map((n) => (n.id === node.id ? { ...n, selected: true } : n)),
       );
       fitView({ nodes: [node], duration: 500 });
     },
-    [fitView, setNodes],
+    [getNodes, fitView, setNodes],
   );
 
   const onSelect = useCallback(
-    (node: Node<BuiltInEdge>) => {
-      (onSelectNode || defaultOnSelectNode)?.(node);
+    (result: NodeSearchResult) => {
+      (onSelectNode || defaultOnSelectNode)?.(result);
       setSearchString("");
       onOpenChange?.(false);
     },
@@ -147,15 +171,11 @@ export function NodeSearchInternal({
   // 处理全文搜索结果的选择
   const onSelectFullTextResult = useCallback(
     (result: FullTextSearchResult) => {
-      const nodes = getNodes();
-      const node = nodes.find((n) => n.id === result.id);
-      if (node) {
-        (onSelectNode || defaultOnSelectNode)?.(node);
-      }
+      (onSelectNode || defaultOnSelectNode)?.({ id: result.id, name: result.name });
       setSearchString("");
       onOpenChange?.(false);
     },
-    [getNodes, onSelectNode, defaultOnSelectNode, onOpenChange],
+    [onSelectNode, defaultOnSelectNode, onOpenChange],
   );
 
   return (
@@ -184,10 +204,10 @@ export function NodeSearchInternal({
                     return (
                       <CommandItem
                         key={node.id}
-                        value={node.data.label as string}
+                        value={node.name}
                         onSelect={() => onSelect(node)}
                       >
-                        <span>{node.data.label as string}</span>
+                        <span>{node.name}</span>
                       </CommandItem>
                     );
                   })}
@@ -240,6 +260,7 @@ export function NodeSearchInternal({
 export function NodeSearch({
   onSearch,
   onSelectNode,
+  scopeNodeIds,
 }: NodeSearchProps) {
   const [open, setOpen] = useState(false);
   return (
@@ -250,6 +271,7 @@ export function NodeSearch({
       <NodeSearchInternal
         onSearch={onSearch}
         onSelectNode={onSelectNode}
+        scopeNodeIds={scopeNodeIds}
         open={open}
         onOpenChange={setOpen}
       />
@@ -258,8 +280,11 @@ export function NodeSearch({
 }
 
 export interface NodeSearchDialogProps {
-  onSearch?: (searchString: string) => Node<BuiltInEdge>[] | undefined;
-  onSelectNode?: (node: Node<BuiltInEdge>) => void | undefined;
+  onSearch?: (
+    searchString: string,
+  ) => NodeSearchResult[] | Promise<NodeSearchResult[]> | undefined;
+  onSelectNode?: (result: NodeSearchResult) => void | undefined;
+  scopeNodeIds?: Set<string> | undefined;
   open?: boolean | undefined;
   onOpenChange?: ((open: boolean) => void) | undefined;
   title?: string;
@@ -268,6 +293,7 @@ export interface NodeSearchDialogProps {
 export function NodeSearchDialog({
   onSearch,
   onSelectNode,
+  scopeNodeIds,
   open,
   onOpenChange,
 }: NodeSearchDialogProps) {
@@ -276,6 +302,7 @@ export function NodeSearchDialog({
       <NodeSearchInternal
         onSearch={onSearch}
         onSelectNode={onSelectNode}
+        scopeNodeIds={scopeNodeIds}
         open={open}
         onOpenChange={onOpenChange}
       />

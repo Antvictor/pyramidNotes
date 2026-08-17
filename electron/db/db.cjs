@@ -4,9 +4,12 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const { getBasePath } = require('../window/window.cjs');
+const { search, reset } = require('./search.cjs');
 
 let db = null;
 let isInitialized = false;
+let currentDbPath = null;
+let currentExtensionPath = null;
 
 function getDb() {
     return db;
@@ -23,6 +26,9 @@ function closeDatabase() {
         db = null;
     }
     isInitialized = false;
+    currentDbPath = null;
+    currentExtensionPath = null;
+    reset();
 }
 
 function initializeDatabase(storagePath) {
@@ -34,6 +40,7 @@ function initializeDatabase(storagePath) {
     // Use storagePath/.data as the database file location
     const dbDir = storagePath;
     const dbPath = path.join(dbDir, '.data');
+    currentDbPath = dbPath;
     console.log('Database path:', dbPath);
 
     // Ensure storage path exists
@@ -136,6 +143,10 @@ function initializeDatabase(storagePath) {
                 return null;
             }
         });
+        ipcMain.handle('searchNotes', (event, keyword) => {
+            if (!currentDbPath || !currentExtensionPath) return [];
+            return search(keyword, currentDbPath, currentExtensionPath);
+        });
         initializeDatabase.handlersRegistered = true;
     }
 
@@ -196,6 +207,7 @@ function initializeDatabase(storagePath) {
 
         console.log('Load extension:', filePath);
 
+        currentExtensionPath = filePath;
         db.loadExtension(filePath);
 
         // 打印 libsimple 提供的所有函数

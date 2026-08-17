@@ -24,6 +24,7 @@ import "@xyflow/react/dist/style.css";
 // 自定义节点组件
 import NodeCustom from "./note/NodeCustom";
 import db from "./db/db"
+import { computeAncestorChain } from "./treeUtils";
 import ContextMenu from "./note/ContextMenu/ContextMenu";
 import OpenPrompt from "./commons/OpenPrompt";
 import { PermissionDialog } from "@/components/ui/permission-dialog";
@@ -296,6 +297,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const [focusNodeId, setFocusNodeId] = useState("1");
   const [loadedNodeIds, setLoadedNodeIds] = useState(() => new Set());
   const [expandedNodeIds, setExpandedNodeIds] = useState(() => new Set());
+  const [pendingRevealNodeId, setPendingRevealNodeId] = useState(null);
   const navigate = useNavigate();
 
   // 切换聚焦模式时重置
@@ -369,6 +371,27 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     });
     if (node) setSelectedNode({ id: nodeId, name: node.name });
   }, [allNotesNodeMap, setSelectedNode]);
+
+  const handleRevealNode = useCallback(({ id, name }) => {
+    if (!allNotesNodeMap) return;
+    const displayRootId = focusNodeId === '1'
+      ? notesData.find((n) => n.top === '0')?.id
+      : focusNodeId;
+    if (!displayRootId) return;
+    const chain = computeAncestorChain(id, displayRootId, allNotesNodeMap);
+    setLoadedNodeIds((prev) => {
+      const next = new Set(prev);
+      for (const c of chain) next.add(c);
+      return next;
+    });
+    setExpandedNodeIds((prev) => {
+      const next = new Set(prev);
+      for (const c of chain) next.add(c);
+      return next;
+    });
+    setSelectedNode({ id, name });
+    setPendingRevealNodeId(id);
+  }, [allNotesNodeMap, focusNodeId, notesData, setSelectedNode]);
 
   // 初始加载前三层
   useEffect(() => {
@@ -939,6 +962,20 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     return null;
   };
 
+  // 搜索选中后：等节点进入 ReactFlow 再 fitView 定位
+  const RevealOnPending = () => {
+    const { fitView } = useReactFlow();
+    useEffect(() => {
+      if (!pendingRevealNodeId) return;
+      const node = nodes.find((n) => n.id === pendingRevealNodeId);
+      if (node) {
+        fitView({ nodes: [node], duration: 300 });
+        setPendingRevealNodeId(null);
+      }
+    }, [pendingRevealNodeId, nodes, fitView]);
+    return null;
+  };
+
   const breadcrumbPath = useMemo(() => {
     if (!allNotesNodeMap || focusNodeId === '1') return null;
     const segments = [];
@@ -963,6 +1000,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     >
       <ReactFlowProvider>
         <CenterOnSelected />
+        <RevealOnPending />
         <LayoutOnMeasured nodeSpacing={nodeSpacing} displayedNotes={displayedNotes} focusNodeId={focusNodeId} setNodes={setNodes} />
         <div style={{
           display: 'flex', alignItems: 'center', gap: 4,
@@ -1110,6 +1148,12 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
         </ReactFlow>
         <NodeSearchDialog
           open={searchOpen}
+          scopeNodeIds={
+            focusNodeId !== '1' && allNotesNodeMap
+              ? new Set(getDescendantIdsSync(focusNodeId, allNotesNodeMap))
+              : undefined
+          }
+          onSelectNode={handleRevealNode}
           onOpenChange={(open) => {
             setSearchOpen(open);
             if (!open) {

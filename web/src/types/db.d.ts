@@ -3,6 +3,7 @@ declare module '@/pages/db/db.js' {
     id: string;
     name: string;
     content: string;
+    snippets: string;
   }
 
   interface Table {
@@ -11,6 +12,7 @@ declare module '@/pages/db/db.js' {
     update(where: Record<string, unknown>, data: Record<string, unknown>): Promise<unknown>;
     delete(where: Record<string, unknown>): Promise<unknown>;
     search(keyword: string): Promise<FullTextSearchResult[]>;
+    searchByName(keyword: string): Promise<{ id: string; name: string }[]>;
   }
 
   interface Database {

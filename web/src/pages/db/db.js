@@ -1,3 +1,7 @@
+export function escapeLike(keyword) {
+    return keyword.replace(/[\\%_]/g, (c) => '\\' + c);
+}
+
 class Table {
     constructor(tableName) {
         this.tableName = tableName;
@@ -149,28 +153,17 @@ class Table {
      * @returns {Promise<Array>} 搜索结果，包含 id、name、snippets、firstSnippet
      */
     async search(keyword) {
-        const sql = `
-            SELECT
-                n.id,
-                n.name,
-                simple_highlight(notes_fts, 1, '<mark>', '</mark>') as content
-            FROM notes_fts
-            JOIN notes n ON notes_fts.id = n.id
-            WHERE notes_fts MATCH simple_query(?)
-        `;
-        console.log('[Search] SQL:', sql);
-        console.log('[Search] Keyword:', keyword);
-        const result = await window.api.dbQuery(sql, [keyword]);
-        console.log('[Search] Raw Result:', JSON.stringify(result, null, 2));
-
-        // 处理返回结果，生成 snippets
-        const processedResults = result.map(item => ({
+        const rows = await window.api.searchNotes(keyword);
+        return (rows || []).map((item) => ({
             ...item,
-            snippets: this.generateSnippets(item.content, {maxLength: 100})
+            snippets: this.generateSnippets(item.content, { maxLength: 100 }),
         }));
-        console.log('[Search] Raw Result:', JSON.stringify(processedResults, null, 2));
+    }
 
-        return processedResults;
+    async searchByName(keyword) {
+        const escaped = escapeLike(keyword);
+        const sql = `SELECT id, name FROM notes WHERE name LIKE ? ESCAPE '\\' LIMIT 100`;
+        return await window.api.dbQuery(sql, [`%${escaped}%`]);
     }
 }
 class Database {

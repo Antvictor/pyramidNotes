@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('api', {
     updateYaml: (fileName, newYamlData) => ipcRenderer.invoke('updateYaml', fileName, newYamlData),
     getPath: () => ipcRenderer.invoke('getPath'),
     dbQuery: (sql, params) => ipcRenderer.invoke('dbQuery', sql, params),
+    searchNotes: (keyword) => ipcRenderer.invoke('searchNotes', keyword),
     getSettings: () => ipcRenderer.invoke('getSettings'),
     saveSettings: (settings) => ipcRenderer.invoke('saveSettings', settings),
     capturePage: (options) => ipcRenderer.invoke('capturePage', options),
