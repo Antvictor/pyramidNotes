@@ -161,6 +161,8 @@ const en = {
       heading1: 'Heading 1',
       heading2: 'Heading 2',
       extractNode: 'Extract selection to child node',
+      find: 'Find',
+      replace: 'Replace',
       search: 'Search',
       backToMap: 'Back to mind map',
     },

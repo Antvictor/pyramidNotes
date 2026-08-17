@@ -26,6 +26,8 @@ const DEFAULT_SHORTCUTS = {
     heading1: "Ctrl+1",
     heading2: "Ctrl+2",
     extractNode: "Ctrl+Shift+M",
+    find: "Ctrl+F",
+    replace: "Ctrl+R",
   },
   global: {
     search: "Ctrl+K",
@@ -186,6 +188,8 @@ export default function ShortcutsModal({ open, onOpenChange }) {
     heading1: t("shortcuts.actions.heading1"),
     heading2: t("shortcuts.actions.heading2"),
     extractNode: t("shortcuts.actions.extractNode"),
+    find: t("shortcuts.actions.find"),
+    replace: t("shortcuts.actions.replace"),
   };
 
   const globalLabels = {

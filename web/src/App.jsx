@@ -20,6 +20,8 @@ const DEFAULT_SHORTCUTS = {
     heading1: "Ctrl+1",
     heading2: "Ctrl+2",
     extractNode: "Ctrl+Shift+M",
+    find: "Ctrl+F",
+    replace: "Ctrl+R",
   },
   global: {
     search: "Ctrl+K",

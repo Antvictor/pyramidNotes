@@ -33,12 +33,16 @@ const Note = ({ shortcuts }) => {
     { key: shortcuts.note.heading1, action: "heading1" },
     { key: shortcuts.note.heading2, action: "heading2" },
     { key: shortcuts.note.extractNode || "Ctrl+Shift+M", action: "extractNode" },
+    { key: shortcuts.note.find || "Ctrl+F", action: "find" },
+    { key: shortcuts.note.replace || "Ctrl+R", action: "replace" },
   ] : [
     { key: "Ctrl+B", action: "bold" },
     { key: "Ctrl+I", action: "italic" },
     { key: "Ctrl+1", action: "heading1" },
     { key: "Ctrl+2", action: "heading2" },
     { key: "Ctrl+Shift+M", action: "extractNode" },
+    { key: "Ctrl+F", action: "find" },
+    { key: "Ctrl+R", action: "replace" },
   ];
 
   useEffect(() => {

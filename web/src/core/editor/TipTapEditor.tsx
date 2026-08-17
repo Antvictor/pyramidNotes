@@ -338,6 +338,8 @@ export default function TipTapEditor({
   const [isSubmittingExtraction, setIsSubmittingExtraction] = useState(false);
   const [editorResetKey, setEditorResetKey] = useState(0);
   const findBarRef = useRef<FindReplaceBarHandle | null>(null);
+  const keyBindingsRef = useRef(keyBindings);
+  keyBindingsRef.current = keyBindings;
 
   // Update contentRef when content prop changes
   useEffect(() => {
@@ -532,17 +534,6 @@ export default function TipTapEditor({
   const handleEditorKeyDown = useCallback((view: EditorView, event: KeyboardEvent) => {
     const editor = editorRef.current;
 
-    if ((event.ctrlKey || event.metaKey) && (event.key === "f" || event.key === "F")) {
-      event.preventDefault();
-      findBarRef.current?.open("find");
-      return true;
-    }
-    if ((event.ctrlKey || event.metaKey) && (event.key === "r" || event.key === "R")) {
-      event.preventDefault();
-      findBarRef.current?.open("replace");
-      return true;
-    }
-
     if (restoreInternalNodeLinkToken(view, event)) return true;
 
     const currentSuggestion = suggestionRef.current;
@@ -581,7 +572,7 @@ export default function TipTapEditor({
       }
     }
 
-    for (const binding of keyBindings) {
+    for (const binding of keyBindingsRef.current) {
       if (matchEditorShortcut(event, binding.key)) {
         event.preventDefault();
         if (!editor) return true;
@@ -604,12 +595,18 @@ export default function TipTapEditor({
           case "extractNode":
             openExtractionDialog({ draft: getExtractionDraft(true) });
             return true;
+          case "find":
+            findBarRef.current?.open("find");
+            return true;
+          case "replace":
+            findBarRef.current?.open("replace");
+            return true;
         }
       }
     }
 
     return false;
-  }, [completeNode, getExtractionDraft, keyBindings, openExtractionDialog, updateActiveSuggestionIndex]);
+  }, [completeNode, getExtractionDraft, openExtractionDialog, updateActiveSuggestionIndex]);
 
   const handleEditorWrapperKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {
     const extractBinding = keyBindings.find((binding) => binding.action === "extractNode");

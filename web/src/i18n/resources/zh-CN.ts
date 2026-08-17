@@ -161,6 +161,8 @@ const zhCN = {
       heading1: '标题 1',
       heading2: '标题 2',
       extractNode: '抽取选区为子节点',
+      find: '查找',
+      replace: '替换',
       search: '搜索',
       backToMap: '返回思维导图',
     },
