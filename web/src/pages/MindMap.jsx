@@ -25,6 +25,7 @@ import "@xyflow/react/dist/style.css";
 import NodeCustom from "./note/NodeCustom";
 import db from "./db/db"
 import { computeAncestorChain } from "./treeUtils";
+import { useMindMapViewStore } from "@/stores/mindMapViewStore";
 import ContextMenu from "./note/ContextMenu/ContextMenu";
 import OpenPrompt from "./commons/OpenPrompt";
 import { PermissionDialog } from "@/components/ui/permission-dialog";
@@ -294,17 +295,16 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const [permissionError, setPermissionError] = useState(null);
   const [searchParams] = useSearchParams();
   const [nodeSpacing, setNodeSpacing] = useState('normal');
-  const [focusNodeId, setFocusNodeId] = useState("1");
-  const [loadedNodeIds, setLoadedNodeIds] = useState(() => new Set());
-  const [expandedNodeIds, setExpandedNodeIds] = useState(() => new Set());
+  const focusNodeId = useMindMapViewStore((s) => s.focusNodeId);
+  const setFocusNodeId = useMindMapViewStore((s) => s.setFocusNodeId);
+  const loadedNodeIds = useMindMapViewStore((s) => s.loadedNodeIds);
+  const setLoadedNodeIds = useMindMapViewStore((s) => s.setLoadedNodeIds);
+  const expandedNodeIds = useMindMapViewStore((s) => s.expandedNodeIds);
+  const setExpandedNodeIds = useMindMapViewStore((s) => s.setExpandedNodeIds);
+  const initializedFocusId = useMindMapViewStore((s) => s.initializedFocusId);
+  const setInitializedFocusId = useMindMapViewStore((s) => s.setInitializedFocusId);
   const [pendingRevealNodeId, setPendingRevealNodeId] = useState(null);
   const navigate = useNavigate();
-
-  // 切换聚焦模式时重置
-  useEffect(() => {
-    setLoadedNodeIds(new Set());
-    setExpandedNodeIds(new Set());
-  }, [focusNodeId]);
 
   const allNotesNodeMap = useMemo(() => {
     if (!notesData) return null;
@@ -393,9 +393,11 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     setPendingRevealNodeId(id);
   }, [allNotesNodeMap, focusNodeId, notesData, setSelectedNode]);
 
-  // 初始加载前三层
+  // 首次加载或聚焦切换时加载前三层；数据变更/导航返回不重置
   useEffect(() => {
     if (!allNotesNodeMap || !notesData) return;
+    if (initializedFocusId === focusNodeId) return;
+
     const effectiveRootId = focusNodeId === '1'
       ? notesData.find(n => n.top === '0')?.id
       : focusNodeId;
@@ -421,9 +423,11 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     for (const [id, depth] of depthMap) {
       if (depth <= 2) ids.add(id);
     }
+
+    setInitializedFocusId(focusNodeId);
     setLoadedNodeIds(ids);
     setExpandedNodeIds(new Set());
-  }, [allNotesNodeMap, focusNodeId]);
+  }, [allNotesNodeMap, focusNodeId, initializedFocusId, notesData]);
 
   const clickTimerRef = useRef(null);
   const lastClickRef = useRef(null);
