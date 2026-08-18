@@ -6,6 +6,7 @@ import { EditorProvider, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Code } from "@tiptap/extension-code";
 import Image from "@tiptap/extension-image";
+import { Link } from "@tiptap/extension-link";
 import FindAndReplace from "@tiptap/extension-find-and-replace";
 import { NodeSelection, Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
@@ -165,8 +166,20 @@ const InternalNodeTokenNormalizer = Extension.create({
           }> = [];
           const tokenPattern = /(!?)\[\[([^\]\n]+?)\]\]/g;
 
+          const linkReplacements: Array<{
+            from: number;
+            to: number;
+            text: string;
+            href: string;
+          }> = [];
+          const linkPattern = /\[([^\]\n]+?)\]\(((?:[a-z][a-z0-9+.-]*:\/\/|www\.|mailto:)[^\s)]+)\)/g;
+
           newState.doc.descendants((node, pos, parent) => {
             if (!node.isText || !node.text || parent?.type.name === "codeBlock") return;
+
+            // Skip text inside link marks
+            const hasLinkMark = node.marks.some((m) => m.type.name === "link");
+            if (hasLinkMark) return;
 
             tokenPattern.lastIndex = 0;
             let match: RegExpExecArray | null;
@@ -181,13 +194,27 @@ const InternalNodeTokenNormalizer = Extension.create({
                 embed: match[1] === "!",
               });
             }
+
+            linkPattern.lastIndex = 0;
+            let linkMatch: RegExpExecArray | null;
+            while ((linkMatch = linkPattern.exec(node.text)) !== null) {
+              let href = linkMatch[2];
+              const text = linkMatch[1];
+              if (!href || !text) continue;
+              if (href.startsWith("www.")) href = "https://" + href;
+              linkReplacements.push({
+                from: pos + linkMatch.index,
+                to: pos + linkMatch.index + linkMatch[0].length,
+                text,
+                href,
+              });
+            }
           });
 
-          if (replacements.length === 0) return null;
+          if (replacements.length === 0 && linkReplacements.length === 0) return null;
 
           const tr = newState.tr;
           for (const replacement of replacements.reverse()) {
-            // For ![[...]], check if it's an image reference first
             if (replacement.embed && !replacement.id && isImageReference(replacement.name)) {
               const imageType = newState.schema.nodes.internalImageEmbed;
               if (!imageType) continue;
@@ -208,10 +235,46 @@ const InternalNodeTokenNormalizer = Extension.create({
             tr.replaceRangeWith(replacement.from, replacement.to, internalNode);
           }
 
+          const linkMarkType = newState.schema.marks.link;
+          if (linkMarkType) {
+            for (const lr of linkReplacements.reverse()) {
+              const mark = linkMarkType.create({ href: lr.href });
+              tr.replaceWith(lr.from, lr.to, newState.schema.text(lr.text, [mark]));
+            }
+          }
+
           return tr.docChanged ? tr : null;
         },
       }),
     ];
+  },
+});
+
+// Override prosemirror-markdown's link serializer to always output [text](href).
+// The default emits <href> when link text equals the URL (inAutolink), which
+// stores pasted bare URLs as <https://...> and breaks downstream markdown parsing.
+const LinkExtension = Link.extend({
+  // Pasting/typing bare URLs must stay plain text; links are only created from
+  // [text](url) syntax (handled by InternalNodeTokenNormalizer and tiptap-markdown).
+  addPasteRules() {
+    return [];
+  },
+  addStorage() {
+    return {
+      markdown: {
+        serialize: {
+          open: () => "[",
+          close: (_state: unknown, mark: { attrs: { href: string; title?: string } }) => {
+            const { href, title } = mark.attrs;
+            if (!href) return "]";
+            let result = "](" + href.replace(/[()"]/g, "\\$&");
+            if (title) result += ` "${title.replace(/"/g, '\\"')}"`;
+            return result + ")";
+          },
+          mixable: true,
+        },
+      },
+    };
   },
 });
 
@@ -298,6 +361,75 @@ function restoreInternalNodeLinkToken(view: EditorView, event: KeyboardEvent) {
   return false;
 }
 
+// Deleting an external link mark restores the [text](url markdown source instead
+// of removing the text. The closing ')' is omitted so the normalizer doesn't
+// immediately re-link it; typing ')' completes the link again.
+function restoreExternalLinkMarkToken(view: EditorView, event: KeyboardEvent) {
+  if (event.key !== "Backspace" && event.key !== "Delete") return false;
+
+  const { state } = view;
+  const { selection, schema, doc } = state;
+  const linkType = schema.marks.link;
+  if (!linkType) return false;
+
+  const restoreLink = (from: number, to: number, text: string, href: string) => {
+    const restored = `[${text}](${href}`;
+    const tr = state.tr.replaceWith(from, to, schema.text(restored));
+    tr.setSelection(TextSelection.create(tr.doc, from + restored.length));
+    view.dispatch(tr);
+    event.preventDefault();
+    event.stopPropagation();
+    return true;
+  };
+
+  const findLinkAt = (pos: number): { from: number; to: number; text: string; href: string } | null => {
+    let found: { from: number; to: number; text: string; href: string } | null = null;
+    doc.descendants((node, nodePos) => {
+      if (found) return false;
+      if (!node.isText || !node.text) return undefined;
+      const mark = node.marks.find((m) => m.type === linkType);
+      if (!mark) return undefined;
+      const from = nodePos;
+      const to = nodePos + node.nodeSize;
+      if (pos >= from && pos < to) {
+        found = { from, to, text: node.text, href: mark.attrs.href as string };
+        return false;
+      }
+      return undefined;
+    });
+    return found;
+  };
+
+  if (!selection.empty) {
+    let restored = false;
+    doc.nodesBetween(selection.from, selection.to, (node, pos) => {
+      if (restored) return false;
+      if (!node.isText || !node.text) return undefined;
+      const mark = node.marks.find((m) => m.type === linkType);
+      if (!mark) return undefined;
+      const nodeEnd = pos + node.nodeSize;
+      if (selection.from <= pos && selection.to >= nodeEnd) {
+        restored = restoreLink(pos, nodeEnd, node.text, mark.attrs.href as string);
+        return false;
+      }
+      return undefined;
+    });
+    return restored;
+  }
+
+  const { $from } = selection;
+  if (event.key === "Backspace") {
+    const link = findLinkAt($from.pos - 1);
+    if (link && link.to === $from.pos) return restoreLink(link.from, link.to, link.text, link.href);
+  }
+  if (event.key === "Delete") {
+    const link = findLinkAt($from.pos);
+    if (link && link.from === $from.pos) return restoreLink(link.from, link.to, link.text, link.href);
+  }
+
+  return false;
+}
+
 function insertCompletedInternalNode(view: EditorView, target: NodeLookupItem, suggestion: SuggestionState) {
   const { state } = view;
   const nodeType = suggestion.embed
@@ -378,10 +510,16 @@ export default function TipTapEditor({
   const internalNodeEmbed = useMemo(() => InternalNodeEmbed.configure({ nodes, onOpenNode: openNode }), [nodes, openNode]);
   const tiptapImage = useMemo(() => Image.configure({ allowBase64: false, inline: false }), []);
   const internalImageEmbed = useMemo(() => InternalImageEmbed.configure({ noteName: safeNoteName }), [safeNoteName]);
+  const link = useMemo(() => LinkExtension.configure({
+    openOnClick: true,
+    autolink: false,
+    linkOnPaste: false,
+    HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" },
+  }), []);
 
   const extensions = useMemo(
-    () => [starterKit, Code, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, InternalNodeTokenNormalizer, markdownExtension, findAndReplace],
-    [starterKit, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, markdownExtension, findAndReplace],
+    () => [starterKit, Code, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, InternalNodeTokenNormalizer, markdownExtension, findAndReplace],
+    [starterKit, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, markdownExtension, findAndReplace],
   );
 
   const handleUpdate = useCallback(({ editor }: { editor: Editor }) => {
@@ -534,6 +672,7 @@ export default function TipTapEditor({
   const handleEditorKeyDown = useCallback((view: EditorView, event: KeyboardEvent) => {
     const editor = editorRef.current;
 
+    if (restoreExternalLinkMarkToken(view, event)) return true;
     if (restoreInternalNodeLinkToken(view, event)) return true;
 
     const currentSuggestion = suggestionRef.current;
@@ -750,6 +889,15 @@ export default function TipTapEditor({
                 const tr = state.tr.replaceSelectionWith(imageNode);
                 dispatch(tr);
               }
+              return true;
+            }
+
+            // Pasting a bare URL must stay plain text. The browser clipboard also
+            // carries an <a> HTML version which ProseMirror would parse into a link
+            // mark, so bypass it and insert the URL as text.
+            if (text && /^(?:https?:\/\/|www\.)\S+$/i.test(text)) {
+              event.preventDefault();
+              view.dispatch(view.state.tr.insertText(text));
               return true;
             }
 
