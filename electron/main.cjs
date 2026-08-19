@@ -11,6 +11,7 @@ const { resolveAppIconPath } = require('./common/assets.cjs')
 const { registerSettingsIPC } = require('./ipc/settings.cjs')
 const { registerCaptureIPC } = require('./ipc/capture.cjs')
 const { applyApplicationMenu } = require('./common/locale.cjs')
+const { registerLicenseIPC } = require('./ipc/license.cjs')
 
 if (process.env.PYRAMID_CAPTURE_REMOTE_DEBUG_PORT) {
   app.commandLine.appendSwitch('remote-debugging-port', String(process.env.PYRAMID_CAPTURE_REMOTE_DEBUG_PORT))
@@ -31,12 +32,13 @@ app.whenReady().then(async () => {
     if (process.platform === 'darwin') {
       app.dock.setIcon(resolveAppIconPath());
     }
-    createWindow(settings);
+    const mainWindow = createWindow(settings);
     registerPathIPC();
     registerFileIPC();
     registerAttachmentIPC();
     registerSettingsIPC();
     registerCaptureIPC();
+    registerLicenseIPC(mainWindow);
 
     // Handler to reload database when storagePath changes
     ipcMain.handle('reloadDatabase', async (event, newStoragePath) => {

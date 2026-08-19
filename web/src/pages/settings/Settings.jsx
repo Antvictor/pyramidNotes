@@ -1,11 +1,15 @@
 import { useState, useEffect } from "react";
-import { Folder, HelpCircle, ChevronDown, Keyboard } from "lucide-react";
+import { Folder, HelpCircle, ChevronDown, Keyboard, Crown } from "lucide-react";
 import ShortcutsModal from "./ShortcutsModal";
 import HelpModal from "./HelpModal";
+import Paywall from "../paywall/Paywall";
+import { useLicense } from "../../contexts/LicenseContext";
 import { useTranslation } from "react-i18next";
 
 const Settings = () => {
   const { t } = useTranslation();
+  const { licenseState } = useLicense();
+  const [paywallOpen, setPaywallOpen] = useState(false);
   const [settings, setSettings] = useState({
     theme: "system",
     storagePath: "",
@@ -110,6 +114,21 @@ const Settings = () => {
     dark: t("settings.theme.dark"),
     system: t("settings.theme.system"),
   };
+
+  const getLicenseLabel = () => {
+    switch (licenseState) {
+      case 'trial':
+        return '试用';
+      case 'permanent':
+        return '永久用户';
+      case 'expired':
+        return '已到期';
+      default:
+        return '加载中...';
+    }
+  };
+
+  const canPurchase = licenseState === 'trial' || licenseState === 'expired';
 
   const sectionStyle = {
     width: "100%",
@@ -347,6 +366,46 @@ const Settings = () => {
           </div>
         </div>
 
+        {/* License Section */}
+        <div style={sectionStyle}>
+          <h3 style={{ marginBottom: 12 }}>授权</h3>
+
+          <div style={{ ...rowStyle, borderBottom: "none" }}>
+            <span style={labelStyle}>状态</span>
+            <div style={{ ...controlStyle, flexDirection: "column", alignItems: "flex-end" }}>
+              <span style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: licenseState === 'permanent' ? 'var(--link-color)' : 'var(--text-primary)',
+              }}>
+                {getLicenseLabel()}
+              </span>
+              {canPurchase && (
+                <button
+                  onClick={() => setPaywallOpen(true)}
+                  style={{
+                    marginTop: 8,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "8px 16px",
+                    borderRadius: 6,
+                    border: "1px solid var(--border)",
+                    background: "var(--primary)",
+                    color: "white",
+                    cursor: "pointer",
+                    fontSize: 14,
+                    fontWeight: 500,
+                  }}
+                >
+                  <Crown size={16} />
+                  购买永久版
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Other Section */}
         <div style={sectionStyle}>
           <h3 style={{ marginBottom: 12 }}>{t("settings.sections.other")}</h3>
@@ -512,6 +571,30 @@ const Settings = () => {
           open={helpModalOpen}
           onOpenChange={setHelpModalOpen}
         />
+
+        {/* Paywall Modal */}
+        {paywallOpen && (
+          <div
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setPaywallOpen(false);
+            }}
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(0, 0, 0, 0.6)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1000,
+              padding: "20px",
+            }}
+          >
+            <Paywall onClose={() => setPaywallOpen(false)} compact />
+          </div>
+        )}
       </div>
     </div>
   );

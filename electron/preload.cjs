@@ -25,4 +25,11 @@ contextBridge.exposeInMainWorld('api', {
     saveAttachmentFromBase64: (base64Data, noteName, extension) => ipcRenderer.invoke('saveAttachmentFromBase64', base64Data, noteName, extension),
     saveAttachmentFromPath: (sourcePath, noteName) => ipcRenderer.invoke('saveAttachmentFromPath', sourcePath, noteName),
     readAttachment: (fileName) => ipcRenderer.invoke('readAttachment', fileName),
+    getLicenseState: () => ipcRenderer.invoke('license:getState'),
+    getLicenseProducts: () => ipcRenderer.invoke('license:getProducts'),
+    purchaseLicense: (productId) => ipcRenderer.invoke('license:purchase', productId),
+    restoreLicensePurchases: () => ipcRenderer.invoke('license:restorePurchases'),
+    verifyLicensePurchase: () => ipcRenderer.invoke('license:verifyPurchase'),
+    canMakeLicensePayments: () => ipcRenderer.invoke('license:canMakePayments'),
+    onLicenseTransactionUpdated: (callback) => subscribeToIpc('license:transaction-updated', callback),
 })
