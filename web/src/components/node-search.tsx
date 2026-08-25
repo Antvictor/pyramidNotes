@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   Command,
@@ -62,6 +62,17 @@ export function NodeSearchInternal({
 }: NodeSearchProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"node" | "fulltext">("node");
+
+  // 搜索弹窗打开时自动聚焦输入框
+  useEffect(() => {
+    if (open) {
+      const timer = setTimeout(() => {
+        const input = document.querySelector('[data-slot="command-input"]') as HTMLInputElement;
+        input?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
   const [searchResults, setSearchResults] = useState<NodeSearchResult[]>([]);
   const [fullTextSearchResults, setFullTextSearchResults] = useState<FullTextSearchResult[]>([]);
   const [searchString, setSearchString] = useState<string>("");
@@ -173,6 +184,7 @@ export function NodeSearchInternal({
             onValueChange={onChange}
             value={searchString}
             onFocus={() => onOpenChange?.(true)}
+            autoFocus
           />
 
           {open && (
@@ -204,6 +216,7 @@ export function NodeSearchInternal({
             onValueChange={onChange}
             value={searchString}
             onFocus={() => onOpenChange?.(true)}
+            autoFocus={activeTab === "fulltext"}
           />
 
           {open && (

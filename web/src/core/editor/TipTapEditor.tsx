@@ -5,6 +5,8 @@ import { Extension } from "@tiptap/core";
 import { EditorProvider, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Code } from "@tiptap/extension-code";
+import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import { common, createLowlight } from "lowlight";
 import Image from "@tiptap/extension-image";
 import { Link } from "@tiptap/extension-link";
 import FindAndReplace from "@tiptap/extension-find-and-replace";
@@ -14,6 +16,8 @@ import { Markdown } from "tiptap-markdown";
 import { useTranslation } from "react-i18next";
 import FindReplaceBar, { type FindReplaceBarHandle } from "./FindReplaceBar";
 import "./find-replace.css";
+import "../../pages/note/markdown.css";
+import "highlight.js/styles/atom-one-dark.css";
 import type { KeyBinding } from "./extensions/commands";
 import { InternalNodeEmbed, InternalNodeLink } from "./extensions/InternalNodeLink";
 import { InternalImageEmbed } from "./extensions/InternalImageEmbed";
@@ -118,6 +122,8 @@ function getSuggestionFromView(view: {
     y: coords.bottom + 6,
   };
 }
+
+const lowlight = createLowlight(common);
 
 const InternalNodeCompletion = Extension.create<{
   onChange: (suggestion: SuggestionState | null) => void;
@@ -244,6 +250,61 @@ const InternalNodeTokenNormalizer = Extension.create({
           }
 
           return tr.docChanged ? tr : null;
+        },
+      }),
+    ];
+  },
+});
+
+/**
+ * 行内代码实时预览：用 appendTransaction 扫描 `text` 模式，
+ * 实时给文本加 code mark（保留反引号）。
+ * 使用 textBetween 扫描整个段落（解决跨 text node 匹配问题）。
+ * Code 扩展的 InputRule 在闭合 ` 时删除反引号并保留 code mark。
+ * ``` 不受影响（regex 要求反引号之间有内容）。
+ */
+const InlineCodePreview = Extension.create({
+  name: "inlineCodePreview",
+  addProseMirrorPlugins() {
+    const codeBacktickRegex = /`([^`\n]+)`/g;
+    return [
+      new Plugin({
+        key: new PluginKey("inlineCodePreview"),
+        appendTransaction(transactions, _oldState, newState) {
+          if (!transactions.some((t) => t.docChanged)) return null;
+
+          const codeMark = newState.schema.marks.code;
+          if (!codeMark) return null;
+
+          const tr = newState.tr;
+          let modified = false;
+
+          newState.doc.descendants((node, pos) => {
+            if (!node.isInline && node.isLeaf) return;
+            if (node.isText) return;
+            if (node.type.name === "codeBlock") return;
+            if (node.inlineContent === false) return;
+
+            const blockStart = pos + 1;
+            const blockEnd = pos + node.content.size + 1;
+            if (blockEnd <= blockStart) return;
+
+            const fullText = newState.doc.textBetween(blockStart, blockEnd, "￼", "￼");
+
+            codeBacktickRegex.lastIndex = 0;
+            let match;
+            while ((match = codeBacktickRegex.exec(fullText)) !== null) {
+              const contentStart = blockStart + match.index + 1;
+              const contentEnd = contentStart + match[1].length;
+
+              if (!newState.doc.rangeHasMark(contentStart, contentEnd, codeMark)) {
+                tr.addMark(contentStart, contentEnd, codeMark.create());
+                modified = true;
+              }
+            }
+          });
+
+          return modified ? tr : null;
         },
       }),
     ];
@@ -491,7 +552,8 @@ export default function TipTapEditor({
     transformCopiedText: false,
   }), []);
 
-  const starterKit = useMemo(() => StarterKit.configure({ code: false }), []);
+  const starterKit = useMemo(() => StarterKit.configure({ code: false, codeBlock: false }), []);
+  const codeBlockLowlight = useMemo(() => CodeBlockLowlight.configure({ lowlight }), []);
   const findAndReplace = useMemo(() => FindAndReplace.configure({
     searchDebounceMs: 0,
     injectCSS: false,
@@ -518,8 +580,8 @@ export default function TipTapEditor({
   }), []);
 
   const extensions = useMemo(
-    () => [starterKit, Code, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, InternalNodeTokenNormalizer, markdownExtension, findAndReplace],
-    [starterKit, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, markdownExtension, findAndReplace],
+    () => [starterKit, Code, InlineCodePreview, codeBlockLowlight, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, InternalNodeTokenNormalizer, markdownExtension, findAndReplace],
+    [starterKit, codeBlockLowlight, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, markdownExtension, findAndReplace],
   );
 
   const handleUpdate = useCallback(({ editor }: { editor: Editor }) => {

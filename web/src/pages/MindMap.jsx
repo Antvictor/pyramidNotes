@@ -645,6 +645,8 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     setNotesData(res);
     setSelectedNode({ id: moveSource.id, name: moveSource.name });
     setMoveSource(null);
+    // 移动后居中到节点新位置
+    setTimeout(() => requestCenter(), 300);
   };
 
   useEffect(() => {
@@ -836,6 +838,11 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     [setEdges]
   );
 
+  const centerOnSelectedRef = useRef(null);
+  const requestCenter = useCallback(() => {
+    if (centerOnSelectedRef.current) centerOnSelectedRef.current();
+  }, []);
+
   const [menu, setMenu] = useState({
     show: false,
     x: 0,
@@ -859,25 +866,21 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     });
   }, [focusNodeId]);
 
-  // 右键节点
+  // 右键节点：选中 + 弹出菜单（不居中）
   const onNodeContextMenu = useCallback((e, node) => {
     e.preventDefault();
     e.stopPropagation();
-    setMenu(prev => {
-      if (prev.show && prev.type === 'node' && prev.nodeId === node.id) {
-        return prev; // 已在显示，不重复触发
-      }
-      return {
-        show: true,
-        x: e.clientX,
-        y: e.clientY,
-        type: "node",
-        nodeId: node.id,
-        title: node.data.name,
-        isRoot: node.data.top === "0"
-      };
+    setSelectedNode({ id: node.id, name: node.data.name });
+    setMenu({
+      show: true,
+      x: e.clientX,
+      y: e.clientY,
+      type: "node",
+      nodeId: node.id,
+      title: node.data.name,
+      isRoot: node.data.top === "0"
     });
-  }, []);
+  }, [setSelectedNode]);
 
   const closeMenu = () => setMenu((m) => ({ ...m, show: false }));
 
@@ -906,6 +909,11 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       saveNode(newNodeDb);
       // 创建新节点的 markdown 文件, 把这两个合成一个方法
       addNote(newNodeDb);
+      // 新节点渲染后居中
+      setTimeout(() => {
+        setSelectedNode({ id: `${id}`, name: safeName });
+        requestCenter();
+      }, 300);
       if (allNotesNodeMap) {
         const displayRootId = focusNodeId === '1'
           ? notesData.find((n) => n.top === '0')?.id
@@ -916,7 +924,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
         }
       }
     },
-    [allNotesNodeMap, focusNodeId, notesData]
+    [allNotesNodeMap, focusNodeId, notesData, setSelectedNode, requestCenter]
   );
   const saveNode = async (node) => {
     const yamlStr = { id: node.id, alias: "", title: node.name, left: node.left, top: node.top };
@@ -963,17 +971,28 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     await window.api.openSystemSettings();
   };
 
-  // ESC 返回时居中选中节点
+  // 居中辅助组件：通过 ref 暴露居中方法，供 requestCenter 显式调用
   const CenterOnSelected = () => {
     const { setCenter, getNodes } = useReactFlow();
+
     useEffect(() => {
-      if (selectedNode) {
+      centerOnSelectedRef.current = () => {
+        if (!selectedNode) return;
         const n = getNodes().find(nd => nd.id === selectedNode.id);
         if (n) setCenter(n.position.x + 80, n.position.y + 20, { zoom: 1, duration: 300 });
-      }
-    }, [selectedNode]);
+      };
+    });
+
     return null;
   };
+
+  // ESC 返回时：组件挂载且 selectedNode 已存在，居中一次
+  useEffect(() => {
+    if (selectedNode) {
+      const timer = setTimeout(() => requestCenter(), 100);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   // 搜索选中后：等节点进入 ReactFlow 再 fitView 定位
   const RevealOnPending = () => {

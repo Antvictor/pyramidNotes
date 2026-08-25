@@ -125,6 +125,46 @@
   font-size: 0.875em;
 }
 
+/* 提升 hljs 选择器优先级，覆盖 Tailwind prose 默认颜色 */
+.prose pre code.hljs {
+  background: transparent;
+  padding: 0;
+  color: #abb2bf;
+}
+.prose pre code .hljs-comment,
+.prose pre code .hljs-quote { color: #5c6370; font-style: italic; }
+.prose pre code .hljs-doctag,
+.prose pre code .hljs-keyword,
+.prose pre code .hljs-formula { color: #c678dd; }
+.prose pre code .hljs-section,
+.prose pre code .hljs-name,
+.prose pre code .hljs-selector-tag,
+.prose pre code .hljs-deletion,
+.prose pre code .hljs-subst { color: #e06c75; }
+.prose pre code .hljs-literal { color: #d19a66; }
+.prose pre code .hljs-string,
+.prose pre code .hljs-regexp,
+.prose pre code .hljs-addition,
+.prose pre code .hljs-attribute,
+.prose pre code .hljs-meta .hljs-string { color: #98c379; }
+.prose pre code .hljs-attr,
+.prose pre code .hljs-variable,
+.prose pre code .hljs-template-variable,
+.prose pre code .hljs-type,
+.prose pre code .hljs-class .hljs-title,
+.prose pre code .hljs-title.class_,
+.prose pre code .hljs-built_in { color: #e5c07b; }
+.prose pre code .hljs-title,
+.prose pre code .hljs-title.function_,
+.prose pre code .hljs-symbol,
+.prose pre code .hljs-bullet,
+.prose pre code .hljs-link { color: #61afef; }
+.prose pre code .hljs-number { color: #d19a66; }
+.prose pre code .hljs-meta { color: #61afef; }
+.prose pre code .hljs-emphasis { font-style: italic; }
+.prose pre code .hljs-strong { font-weight: bold; }
+.prose pre code .hljs-regexp { color: #56b6c2; }
+
 /* Lists */
 .cm-md-inline ul,
 .prose ul,
