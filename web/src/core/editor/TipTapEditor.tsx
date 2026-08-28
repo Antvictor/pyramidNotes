@@ -19,6 +19,7 @@ import "./find-replace.css";
 import "../../pages/note/markdown.css";
 import "highlight.js/styles/atom-one-dark.css";
 import type { KeyBinding } from "./extensions/commands";
+import { EmptyParagraphPreserver } from "./extensions/EmptyParagraphPreserver";
 import { InternalNodeEmbed, InternalNodeLink } from "./extensions/InternalNodeLink";
 import { InternalImageEmbed } from "./extensions/InternalImageEmbed";
 import { isImageReference, sanitizeFileName } from "./extensions/attachmentUtils";
@@ -580,8 +581,8 @@ export default function TipTapEditor({
   }), []);
 
   const extensions = useMemo(
-    () => [starterKit, Code, InlineCodePreview, codeBlockLowlight, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, InternalNodeTokenNormalizer, markdownExtension, findAndReplace],
-    [starterKit, codeBlockLowlight, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, markdownExtension, findAndReplace],
+    () => [starterKit, Code, InlineCodePreview, codeBlockLowlight, EmptyParagraphPreserver, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, InternalNodeTokenNormalizer, markdownExtension, findAndReplace],
+    [starterKit, codeBlockLowlight, EmptyParagraphPreserver, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, markdownExtension, findAndReplace],
   );
 
   const handleUpdate = useCallback(({ editor }: { editor: Editor }) => {
