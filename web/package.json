@@ -44,6 +44,7 @@
     "lowlight": "^3.3.0",
     "lucide-react": "^0.548.0",
     "nanoid": "^5.1.6",
+    "prosemirror-markdown": "^1.13.4",
     "radix-ui": "^1.4.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
