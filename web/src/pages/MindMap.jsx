@@ -78,11 +78,11 @@ function layoutTree(nodes, rootId, startX, startY, nodeSizes, spacingPreset) {
       if (m?.width && m?.height) return m;
     }
     const text = `${node?.name ?? ""}`;
-    const nodeMaxWidth = 100, padX = 16, padY = 16;
+    const nodeMaxWidth = 140, padX = 16, padY = 16;
     const charsPerLine = Math.max(1, Math.floor((nodeMaxWidth - padX) / 8));
     const lines = Math.max(1, Math.ceil(text.length / charsPerLine));
     return {
-      width: Math.max(30, Math.min(220, 30 + text.length * 8)),
+      width: Math.min(nodeMaxWidth, Math.max(30, 30 + text.length * 8)),
       height: padY + 24 * lines,
     };
   };

@@ -23,7 +23,7 @@ export default function NodeCustom({ data }) {
         borderRadius: 4,
         cursor: 'pointer',
         minWidth: 40,
-        maxWidth: 100,
+        maxWidth: 140,
         textAlign: 'center',
         color: 'var(--text-primary)',
         transition: 'border-color 0.2s, border-width 0.2s',
