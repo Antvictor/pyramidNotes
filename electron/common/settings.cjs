@@ -27,6 +27,7 @@ const DEFAULT_SETTINGS = {
       backToMap: 'Escape',
     },
   },
+  editorWidthMode: 'constrained',
 };
 
 let cachedSettings = null;

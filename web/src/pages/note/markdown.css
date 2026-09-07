@@ -301,3 +301,10 @@
   margin-right: 0.5em;
   accent-color: var(--primary);
 }
+
+/* 限制模式：内容列居中、A4 宽度（794px = 210mm @ 96dpi），窗口更窄时自适应 */
+.editor-width-constrained .ProseMirror {
+  max-width: 794px;
+  margin-left: auto;
+  margin-right: auto;
+}

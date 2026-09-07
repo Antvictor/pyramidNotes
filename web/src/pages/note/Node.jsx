@@ -21,6 +21,7 @@ const Note = ({ shortcuts }) => {
   const [ready, setReady] = useState(false);
   const [allNodes, setAllNodes] = useState([]);
   const [noteFontSize, setNoteFontSize] = useState(16);
+  const [editorWidthMode, setEditorWidthMode] = useState('constrained');
   const navigate = useNavigate();
   const location = useLocation();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -55,6 +56,9 @@ const Note = ({ shortcuts }) => {
       if (s.noteFontSize) {
         setNoteFontSize(s.noteFontSize);
       }
+      if (s.editorWidthMode) {
+        setEditorWidthMode(s.editorWidthMode);
+      }
       // 1. 获取 Electron userData 路径
       const fileName = `${id}-${name}.md`;
       setFileName(fileName);
@@ -78,6 +82,9 @@ const Note = ({ shortcuts }) => {
     return window.api.onSettingsChanged((newSettings) => {
       if (newSettings.noteFontSize) {
         setNoteFontSize(newSettings.noteFontSize);
+      }
+      if (newSettings.editorWidthMode) {
+        setEditorWidthMode(newSettings.editorWidthMode);
       }
     });
   }, []);
@@ -172,8 +179,10 @@ const Note = ({ shortcuts }) => {
     !ready ?
       <div>{t("editor.loading")}</div> :
       <div style={{
-        width: "90vw",
-        height: "94vh",
+        display: "flex",
+        justifyContent: "center",
+        width: "100%",
+        height: "100%",
         overflow: "hidden" }}>
         <TipTapEditor
           content={value}
@@ -183,6 +192,7 @@ const Note = ({ shortcuts }) => {
           noteName={name}
           noteId={id}
           noteFontSize={noteFontSize}
+          editorWidthMode={editorWidthMode}
           onCreateChildFromSelection={createChildFromSelection}
           onOpenNode={openNode}
         />

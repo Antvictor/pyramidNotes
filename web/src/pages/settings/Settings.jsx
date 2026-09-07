@@ -103,6 +103,11 @@ const Settings = () => {
     await window.api.saveSettings({ nodeSpacing: value });
   };
 
+  const handleEditorWidthModeChange = async (value) => {
+    setSettings((prev) => ({ ...prev, editorWidthMode: value }));
+    await window.api.saveSettings({ editorWidthMode: value });
+  };
+
   const languages = [
     { value: "system", label: t("settings.language.system") },
     { value: "zh-CN", label: t("settings.language.zhCN") },
@@ -363,6 +368,43 @@ const Settings = () => {
                 </span>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Editor Settings Section */}
+        <div style={sectionStyle}>
+          <h3 style={{ marginBottom: 12 }}>编辑器设置</h3>
+
+          <div style={{ ...rowStyle, borderBottom: "none" }}>
+            <div>
+              <span style={labelStyle}>编辑器边栏</span>
+              <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 2 }}>
+                限制：编辑器宽度受限，窗口变大时宽度不变，窗口变小时跟随缩小；放开：编辑器宽度跟随窗口全宽
+              </div>
+            </div>
+            <div style={controlStyle}>
+              {(["constrained", "expanded"]).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => handleEditorWidthModeChange(mode)}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: 6,
+                    border: "1px solid var(--border)",
+                    background:
+                      settings.editorWidthMode === mode
+                        ? "var(--link-color)"
+                        : "var(--bg-primary)",
+                    color:
+                      settings.editorWidthMode === mode ? "white" : "var(--text-primary)",
+                    cursor: "pointer",
+                    fontSize: 13,
+                  }}
+                >
+                  {mode === "constrained" ? "限制" : "放开"}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

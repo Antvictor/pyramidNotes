@@ -41,6 +41,7 @@ interface Props {
   onCreateChildFromSelection?: (nodeName: string, content: string) => Promise<NodeLookupItem>;
   onOpenNode?: (target: NodeLookupItem) => void;
   noteFontSize?: number;
+  editorWidthMode?: 'constrained' | 'expanded';
 }
 
 type SuggestionState = {
@@ -515,6 +516,7 @@ export default function TipTapEditor({
   onCreateChildFromSelection,
   onOpenNode,
   noteFontSize = 16,
+  editorWidthMode = 'constrained',
 }: Props) {
   const { t } = useTranslation();
   const editorRef = useRef<Editor | null>(null);
@@ -860,7 +862,15 @@ export default function TipTapEditor({
   return (
     <div
       ref={editorRootRef}
-      style={{ height: "100%", width: "100%", overflowY: "auto", overflowX: "hidden", position: "relative", "--note-font-size": noteFontSize + "px" } as React.CSSProperties}
+      className={editorWidthMode === 'constrained' ? 'editor-width-constrained' : undefined}
+      style={{
+        width: "100%",
+        height: "100%",
+        overflowY: "auto",
+        overflowX: "hidden",
+        position: "relative",
+        "--note-font-size": noteFontSize + "px",
+      } as React.CSSProperties}
       onClick={() => setContextMenu(null)}
       onMouseDownCapture={(event) => {
         if (isEditorFloatingUiTarget(event.target)) return;
@@ -880,8 +890,10 @@ export default function TipTapEditor({
           editorRef.current = editor;
           // Set markdown content after editor is created using tiptap-markdown's setContent command
           if (contentRef.current) {
-            editor.chain().focus().setContent(contentRef.current).run();
+            editor.chain().setContent(contentRef.current).run();
           }
+          // Cursor at document end on entry; focus('end') also scrolls it into view
+          editor.commands.focus('end');
         }}
         editorProps={{
           attributes: {

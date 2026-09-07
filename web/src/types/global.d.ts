@@ -10,6 +10,7 @@ interface PyramidSettings {
   systemFontSize?: number;
   noteFontSize?: number;
   nodeSpacing?: 'compact' | 'normal' | 'loose';
+  editorWidthMode?: 'constrained' | 'expanded';
 }
 
 interface PyramidApi {
