@@ -12,7 +12,8 @@ export type InternalNodeReference = {
 export function parseInternalNodeReference(value: string): InternalNodeReference {
   const separatorIndex = value.indexOf("|");
   if (separatorIndex < 0) {
-    return { id: "", name: value.trim() };
+    const id = value.trim();
+    return { id, name: id };
   }
 
   return {
@@ -25,9 +26,11 @@ export function serializeInternalNodeReference(
   reference: InternalNodeReference,
   embed = false,
 ) {
-  const value = reference.id
+  const hasExplicitAlias =
+    Boolean(reference.id) && Boolean(reference.name) && reference.name !== reference.id;
+  const value = hasExplicitAlias
     ? `${reference.id}|${reference.name}`
-    : reference.name;
+    : reference.id || reference.name;
   return `${embed ? "!" : ""}[[${value}]]`;
 }
 
@@ -35,10 +38,6 @@ export function resolveInternalNodeTarget(
   nodes: NodeReferenceTarget[],
   reference: InternalNodeReference,
 ) {
-  if (reference.id) {
-    return nodes.find((node) => node.id === reference.id);
-  }
-
-  const nameMatches = nodes.filter((node) => node.name === reference.name);
-  return nameMatches.length === 1 ? nameMatches[0] : undefined;
+  if (!reference.id) return undefined;
+  return nodes.find((node) => node.id === reference.id);
 }

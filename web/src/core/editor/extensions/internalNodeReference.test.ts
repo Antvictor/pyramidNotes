@@ -12,12 +12,31 @@ const duplicateNodes = [
 ];
 
 describe("internal node references", () => {
-  it("round trips stable ids while keeping the node name as the visible alias", () => {
-    const reference = { id: "second-id", name: "Same name" };
+  it("round trips explicit-alias references", () => {
+    const reference = { id: "second-id", name: "Alias" };
 
-    expect(serializeInternalNodeReference(reference)).toBe("[[second-id|Same name]]");
-    expect(serializeInternalNodeReference(reference, true)).toBe("![[second-id|Same name]]");
-    expect(parseInternalNodeReference("second-id|Same name")).toEqual(reference);
+    expect(serializeInternalNodeReference(reference)).toBe("[[second-id|Alias]]");
+    expect(serializeInternalNodeReference(reference, true)).toBe("![[second-id|Alias]]");
+    expect(parseInternalNodeReference("second-id|Alias")).toEqual(reference);
+  });
+
+  it("parses pipe-less references as id-only and round trips without a pipe", () => {
+    expect(parseInternalNodeReference("second-id")).toEqual({
+      id: "second-id",
+      name: "second-id",
+    });
+    const reference = parseInternalNodeReference("second-id");
+    expect(serializeInternalNodeReference(reference)).toBe("[[second-id]]");
+    expect(serializeInternalNodeReference(reference, true)).toBe("![[second-id]]");
+  });
+
+  it("serializes empty-name references as id-only", () => {
+    expect(serializeInternalNodeReference({ id: "second-id", name: "" })).toBe("[[second-id]]");
+    expect(serializeInternalNodeReference({ id: "second-id", name: "" }, true)).toBe("![[second-id]]");
+  });
+
+  it("serializes a name equal to the id as id-only", () => {
+    expect(serializeInternalNodeReference({ id: "second-id", name: "second-id" })).toBe("[[second-id]]");
   });
 
   it("resolves duplicate names by id", () => {
@@ -29,19 +48,11 @@ describe("internal node references", () => {
     expect(target?.content).toBe("second");
   });
 
-  it("keeps legacy name-only references working", () => {
-    expect(parseInternalNodeReference("Same name")).toEqual({ id: "", name: "Same name" });
+  it("does not resolve references without an id", () => {
     expect(resolveInternalNodeTarget(
       [{ id: "only-id", name: "Unique name" }],
       { id: "", name: "Unique name" },
-    )?.id).toBe("only-id");
-  });
-
-  it("does not guess which duplicate node a legacy name-only reference meant", () => {
-    expect(resolveInternalNodeTarget(duplicateNodes, {
-      id: "",
-      name: "Same name",
-    })).toBeUndefined();
+    )).toBeUndefined();
   });
 
   it("does not redirect a missing id to another node with the same name", () => {
