@@ -564,6 +564,18 @@ export default function TipTapEditor({
     contentRef.current = content;
   }, [content]);
 
+  // Backlink jump positioning. onCreate runs before DOM layout (scrollIntoView
+  // would no-op) and child effects (EditorProvider) run before this parent
+  // effect, so by now the doc is populated and laid out.
+  useEffect(() => {
+    if (!focusRefId) return;
+    const editor = editorRef.current;
+    if (!editor) return;
+    if (!focusInternalReference(editor, focusRefId)) {
+      editor.commands.focus('end');
+    }
+  }, [focusRefId]);
+
   const safeNoteName = useMemo(() => sanitizeFileName(noteName || 'untitled'), [noteName]);
 
   const markdownExtension = useMemo(() => Markdown.configure({
@@ -915,8 +927,8 @@ export default function TipTapEditor({
             editor.chain().setContent(contentRef.current).run();
           }
           // Cursor at document end on entry; focus('end') also scrolls it into view.
-          // A backlink jump takes precedence: select and scroll to the referenced node.
-          if (!(focusRefId && focusInternalReference(editor, focusRefId))) {
+          // A backlink jump skips this: the parent useEffect handles it after layout.
+          if (!focusRefId) {
             editor.commands.focus('end');
           }
         }}

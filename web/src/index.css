@@ -248,6 +248,14 @@ button:focus-visible {
   text-decoration: underline;
 }
 
+.internal-node-link.ProseMirror-selectednode,
+.internal-node-embed.ProseMirror-selectednode {
+  background: var(--muted);
+  outline: 2px solid var(--link-color);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+
 .internal-node-link-missing {
   color: rgb(148, 82, 22);
   cursor: default;
