@@ -37,7 +37,7 @@ const ContextMenu = ({ menu, onClose, requestCreateNode, requestEditNode, reques
               </div>
             )}
             <div className="menu-item" data-menu-item="delete" onClick={() => { requestDeleteNode(menu.nodeId, menu.title); onClose(); }}>
-              🗑 {t("nodeMenu.delete")}
+              🗑️ {t("nodeMenu.delete")}
             </div>
           </>
         )}
