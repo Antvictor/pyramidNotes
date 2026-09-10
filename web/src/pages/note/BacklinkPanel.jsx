@@ -13,15 +13,12 @@ function BacklinkPanel({ backlinks, onOpenNode }) {
         {backlinks.map((note) => (
           <div
             key={note.id}
-            className="border-b border-dashed border-neutral-300/40 last:border-b-0 dark:border-neutral-700/30"
+            role="button"
+            tabIndex={0}
+            onClick={() => onOpenNode(note)}
+            className="cursor-pointer border-b border-dashed border-neutral-300/40 py-[3px] text-xs text-neutral-600 last:border-b-0 hover:underline dark:border-neutral-700/30 dark:text-neutral-400"
           >
-            <button
-              type="button"
-              onClick={() => onOpenNode(note)}
-              className="block w-full truncate py-[3px] text-left text-xs text-neutral-500 hover:text-blue-600 dark:text-neutral-400 dark:hover:text-blue-400"
-            >
-              {note.name}
-            </button>
+            {note.name}
           </div>
         ))}
       </div>
