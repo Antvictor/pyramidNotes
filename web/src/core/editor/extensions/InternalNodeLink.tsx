@@ -109,10 +109,11 @@ function registerInternalNodeSyntax(markdownit: unknown) {
 
     const reference = parseInternalNodeReference(src.slice(marker.length, end));
     const { id, name } = reference;
-    if (!name) return false;
+    if (!id && !name) return false;
 
-    // For ![[...]], check if it's an image reference (but not if it has an explicit id)
-    if (embed && !reference.id && isImageReference(name)) {
+    // For ![[...]], check if it's an image reference (only when there is no
+    // explicit id — pipe-less refs parse with id === name)
+    if (embed && reference.id === reference.name && isImageReference(name)) {
       const token = state.push("internal_image", "", 0);
       token.attrs = [["data-src", name]];
       token.content = name;
@@ -220,6 +221,7 @@ export const InternalNodeLink = Node.create({
       const name = node.attrs.name || "";
       const options = extension.options as InternalNodeOptions;
       const target = resolveInternalNodeTarget(options.nodes, { id, name });
+      const displayName = target?.name || name || id;
       return (
         <NodeViewWrapper
           as="span"
@@ -227,7 +229,7 @@ export const InternalNodeLink = Node.create({
           contentEditable={false}
           onClick={(event: MouseEvent) => openNodeFromReference(event, target, options.onOpenNode)}
         >
-          {name}
+          {displayName}
         </NodeViewWrapper>
       );
     });
@@ -295,11 +297,12 @@ export const InternalNodeEmbed = Node.create({
       const name = node.attrs.name || "";
       const options = extension.options as InternalNodeOptions;
       const target = resolveInternalNodeTarget(options.nodes, { id, name });
+      const displayName = target?.name || name || id;
 
       if (!target) {
         return (
           <NodeViewWrapper className="internal-node-embed internal-node-embed-missing" contentEditable={false}>
-            <div className="internal-node-embed-title">{name}</div>
+            <div className="internal-node-embed-title">{displayName}</div>
             <div className="internal-node-embed-placeholder">未找到该节点</div>
           </NodeViewWrapper>
         );
@@ -308,7 +311,7 @@ export const InternalNodeEmbed = Node.create({
       if (options.embedPath.includes(target.id)) {
         return (
           <NodeViewWrapper className="internal-node-embed internal-node-embed-cycle" contentEditable={false}>
-            <div className="internal-node-embed-title">{name}</div>
+            <div className="internal-node-embed-title">{displayName}</div>
             <div className="internal-node-embed-placeholder">检测到循环嵌入</div>
           </NodeViewWrapper>
         );
@@ -320,7 +323,7 @@ export const InternalNodeEmbed = Node.create({
           contentEditable={false}
           onDoubleClick={(event: MouseEvent) => openNodeFromReference(event, target, options.onOpenNode)}
         >
-          <div className="internal-node-embed-title">{name}</div>
+          <div className="internal-node-embed-title">{displayName}</div>
           <ReadOnlyMarkdownPreview
             content={target.content || ""}
             nodes={options.nodes}
