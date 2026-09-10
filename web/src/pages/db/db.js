@@ -165,6 +165,12 @@ class Table {
         const sql = `SELECT id, name FROM notes WHERE name LIKE ? ESCAPE '\\' LIMIT 100`;
         return await window.api.dbQuery(sql, [`%${escaped}%`]);
     }
+
+    async findBacklinks(noteId) {
+        const escaped = escapeLike(noteId);
+        const sql = `SELECT id, name FROM notes WHERE id != ? AND (content LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')`;
+        return await window.api.dbQuery(sql, [noteId, `%[[${escaped}|%`, `%[[${escaped}]]%`]);
+    }
 }
 class Database {
     constructor(tables = []) {

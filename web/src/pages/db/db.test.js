@@ -27,6 +27,24 @@ describe("db.notes.searchByName", () => {
   });
 });
 
+describe("db.notes.findBacklinks", () => {
+  beforeEach(() => {
+    vi.stubGlobal("window", {
+      api: { dbQuery: vi.fn().mockResolvedValue([{ id: "2", name: "ref" }]) },
+    });
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("matches both reference formats and excludes the note itself", async () => {
+    const result = await db.notes.findBacklinks("abc123");
+    expect(window.api.dbQuery).toHaveBeenCalledWith(
+      "SELECT id, name FROM notes WHERE id != ? AND (content LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')",
+      ["abc123", "%[[abc123|%", "%[[abc123]]%"],
+    );
+    expect(result).toEqual([{ id: "2", name: "ref" }]);
+  });
+});
+
 describe("db.notes.search", () => {
   beforeEach(() => {
     vi.stubGlobal("window", {
