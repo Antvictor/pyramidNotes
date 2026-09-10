@@ -20,6 +20,9 @@ const zhCN = {
   editor: {
     loading: '正在加载笔记…',
   },
+  backlinks: {
+    title: '被 {{total}} 篇笔记引用',
+  },
   find: {
     findPlaceholder: '搜索',
     replacePlaceholder: '替换为',

@@ -20,6 +20,9 @@ const en = {
   editor: {
     loading: 'Loading note…',
   },
+  backlinks: {
+    title: 'Referenced by {{total}} note(s)',
+  },
   find: {
     findPlaceholder: 'Find',
     replacePlaceholder: 'Replace with',
