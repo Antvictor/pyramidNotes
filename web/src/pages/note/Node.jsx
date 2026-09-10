@@ -117,10 +117,10 @@ const Note = ({ shortcuts }) => {
     return newNode;
   };
 
-  const openNode = (target) => {
+  const openNode = (target, focusRefId) => {
     navigate(
       `/note/${encodeURIComponent(target.id)}/${encodeURIComponent(target.name)}`,
-      { state: { fromNote: id } },
+      { state: { fromNote: id, ...(focusRefId ? { focusRef: focusRefId } : {}) } },
     );
   };
 
@@ -206,9 +206,10 @@ const Note = ({ shortcuts }) => {
             editorWidthMode={editorWidthMode}
             onCreateChildFromSelection={createChildFromSelection}
             onOpenNode={openNode}
+            focusRefId={location.state?.focusRef}
           />
         </div>
-        <BacklinkPanel backlinks={backlinks} onOpenNode={openNode} />
+        <BacklinkPanel backlinks={backlinks} onOpenNode={(note) => openNode(note, id)} />
         <NodeSearchDialog
           open={searchOpen}
           onOpenChange={setSearchOpen}

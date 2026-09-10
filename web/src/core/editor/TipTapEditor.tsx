@@ -42,6 +42,7 @@ interface Props {
   onOpenNode?: (target: NodeLookupItem) => void;
   noteFontSize?: number;
   editorWidthMode?: 'constrained' | 'expanded';
+  focusRefId?: string;
 }
 
 type SuggestionState = {
@@ -506,6 +507,26 @@ function insertCompletedInternalNode(view: EditorView, target: NodeLookupItem, s
   return true;
 }
 
+function focusInternalReference(editor: Editor, refId: string) {
+  let targetPos: number | null = null;
+  editor.state.doc.descendants((node, pos) => {
+    if (targetPos !== null) return false;
+    if (
+      (node.type.name === "internalNodeLink" || node.type.name === "internalNodeEmbed") &&
+      node.attrs.id === refId
+    ) {
+      targetPos = pos;
+      return false;
+    }
+    return true;
+  });
+  if (targetPos === null) return false;
+  const tr = editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, targetPos));
+  tr.scrollIntoView();
+  editor.view.dispatch(tr);
+  return true;
+}
+
 export default function TipTapEditor({
   content,
   onChange,
@@ -517,6 +538,7 @@ export default function TipTapEditor({
   onOpenNode,
   noteFontSize = 16,
   editorWidthMode = 'constrained',
+  focusRefId,
 }: Props) {
   const { t } = useTranslation();
   const editorRef = useRef<Editor | null>(null);
@@ -892,8 +914,11 @@ export default function TipTapEditor({
           if (contentRef.current) {
             editor.chain().setContent(contentRef.current).run();
           }
-          // Cursor at document end on entry; focus('end') also scrolls it into view
-          editor.commands.focus('end');
+          // Cursor at document end on entry; focus('end') also scrolls it into view.
+          // A backlink jump takes precedence: select and scroll to the referenced node.
+          if (!(focusRefId && focusInternalReference(editor, focusRefId))) {
+            editor.commands.focus('end');
+          }
         }}
         editorProps={{
           attributes: {

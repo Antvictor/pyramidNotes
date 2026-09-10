@@ -6,4 +6,6 @@
 - [x] 4. db.js findBacklinks
 - [x] 5. i18n backlinks.title
 - [x] 6. BacklinkPanel + Node.jsx 纵向布局 + EDITOR_LAYOUT.md 更新
-- [ ] 7. 手动验证（重命名同步/反链/图片回归/布局探针）
+- [x] 7. 手动验证（重命名同步/反链/图片回归/布局探针）— 已通过
+- [x] 8. 反链跳转定位到引用位置（route state focusRef → onCreate NodeSelection + scrollIntoView）
+- [ ] 9. 手动验证：反链跳转定位
