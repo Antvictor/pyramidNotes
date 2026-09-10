@@ -108,6 +108,11 @@ const Settings = () => {
     await window.api.saveSettings({ editorWidthMode: value });
   };
 
+  const handleShowBacklinksChange = async (value) => {
+    setSettings((prev) => ({ ...prev, showBacklinks: value }));
+    await window.api.saveSettings({ showBacklinks: value });
+  };
+
   const languages = [
     { value: "system", label: t("settings.language.system") },
     { value: "zh-CN", label: t("settings.language.zhCN") },
@@ -375,7 +380,7 @@ const Settings = () => {
         <div style={sectionStyle}>
           <h3 style={{ marginBottom: 12 }}>编辑器设置</h3>
 
-          <div style={{ ...rowStyle, borderBottom: "none" }}>
+          <div style={rowStyle}>
             <div>
               <span style={labelStyle}>编辑器边栏</span>
               <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 2 }}>
@@ -402,6 +407,41 @@ const Settings = () => {
                   }}
                 >
                   {mode === "constrained" ? "限制" : "放开"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ ...rowStyle, borderBottom: "none" }}>
+            <div>
+              <span style={labelStyle}>反链面板</span>
+              <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 2 }}>
+                显示：笔记底部显示引用当前笔记的反链面板；隐藏：不显示
+              </div>
+            </div>
+            <div style={controlStyle}>
+              {[
+                { label: "显示", value: true },
+                { label: "隐藏", value: false },
+              ].map(({ label, value }) => (
+                <button
+                  key={label}
+                  onClick={() => handleShowBacklinksChange(value)}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: 6,
+                    border: "1px solid var(--border)",
+                    background:
+                      settings.showBacklinks === value
+                        ? "var(--link-color)"
+                        : "var(--bg-primary)",
+                    color:
+                      settings.showBacklinks === value ? "white" : "var(--text-primary)",
+                    cursor: "pointer",
+                    fontSize: 13,
+                  }}
+                >
+                  {label}
                 </button>
               ))}
             </div>

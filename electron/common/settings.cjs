@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS = {
     },
   },
   editorWidthMode: 'constrained',
+  showBacklinks: true,
 };
 
 let cachedSettings = null;
