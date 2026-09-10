@@ -24,6 +24,7 @@ const Note = ({ shortcuts }) => {
   const [backlinks, setBacklinks] = useState([]);
   const [noteFontSize, setNoteFontSize] = useState(16);
   const [editorWidthMode, setEditorWidthMode] = useState('constrained');
+  const [showBacklinks, setShowBacklinks] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -61,6 +62,9 @@ const Note = ({ shortcuts }) => {
       if (s.editorWidthMode) {
         setEditorWidthMode(s.editorWidthMode);
       }
+      if (s.showBacklinks !== undefined) {
+        setShowBacklinks(s.showBacklinks);
+      }
       // 1. 获取 Electron userData 路径
       const fileName = `${id}-${name}.md`;
       setFileName(fileName);
@@ -89,6 +93,9 @@ const Note = ({ shortcuts }) => {
       }
       if (newSettings.editorWidthMode) {
         setEditorWidthMode(newSettings.editorWidthMode);
+      }
+      if (newSettings.showBacklinks !== undefined) {
+        setShowBacklinks(newSettings.showBacklinks);
       }
     });
   }, []);
@@ -209,7 +216,9 @@ const Note = ({ shortcuts }) => {
             focusRefId={location.state?.focusRef}
           />
         </div>
-        <BacklinkPanel backlinks={backlinks} onOpenNode={(note) => openNode(note, id)} />
+        {showBacklinks && (
+          <BacklinkPanel backlinks={backlinks} onOpenNode={(note) => openNode(note, id)} />
+        )}
         <NodeSearchDialog
           open={searchOpen}
           onOpenChange={setSearchOpen}
