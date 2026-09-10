@@ -508,25 +508,28 @@ function insertCompletedInternalNode(view: EditorView, target: NodeLookupItem, s
 }
 
 function focusInternalReference(editor: Editor, refId: string) {
-  let targetPos: number | null = null;
+  let target: { pos: number; size: number } | null = null;
   editor.state.doc.descendants((node, pos) => {
-    if (targetPos !== null) return false;
+    if (target !== null) return false;
     if (
       (node.type.name === "internalNodeLink" || node.type.name === "internalNodeEmbed") &&
       node.attrs.id === refId
     ) {
-      targetPos = pos;
+      target = { pos, size: node.nodeSize };
       return false;
     }
     return true;
   });
-  if (targetPos === null) return false;
-  const tr = editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, targetPos));
+  if (target === null) return false;
+  // Cursor right after the reference (not a NodeSelection), scrolling it into view.
+  const { pos, size } = target;
+  const $after = editor.state.doc.resolve(pos + size);
+  const tr = editor.state.tr.setSelection(TextSelection.near($after));
   tr.scrollIntoView();
   editor.view.dispatch(tr);
   // The synchronous tr.scrollIntoView() above no-ops before initial layout;
   // the focus command defers DOM focus + scroll to a rAF (with an
-  // isDestroyed guard), so the NodeSelection actually scrolls into view.
+  // isDestroyed guard), so the cursor actually scrolls into view.
   editor.commands.focus();
   return true;
 }
