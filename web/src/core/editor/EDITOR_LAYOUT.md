@@ -13,7 +13,7 @@
 | 3. App 根 div | `web/src/App.jsx` ~100 行 | 横向 flex 容器 | `height: 100vh`，无宽度声明 |
 | 4. Sidebar | `web/src/App.jsx` ~102 行 | 固定窄条 | 60px |
 | 5. 内容区 div | `web/src/App.jsx` ~105 行 | 路由出口容器 | `flex: 1` + `padding: 20px` + `overflow: hidden` |
-| 6. Node wrapper | `web/src/pages/note/Node.jsx` ~182 行 | 编辑器定位层 | `flex` + `justify-content: center` + `100%×100%` |
+| 6. Node wrapper | `web/src/pages/note/Node.jsx` ~185 行 | 编辑器定位层 | 纵向 flex 容器：外层 column `100%×100%`，中间层 `flex:1 + minHeight:0 + justify-content:center` 为编辑器宿主，底部可挂反链面板 |
 | 7. 编辑器根 div | `web/src/core/editor/TipTapEditor.tsx`（return 的最外层 div） | **滚动容器** | `width: 100%`、`height: 100%`、`overflowY: auto`、`position: relative`；按模式挂 className |
 | 8. EditorContent 包裹 | tiptap 自动生成 | 无样式透明层 | — |
 | 9. `.ProseMirror` | 规则在 `web/src/pages/note/markdown.css` 末尾 | **内容列** | 限制模式：`max-width: 794px` + `margin: auto` |
@@ -80,4 +80,5 @@
 
 ## 修复历史
 
+- **2026-09-10**：新增反链面板底栏，第 6 层拆为纵向 flex：外层 column 继承 100%×100%，中间层用 `flex:1 + minHeight:0` 承接原 `flex + center` 样式并去掉 `height:'100%'`（避免与 flex:1 冲突溢出）。第 7 层滚动容器与第 9 层 `.ProseMirror` 未动。
 - **2026-09-07**：实现限制/放开两种宽度模式。第一次实现把 `maxWidth: 800` 放在滚动容器上导致滚动条在窗口中间；改为 className + `.ProseMirror` CSS 后仍异常，最终定位到 `body { display: flex }`（Vite 残留）导致全应用宽度塌缩。删除后修复。涉及：`TipTapEditor.tsx`、`markdown.css`、`index.css`。

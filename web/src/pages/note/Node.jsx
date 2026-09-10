@@ -1,6 +1,7 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import TipTapEditor from "../../core/editor/TipTapEditor";
+import BacklinkPanel from "./BacklinkPanel";
 import { useTranslation } from "react-i18next";
 import { nanoid } from "nanoid";
 import db from "../db/db";
@@ -20,6 +21,7 @@ const Note = ({ shortcuts }) => {
   const [fileName, setFileName] = useState("");
   const [ready, setReady] = useState(false);
   const [allNodes, setAllNodes] = useState([]);
+  const [backlinks, setBacklinks] = useState([]);
   const [noteFontSize, setNoteFontSize] = useState(16);
   const [editorWidthMode, setEditorWidthMode] = useState('constrained');
   const navigate = useNavigate();
@@ -70,6 +72,8 @@ const Note = ({ shortcuts }) => {
       setYamlValue(yamlData);
       const nodes = await db.notes.select();
       setAllNodes(nodes || []);
+      const backlinkRows = await db.notes.findBacklinks(id);
+      setBacklinks(backlinkRows || []);
       setReady(true);
     }
 
@@ -180,22 +184,31 @@ const Note = ({ shortcuts }) => {
       <div>{t("editor.loading")}</div> :
       <div style={{
         display: "flex",
-        justifyContent: "center",
+        flexDirection: "column",
         width: "100%",
         height: "100%",
         overflow: "hidden" }}>
-        <TipTapEditor
-          content={value}
-          onChange={saveFile}
-          keyBindings={keyBindings}
-          nodes={allNodes}
-          noteName={name}
-          noteId={id}
-          noteFontSize={noteFontSize}
-          editorWidthMode={editorWidthMode}
-          onCreateChildFromSelection={createChildFromSelection}
-          onOpenNode={openNode}
-        />
+        <div style={{
+          flex: 1,
+          minHeight: 0,
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          overflow: "hidden" }}>
+          <TipTapEditor
+            content={value}
+            onChange={saveFile}
+            keyBindings={keyBindings}
+            nodes={allNodes}
+            noteName={name}
+            noteId={id}
+            noteFontSize={noteFontSize}
+            editorWidthMode={editorWidthMode}
+            onCreateChildFromSelection={createChildFromSelection}
+            onOpenNode={openNode}
+          />
+        </div>
+        <BacklinkPanel backlinks={backlinks} onOpenNode={openNode} />
         <NodeSearchDialog
           open={searchOpen}
           onOpenChange={setSearchOpen}
