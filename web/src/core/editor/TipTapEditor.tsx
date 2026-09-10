@@ -193,7 +193,7 @@ const InternalNodeTokenNormalizer = Extension.create({
             let match: RegExpExecArray | null;
             while ((match = tokenPattern.exec(node.text)) !== null) {
               const { id, name } = parseInternalNodeReference(match[2]);
-              if (!name) continue;
+              if (!id && !name) continue;
               replacements.push({
                 from: pos + match.index,
                 to: pos + match.index + match[0].length,
@@ -223,7 +223,7 @@ const InternalNodeTokenNormalizer = Extension.create({
 
           const tr = newState.tr;
           for (const replacement of replacements.reverse()) {
-            if (replacement.embed && !replacement.id && isImageReference(replacement.name)) {
+            if (replacement.embed && replacement.id === replacement.name && isImageReference(replacement.name)) {
               const imageType = newState.schema.nodes.internalImageEmbed;
               if (!imageType) continue;
               const imageNode = imageType.create({ src: replacement.name });
@@ -500,7 +500,7 @@ function insertCompletedInternalNode(view: EditorView, target: NodeLookupItem, s
     : state.schema.nodes.internalNodeLink;
   if (!nodeType) return false;
 
-  const node = nodeType.create({ id: target.id, name: target.name });
+  const node = nodeType.create({ id: target.id, name: "" });
   const tr = state.tr.replaceRangeWith(suggestion.from, suggestion.to, node);
   view.dispatch(tr.scrollIntoView());
   return true;
