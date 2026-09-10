@@ -524,6 +524,10 @@ function focusInternalReference(editor: Editor, refId: string) {
   const tr = editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, targetPos));
   tr.scrollIntoView();
   editor.view.dispatch(tr);
+  // The synchronous tr.scrollIntoView() above no-ops before initial layout;
+  // the focus command defers DOM focus + scroll to a rAF (with an
+  // isDestroyed guard), so the NodeSelection actually scrolls into view.
+  editor.commands.focus();
   return true;
 }
 
@@ -563,18 +567,6 @@ export default function TipTapEditor({
   useEffect(() => {
     contentRef.current = content;
   }, [content]);
-
-  // Backlink jump positioning. onCreate runs before DOM layout (scrollIntoView
-  // would no-op) and child effects (EditorProvider) run before this parent
-  // effect, so by now the doc is populated and laid out.
-  useEffect(() => {
-    if (!focusRefId) return;
-    const editor = editorRef.current;
-    if (!editor) return;
-    if (!focusInternalReference(editor, focusRefId)) {
-      editor.commands.focus('end');
-    }
-  }, [focusRefId]);
 
   const safeNoteName = useMemo(() => sanitizeFileName(noteName || 'untitled'), [noteName]);
 
@@ -927,8 +919,8 @@ export default function TipTapEditor({
             editor.chain().setContent(contentRef.current).run();
           }
           // Cursor at document end on entry; focus('end') also scrolls it into view.
-          // A backlink jump skips this: the parent useEffect handles it after layout.
-          if (!focusRefId) {
+          // A backlink jump takes precedence: select and scroll to the referenced node.
+          if (!(focusRefId && focusInternalReference(editor, focusRefId))) {
             editor.commands.focus('end');
           }
         }}
