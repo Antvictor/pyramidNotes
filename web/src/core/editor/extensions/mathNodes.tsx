@@ -1,3 +1,10 @@
+import { mergeAttributes, Node, nodeInputRule } from "@tiptap/core";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import type { MarkdownSerializerState } from "prosemirror-markdown";
+import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+
 import katex from "katex";
 
 // ---- InputRule 正则 ----
@@ -175,3 +182,305 @@ export function renderKatex(
     return { html: "", error: error instanceof Error ? error.message : String(error) };
   }
 }
+
+// ================= 行内公式 =================
+
+type MathPMNode = ProseMirrorNode & { attrs: { latex?: string } };
+
+export const MathInline = Node.create({
+  name: "mathInline",
+  group: "inline",
+  inline: true,
+  atom: true,
+  selectable: true,
+
+  addAttributes() {
+    return {
+      latex: {
+        default: "",
+        parseHTML: (element: HTMLElement) => decodeLatexAttr(element.getAttribute("data-latex")),
+        renderHTML: (attributes: { latex?: string }) => ({
+          "data-latex": encodeLatexAttr(attributes.latex || ""),
+        }),
+      },
+    };
+  },
+
+  parseHTML() {
+    return [{ tag: "math-inline" }];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return ["math-inline", mergeAttributes(HTMLAttributes)];
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(({ node, updateAttributes, editor }) => {
+      const { t } = useTranslation();
+      const latex = (node.attrs.latex as string) || "";
+      const [editing, setEditing] = useState(false);
+      const [draft, setDraft] = useState("");
+      const inputRef = useRef<HTMLInputElement | null>(null);
+      const cancelledRef = useRef(false);
+
+      useEffect(() => {
+        if (editing) requestAnimationFrame(() => inputRef.current?.select());
+      }, [editing]);
+
+      const startEdit = () => {
+        if (!editor.isEditable) return;
+        cancelledRef.current = false;
+        setDraft(latex);
+        setEditing(true);
+      };
+      const commit = () => {
+        if (cancelledRef.current) return;
+        setEditing(false);
+        const next = draft.trim();
+        if (next && next !== latex) updateAttributes({ latex: next });
+      };
+      const cancel = () => {
+        cancelledRef.current = true;
+        setEditing(false);
+      };
+
+      if (editing) {
+        return (
+          <NodeViewWrapper as="span" className="math-inline-view math-inline-view-editing" contentEditable={false}>
+            <input
+              ref={inputRef}
+              className="math-inline-source-input"
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  commit();
+                } else if (event.key === "Escape") {
+                  event.preventDefault();
+                  cancel();
+                }
+              }}
+              onBlur={commit}
+            />
+          </NodeViewWrapper>
+        );
+      }
+
+      if (!latex.trim()) {
+        return (
+          <NodeViewWrapper
+            as="span"
+            className="math-inline-view math-inline-view-empty"
+            contentEditable={false}
+            onDoubleClick={startEdit}
+          >
+            {t("editor.editSource")}
+          </NodeViewWrapper>
+        );
+      }
+
+      const { html, error } = renderKatex(latex, false);
+      if (error) {
+        return (
+          <NodeViewWrapper
+            as="span"
+            className="math-inline-view math-inline-view-error"
+            contentEditable={false}
+            title={latex}
+            onDoubleClick={startEdit}
+          >
+            {t("editor.mathRenderError")}: {latex}
+          </NodeViewWrapper>
+        );
+      }
+
+      return (
+        <NodeViewWrapper
+          as="span"
+          className="math-inline-view"
+          contentEditable={false}
+          dangerouslySetInnerHTML={{ __html: html }}
+          onDoubleClick={startEdit}
+        />
+      );
+    });
+  },
+
+  addInputRules() {
+    return [
+      nodeInputRule({
+        find: MATH_INLINE_INPUT_REGEX,
+        type: this.type,
+        getAttributes: (match: RegExpMatchArray) => ({ latex: match[1] || "" }),
+      }),
+    ];
+  },
+
+  addStorage() {
+    return {
+      markdown: {
+        serialize(state: MarkdownSerializerState, node: MathPMNode) {
+          state.write(`$${node.attrs.latex || ""}$`);
+        },
+        parse: {
+          setup(markdownit: unknown) {
+            registerMathSyntax(markdownit);
+          },
+        },
+      },
+    };
+  },
+});
+
+// ================= 块级公式 =================
+
+export const MathBlock = Node.create({
+  name: "mathBlock",
+  group: "block",
+  atom: true,
+  selectable: true,
+
+  addAttributes() {
+    return {
+      latex: {
+        default: "",
+        parseHTML: (element: HTMLElement) => decodeLatexAttr(element.getAttribute("data-latex")),
+        renderHTML: (attributes: { latex?: string }) => ({
+          "data-latex": encodeLatexAttr(attributes.latex || ""),
+        }),
+      },
+    };
+  },
+
+  parseHTML() {
+    return [{ tag: "math-block" }];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return ["math-block", mergeAttributes(HTMLAttributes)];
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(({ node, updateAttributes, editor, selected }) => {
+      const { t } = useTranslation();
+      const latex = (node.attrs.latex as string) || "";
+      // 空 latex(输入 $$ 建块 / 打开空公式块)→ 初始即编辑态;非可编辑编辑器不进入
+      const [editing, setEditing] = useState(() => !latex.trim() && editor.isEditable);
+      const [draft, setDraft] = useState(latex);
+      const taRef = useRef<HTMLTextAreaElement | null>(null);
+      const cancelledRef = useRef(false);
+
+      useEffect(() => {
+        if (editing) requestAnimationFrame(() => taRef.current?.focus());
+      }, [editing]);
+
+      const startEdit = () => {
+        if (!editor.isEditable) return;
+        cancelledRef.current = false;
+        setDraft(latex);
+        setEditing(true);
+      };
+      const commit = () => {
+        if (cancelledRef.current) return;
+        setEditing(false);
+        const next = draft.trim();
+        if (next && next !== latex) updateAttributes({ latex: next });
+      };
+      const cancel = () => {
+        cancelledRef.current = true;
+        setEditing(false);
+      };
+
+      if (editing) {
+        return (
+          <NodeViewWrapper
+            className={`math-block-view math-block-view-editing${selected ? " is-selected" : ""}`}
+            contentEditable={false}
+          >
+            <textarea
+              ref={taRef}
+              className="math-block-source-input"
+              value={draft}
+              rows={Math.max(3, (draft.match(/\n/g)?.length ?? 0) + 2)}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  cancel();
+                } else if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                  event.preventDefault();
+                  commit();
+                }
+              }}
+              onBlur={commit}
+            />
+          </NodeViewWrapper>
+        );
+      }
+
+      if (!latex.trim()) {
+        return (
+          <NodeViewWrapper
+            className="math-block-view math-block-view-empty"
+            contentEditable={false}
+            onDoubleClick={startEdit}
+          >
+            {t("editor.editSource")}
+          </NodeViewWrapper>
+        );
+      }
+
+      const { html, error } = renderKatex(latex, true);
+      if (error) {
+        return (
+          <NodeViewWrapper
+            className="math-block-view math-block-view-error"
+            contentEditable={false}
+            onDoubleClick={startEdit}
+          >
+            <div className="rendered-code-error">
+              {t("editor.mathRenderError")}: {error}
+            </div>
+            <pre className="math-error-source">{latex}</pre>
+          </NodeViewWrapper>
+        );
+      }
+
+      return (
+        <NodeViewWrapper
+          className={`math-block-view${selected ? " is-selected" : ""}`}
+          contentEditable={false}
+          dangerouslySetInnerHTML={{ __html: html }}
+          onDoubleClick={startEdit}
+        />
+      );
+    });
+  },
+
+  addInputRules() {
+    return [
+      nodeInputRule({
+        find: MATH_BLOCK_INPUT_REGEX,
+        type: this.type,
+        getAttributes: () => ({ latex: "" }),
+      }),
+    ];
+  },
+
+  addStorage() {
+    return {
+      markdown: {
+        serialize(state: MarkdownSerializerState, node: MathPMNode) {
+          state.write(`$$\n${node.attrs.latex || ""}\n$$`);
+          state.closeBlock(node);
+        },
+        parse: {
+          setup(markdownit: unknown) {
+            registerMathSyntax(markdownit);
+          },
+        },
+      },
+    };
+  },
+});
