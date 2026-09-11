@@ -1,5 +1,6 @@
-import { InputRule, mergeAttributes, Node } from "@tiptap/core";
+import { InputRule, mergeAttributes, Node, type Editor } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import { TextSelection, type Transaction } from "@tiptap/pm/state";
 import type { MarkdownSerializerState } from "prosemirror-markdown";
 import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
 import { useEffect, useRef, useState } from "react";
@@ -342,6 +343,54 @@ export const MathInline = Node.create({
 
 // ================= 块级公式 =================
 
+// ---- 外部边界删除进入编辑的通信 meta ----
+// mathBlock 是 atom:相邻段落的行首 Backspace / 行尾 Delete 原生会直接删掉整个节点,
+// 与原生代码块"删除键进入块内编辑"的体验不一致。这里改为派发带 meta 的事务,
+// 由对应 NodeView 监听到后进入编辑态。
+const MATH_BLOCK_EDIT_META = "mathBlockEnterEdit";
+
+// 进入编辑时 textarea 光标落在哪一端,对齐原生代码块边界删除后的光标位置:
+// 从下方段落行首 Backspace 进块 → 源码末尾;从上方段落行尾 Delete 进块 → 源码开头。
+// atom 节点没有「内部」位置,PM 选区进不去,所以只能靠 meta 把方向带给 NodeView。
+type MathBlockCaret = "start" | "end";
+
+function enterAdjacentMathBlock(editor: Editor, direction: "backward" | "forward"): boolean {
+  const { state } = editor;
+  const { empty, $from } = state.selection;
+  if (!empty || !$from.parent.isTextblock || $from.parent.type.spec.code) return false;
+
+  let pos: number;
+  let node: ProseMirrorNode | null;
+  if (direction === "backward") {
+    if ($from.parentOffset !== 0) return false;
+    const boundary = $from.before($from.depth);
+    node = state.doc.resolve(boundary).nodeBefore;
+    if (!node) return false;
+    pos = boundary - node.nodeSize;
+  } else {
+    if ($from.parentOffset !== $from.parent.content.size) return false;
+    const boundary = $from.after($from.depth);
+    node = state.doc.resolve(boundary).nodeAfter;
+    if (!node) return false;
+    pos = boundary;
+  }
+  if (node.type.name !== "mathBlock") return false;
+
+  if (((node.attrs.latex as string) || "").trim().length === 0) {
+    // 空块:直接删除(与空代码块的删除语义一致)
+    const tr = state.tr.delete(pos, pos + node.nodeSize);
+    tr.setSelection(TextSelection.near(tr.doc.resolve(pos), direction === "backward" ? 1 : -1));
+    editor.view.dispatch(tr.scrollIntoView());
+    return true;
+  }
+
+  const caret: MathBlockCaret = direction === "backward" ? "end" : "start";
+  editor.view.dispatch(
+    state.tr.setMeta(MATH_BLOCK_EDIT_META, { pos, caret }).scrollIntoView(),
+  );
+  return true;
+}
+
 export const MathBlock = Node.create({
   name: "mathBlock",
   group: "block",
@@ -369,7 +418,7 @@ export const MathBlock = Node.create({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(({ node, updateAttributes, editor, selected }) => {
+    return ReactNodeViewRenderer(({ node, updateAttributes, editor, selected, getPos }) => {
       const { t } = useTranslation();
       const latex = (node.attrs.latex as string) || "";
       // 空 latex(输入 $$ 建块 / 打开空公式块)→ 初始即编辑态;非可编辑编辑器不进入
@@ -377,14 +426,26 @@ export const MathBlock = Node.create({
       const [draft, setDraft] = useState(latex);
       const taRef = useRef<HTMLTextAreaElement | null>(null);
       const cancelledRef = useRef(false);
+      // 本次进入编辑后光标该落在哪一端。新挂载的 textarea 默认偏移 0,
+      // 只 focus() 会让「从下方 Backspace 进块」也停在首行行首(用户报告)。
+      const caretRef = useRef<MathBlockCaret>("end");
 
       useEffect(() => {
-        if (editing) requestAnimationFrame(() => taRef.current?.focus());
+        if (!editing) return;
+        const frame = requestAnimationFrame(() => {
+          const ta = taRef.current;
+          if (!ta) return;
+          ta.focus();
+          const index = caretRef.current === "start" ? 0 : ta.value.length;
+          ta.setSelectionRange(index, index);
+        });
+        return () => cancelAnimationFrame(frame);
       }, [editing]);
 
-      const startEdit = () => {
+      const startEdit = (caret: MathBlockCaret = "end") => {
         if (!editor.isEditable) return;
         cancelledRef.current = false;
+        caretRef.current = caret;
         setDraft(latex);
         setEditing(true);
       };
@@ -399,6 +460,94 @@ export const MathBlock = Node.create({
         setEditing(false);
       };
 
+      // 删除自身:替换为空段落并把光标放进去(对齐空代码块的删除行为)
+      const deleteSelf = () => {
+        const pos = typeof getPos === "function" ? getPos() : undefined;
+        if (pos == null) return;
+        cancelledRef.current = true;
+        const { state, dispatch } = editor.view;
+        const paragraph = state.schema.nodes.paragraph;
+        if (!paragraph) return;
+        const tr = state.tr.replaceWith(pos, pos + node.nodeSize, paragraph.create());
+        tr.setSelection(TextSelection.near(tr.doc.resolve(pos), 1));
+        dispatch(tr.scrollIntoView());
+        // 焦点元素(textarea)已随节点卸载,不还焦点给编辑器就看不见光标
+        editor.view.focus();
+      };
+
+      // 连续回车退出(对齐原生代码块 exitOnTripleEnter):末尾已是两连换行时再回车 → 去掉空行并退出
+      const exitByTripleEnter = () => {
+        cancelledRef.current = true;
+        const next = draft.replace(/\n+$/, "");
+        setEditing(false);
+        if (next !== latex) updateAttributes({ latex: next });
+        const pos = typeof getPos === "function" ? getPos() : undefined;
+        if (pos == null) return;
+        const { state, dispatch } = editor.view;
+        const after = pos + node.nodeSize;
+        if (after <= state.doc.content.size) {
+          dispatch(
+            state.tr.setSelection(TextSelection.near(state.doc.resolve(after), 1)).scrollIntoView(),
+          );
+        }
+        // setEditing(false) 卸载了持有焦点的 textarea;不把 DOM 焦点还给编辑器,
+        // PM 选区虽已落在块之后,页面上却看不到光标
+        editor.view.focus();
+      };
+
+      // textarea 在外层 dom 内,按键会冒泡到 ProseMirror(view.dom):必须在 textarea 上用原生
+      // 监听抢先处理并 stopPropagation,否则 PM 会用旧选区执行默认删除键(可能直接删掉整块)。
+      useEffect(() => {
+        if (!editing) return;
+        const ta = taRef.current;
+        if (!ta) return;
+        const onKeyDown = (event: KeyboardEvent) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            cancel();
+            return;
+          }
+          if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+            event.preventDefault();
+            commit();
+            return;
+          }
+          if (event.key === "Enter" && !event.shiftKey) {
+            const atEnd =
+              ta.selectionStart === ta.value.length && ta.selectionEnd === ta.value.length;
+            if (atEnd && ta.value.endsWith("\n\n")) {
+              event.preventDefault();
+              event.stopPropagation();
+              exitByTripleEnter();
+            }
+            return;
+          }
+          if ((event.key === "Backspace" || event.key === "Delete") && ta.value.length === 0) {
+            event.preventDefault();
+            event.stopPropagation();
+            deleteSelf();
+          }
+        };
+        ta.addEventListener("keydown", onKeyDown);
+        return () => ta.removeEventListener("keydown", onKeyDown);
+      });
+
+      // 外部边界删除:扩展派发带 meta 的事务,本视图收到后进入编辑态
+      useEffect(() => {
+        const onTransaction = ({ transaction }: { transaction: Transaction }) => {
+          const meta = transaction.getMeta(MATH_BLOCK_EDIT_META) as
+            | { pos: number; caret: MathBlockCaret }
+            | undefined;
+          if (meta == null) return;
+          const pos = typeof getPos === "function" ? getPos() : undefined;
+          if (pos != null && meta.pos === pos) startEdit(meta.caret);
+        };
+        editor.on("transaction", onTransaction);
+        return () => {
+          editor.off("transaction", onTransaction);
+        };
+      });
+
       if (editing) {
         return (
           <NodeViewWrapper
@@ -411,15 +560,6 @@ export const MathBlock = Node.create({
               value={draft}
               rows={Math.max(3, (draft.match(/\n/g)?.length ?? 0) + 2)}
               onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") {
-                  event.preventDefault();
-                  cancel();
-                } else if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-                  event.preventDefault();
-                  commit();
-                }
-              }}
               onBlur={commit}
             />
           </NodeViewWrapper>
@@ -485,6 +625,14 @@ export const MathBlock = Node.create({
         },
       }),
     ];
+  },
+
+  addKeyboardShortcuts() {
+    return {
+      // 紧贴 mathBlock 的边界删除:进入编辑态而非删除节点(atom 原生会被直接删掉)
+      Backspace: ({ editor }) => enterAdjacentMathBlock(editor, "backward"),
+      Delete: ({ editor }) => enterAdjacentMathBlock(editor, "forward"),
+    };
   },
 
   addStorage() {

@@ -341,8 +341,23 @@
   border-radius: 4px;
 }
 
+/* 编辑态的 <pre> 就是 contentDOM(见 enhancedCodeBlock.tsx),不再套 <code>,
+   这里补上 .prose pre code 原本提供的等宽字体与字号。
+   渲染态/编辑态的显隐走 wrapper 上的 .is-editing class:改 contentDOM 自身的 inline
+   style 会触发 ProseMirror 重建整个 NodeView(详见 enhancedCodeBlock.tsx 的 applyEditMode)。 */
 .rendered-code-block pre {
+  display: none;
   margin: 0;
+  font-family: var(--font-family-mono, 'Fira Code', 'Consolas', monospace);
+  font-size: 0.875em;
+}
+
+.rendered-code-block.is-editing pre {
+  display: block;
+}
+
+.rendered-code-block.is-editing .rendered-code-view {
+  display: none;
 }
 
 .rendered-code-view {
