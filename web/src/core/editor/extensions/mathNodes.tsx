@@ -1,4 +1,4 @@
-import { mergeAttributes, Node, nodeInputRule } from "@tiptap/core";
+import { InputRule, mergeAttributes, Node } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type { MarkdownSerializerState } from "prosemirror-markdown";
 import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
@@ -309,10 +309,17 @@ export const MathInline = Node.create({
 
   addInputRules() {
     return [
-      nodeInputRule({
+      // 不用 nodeInputRule:它在 match[1] 存在时只替换捕获组范围,
+      // 两侧 $ 定界符会残留为文本;这里替换完整匹配区间。
+      new InputRule({
         find: MATH_INLINE_INPUT_REGEX,
-        type: this.type,
-        getAttributes: (match: RegExpMatchArray) => ({ latex: match[1] || "" }),
+        handler: ({ state, range, match }) => {
+          state.tr.replaceWith(
+            range.from,
+            range.to,
+            this.type.create({ latex: match[1] || "" }),
+          );
+        },
       }),
     ];
   },

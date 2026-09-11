@@ -1,6 +1,10 @@
 import MarkdownIt from "markdown-it";
+import { Editor } from "@tiptap/core";
+import type { Node as PMNode } from "@tiptap/pm/model";
+import StarterKit from "@tiptap/starter-kit";
 import { describe, expect, it } from "vitest";
 
+import { MathInline } from "./mathNodes";
 import {
   decodeLatexAttr,
   encodeLatexAttr,
@@ -9,6 +13,21 @@ import {
   registerMathSyntax,
   renderKatex,
 } from "./mathNodes";
+
+function typeText(editor: Editor, text: string) {
+  for (const char of text) {
+    const { view } = editor;
+    const { from, to } = view.state.selection;
+    const handled = view.someProp("handleTextInput", (f) => f(view, from, to, char));
+    if (!handled) view.dispatch(view.state.tr.insertText(char, from, to));
+  }
+}
+
+function childrenOf(node: PMNode): PMNode[] {
+  const children: PMNode[] = [];
+  node.forEach((child) => children.push(child));
+  return children;
+}
 
 describe("math input rules", () => {
   it("converts inline math when the opening $ follows a boundary", () => {
@@ -113,5 +132,39 @@ describe("latex attribute encoding", () => {
 
   it("falls back to raw value on malformed encoding", () => {
     expect(decodeLatexAttr("%E0%A4%A")).toBe("%E0%A4%A");
+  });
+});
+
+describe("math inline input rule in editor", () => {
+  // 回归:nodeInputRule 在 match[1] 存在时只替换捕获组范围,两侧 $ 定界符会
+  // 残留为文本节点(用户输入 $E=mc^2$ 后得到 $ + 节点 + $)
+  it("replaces the full $...$ range with a mathInline node", () => {
+    const editor = new Editor({
+      extensions: [StarterKit.configure({ code: false, codeBlock: false }), MathInline],
+      content: "<p></p>",
+    });
+    typeText(editor, "$E=mc^2$");
+    const paragraph = editor.state.doc.firstChild;
+    expect(paragraph?.type.name).toBe("paragraph");
+    const children = childrenOf(paragraph!);
+    expect(children).toHaveLength(1);
+    expect(children[0].type.name).toBe("mathInline");
+    expect(children[0].attrs.latex).toBe("E=mc^2");
+    editor.destroy();
+  });
+
+  it("keeps surrounding text when typing math after words", () => {
+    const editor = new Editor({
+      extensions: [StarterKit.configure({ code: false, codeBlock: false }), MathInline],
+      content: "<p></p>",
+    });
+    typeText(editor, "see ($a+b$)");
+    const paragraph = editor.state.doc.firstChild;
+    const children = childrenOf(paragraph!);
+    expect(children.map((n) => n.type.name)).toEqual(["text", "mathInline", "text"]);
+    expect(children[0].text).toBe("see (");
+    expect(children[1].attrs.latex).toBe("a+b");
+    expect(children[2].text).toBe(")");
+    editor.destroy();
   });
 });

@@ -331,6 +331,16 @@
   margin: var(--spacing-code-block) 0;
 }
 
+.rendered-code-block:focus {
+  outline: none;
+}
+
+.rendered-code-block.is-selected {
+  outline: 2px solid rgba(59, 130, 246, 0.5);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 .rendered-code-block pre {
   margin: 0;
 }
