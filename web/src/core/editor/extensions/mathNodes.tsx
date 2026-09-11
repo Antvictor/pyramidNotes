@@ -467,10 +467,22 @@ export const MathBlock = Node.create({
 
   addInputRules() {
     return [
-      nodeInputRule({
+      // 不用 nodeInputRule:块节点的 else 分支会先 insert 再 delete,
+      // 在行内触发时段落被拆开并残留空段落。这里:
+      // - 整行就是 $$(空行输入的常见路径)→ 直接替换整段,无残留空段
+      // - 行中触发(如 foo $$)→ 仅替换匹配区间,由 ProseMirror 拆段
+      new InputRule({
         find: MATH_BLOCK_INPUT_REGEX,
-        type: this.type,
-        getAttributes: () => ({ latex: "" }),
+        handler: ({ state, range }) => {
+          const { tr } = state;
+          const $from = state.doc.resolve(range.from);
+          const node = this.type.create({ latex: "" });
+          if (range.from === $from.start() && range.to === $from.end()) {
+            tr.replaceWith($from.before($from.depth), $from.after($from.depth), node);
+          } else {
+            tr.replaceWith(range.from, range.to, node);
+          }
+        },
       }),
     ];
   },

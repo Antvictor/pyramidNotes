@@ -4,7 +4,7 @@ import type { Node as PMNode } from "@tiptap/pm/model";
 import StarterKit from "@tiptap/starter-kit";
 import { describe, expect, it } from "vitest";
 
-import { MathInline } from "./mathNodes";
+import { MathBlock, MathInline } from "./mathNodes";
 import {
   decodeLatexAttr,
   encodeLatexAttr,
@@ -165,6 +165,36 @@ describe("math inline input rule in editor", () => {
     expect(children[0].text).toBe("see (");
     expect(children[1].attrs.latex).toBe("a+b");
     expect(children[2].text).toBe(")");
+    editor.destroy();
+  });
+});
+
+describe("math block input rule in editor", () => {
+  // 回归:空行输入 $$ 应替换整段为空 mathBlock,且块在前
+  // (第二个子节点是 StarterKit trailingNode 在文档末尾补的空段,属既有行为)
+  it("replaces the whole paragraph when typing $$ on an empty line", () => {
+    const editor = new Editor({
+      extensions: [StarterKit.configure({ code: false, codeBlock: false }), MathBlock],
+      content: "<p></p>",
+    });
+    typeText(editor, "$$");
+    const children = childrenOf(editor.state.doc);
+    expect(children[0].type.name).toBe("mathBlock");
+    expect(children[0].attrs.latex).toBe("");
+    expect(children.filter((n) => n.type.name === "paragraph")).toHaveLength(1);
+    editor.destroy();
+  });
+
+  it("keeps preceding text and inserts the block when typing $$ after words", () => {
+    const editor = new Editor({
+      extensions: [StarterKit.configure({ code: false, codeBlock: false }), MathBlock],
+      content: "<p></p>",
+    });
+    typeText(editor, "foo $$");
+    const children = childrenOf(editor.state.doc);
+    expect(children.some((n) => n.type.name === "mathBlock")).toBe(true);
+    const text = editor.state.doc.textBetween(0, editor.state.doc.content.size, "\n");
+    expect(text).toContain("foo");
     editor.destroy();
   });
 });
