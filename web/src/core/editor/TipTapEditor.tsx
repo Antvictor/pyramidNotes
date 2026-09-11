@@ -5,8 +5,6 @@ import { Extension } from "@tiptap/core";
 import { EditorProvider, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Code } from "@tiptap/extension-code";
-import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
-import { common, createLowlight } from "lowlight";
 import Image from "@tiptap/extension-image";
 import { Link } from "@tiptap/extension-link";
 import FindAndReplace from "@tiptap/extension-find-and-replace";
@@ -18,10 +16,13 @@ import FindReplaceBar, { type FindReplaceBarHandle } from "./FindReplaceBar";
 import "./find-replace.css";
 import "../../pages/note/markdown.css";
 import "highlight.js/styles/atom-one-dark.css";
-import type { KeyBinding } from "./extensions/commands";
+import "katex/dist/katex.min.css";
 import { EmptyParagraphPreserver } from "./extensions/EmptyParagraphPreserver";
 import { InternalNodeEmbed, InternalNodeLink } from "./extensions/InternalNodeLink";
 import { InternalImageEmbed } from "./extensions/InternalImageEmbed";
+import { EnhancedCodeBlock } from "./extensions/enhancedCodeBlock";
+import { MathBlock, MathInline } from "./extensions/mathNodes";
+import type { KeyBinding } from "./extensions/commands";
 import { isImageReference, sanitizeFileName } from "./extensions/attachmentUtils";
 import {
   parseInternalNodeReference,
@@ -125,8 +126,6 @@ function getSuggestionFromView(view: {
     y: coords.bottom + 6,
   };
 }
-
-const lowlight = createLowlight(common);
 
 const InternalNodeCompletion = Extension.create<{
   onChange: (suggestion: SuggestionState | null) => void;
@@ -494,6 +493,70 @@ function restoreExternalLinkMarkToken(view: EditorView, event: KeyboardEvent) {
   return false;
 }
 
+// 删除行内公式时还原 $latex$ 源文本(模式同 restoreInternalNodeLinkToken)。
+function restoreMathInlineToken(view: EditorView, event: KeyboardEvent) {
+  if (event.key !== "Backspace" && event.key !== "Delete") return false;
+
+  const { state } = view;
+  const { selection, schema } = state;
+  const mathType = schema.nodes.mathInline;
+  if (!mathType) return false;
+
+  const restore = (from: number, to: number, latex: string) => {
+    const text = `$${latex}$`;
+    const tr = state.tr.replaceWith(from, to, schema.text(text));
+    tr.setSelection(TextSelection.create(tr.doc, from + text.length));
+    view.dispatch(tr);
+    event.preventDefault();
+    event.stopPropagation();
+    return true;
+  };
+
+  if (selection instanceof NodeSelection && selection.node.type === mathType) {
+    return restore(selection.from, selection.to, (selection.node.attrs.latex as string) || "");
+  }
+
+  const { $from } = selection;
+  if (!selection.empty) return false;
+
+  if (event.key === "Backspace") {
+    const nodeBefore = $from.nodeBefore;
+    if (nodeBefore?.type === mathType) {
+      return restore($from.pos - nodeBefore.nodeSize, $from.pos, (nodeBefore.attrs.latex as string) || "");
+    }
+  }
+  if (event.key === "Delete") {
+    const nodeAfter = $from.nodeAfter;
+    if (nodeAfter?.type === mathType) {
+      return restore($from.pos, $from.pos + nodeAfter.nodeSize, (nodeAfter.attrs.latex as string) || "");
+    }
+  }
+  return false;
+}
+
+// 删除块级公式时还原 $$…$$ 段落文本(含 \n,重载后会被 markdown-it 块规则重新解析)。
+function restoreMathBlockToken(view: EditorView, event: KeyboardEvent) {
+  if (event.key !== "Backspace" && event.key !== "Delete") return false;
+
+  const { state } = view;
+  const { selection, schema } = state;
+  const mathType = schema.nodes.mathBlock;
+  if (!mathType) return false;
+  if (!(selection instanceof NodeSelection) || selection.node.type !== mathType) return false;
+
+  const latex = (selection.node.attrs.latex as string) || "";
+  const text = `$$\n${latex}\n$$`;
+  const paragraphType = schema.nodes.paragraph;
+  if (!paragraphType) return false;
+
+  const tr = state.tr.replaceWith(selection.from, selection.to, paragraphType.create(null, schema.text(text)));
+  tr.setSelection(TextSelection.create(tr.doc, selection.from + 1 + text.length));
+  view.dispatch(tr);
+  event.preventDefault();
+  event.stopPropagation();
+  return true;
+}
+
 function insertCompletedInternalNode(view: EditorView, target: NodeLookupItem, suggestion: SuggestionState) {
   const { state } = view;
   const nodeType = suggestion.embed
@@ -585,7 +648,6 @@ export default function TipTapEditor({
   }), []);
 
   const starterKit = useMemo(() => StarterKit.configure({ code: false, codeBlock: false }), []);
-  const codeBlockLowlight = useMemo(() => CodeBlockLowlight.configure({ lowlight }), []);
   const findAndReplace = useMemo(() => FindAndReplace.configure({
     searchDebounceMs: 0,
     injectCSS: false,
@@ -612,8 +674,8 @@ export default function TipTapEditor({
   }), []);
 
   const extensions = useMemo(
-    () => [starterKit, Code, InlineCodePreview, codeBlockLowlight, EmptyParagraphPreserver, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, InternalNodeTokenNormalizer, markdownExtension, findAndReplace],
-    [starterKit, codeBlockLowlight, EmptyParagraphPreserver, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, markdownExtension, findAndReplace],
+    () => [starterKit, Code, InlineCodePreview, EnhancedCodeBlock, MathInline, MathBlock, EmptyParagraphPreserver, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, InternalNodeTokenNormalizer, markdownExtension, findAndReplace],
+    [starterKit, EmptyParagraphPreserver, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, markdownExtension, findAndReplace],
   );
 
   const handleUpdate = useCallback(({ editor }: { editor: Editor }) => {
@@ -768,6 +830,8 @@ export default function TipTapEditor({
 
     if (restoreExternalLinkMarkToken(view, event)) return true;
     if (restoreInternalNodeLinkToken(view, event)) return true;
+    if (restoreMathInlineToken(view, event)) return true;
+    if (restoreMathBlockToken(view, event)) return true;
 
     const currentSuggestion = suggestionRef.current;
     const currentSuggestedNodes = suggestedNodesRef.current;
