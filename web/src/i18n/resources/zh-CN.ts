@@ -19,6 +19,9 @@ const zhCN = {
   },
   editor: {
     loading: '正在加载笔记…',
+    mathRenderError: '公式渲染失败',
+    mermaidRenderError: '图表渲染失败',
+    editSource: '双击编辑源码',
   },
   backlinks: {
     title: '被 {{total}} 篇笔记引用',

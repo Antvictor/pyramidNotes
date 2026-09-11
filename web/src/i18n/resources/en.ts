@@ -19,6 +19,9 @@ const en = {
   },
   editor: {
     loading: 'Loading note…',
+    mathRenderError: 'Math rendering failed',
+    mermaidRenderError: 'Diagram rendering failed',
+    editSource: 'Double-click to edit source',
   },
   backlinks: {
     title: 'Referenced by {{total}} note(s)',
