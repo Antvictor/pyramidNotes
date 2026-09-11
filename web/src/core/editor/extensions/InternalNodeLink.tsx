@@ -14,6 +14,8 @@ import {
 } from "./internalNodeReference";
 import { isImageReference } from "./attachmentUtils";
 import { InternalImageEmbed } from "./InternalImageEmbed";
+import { EnhancedCodeBlock } from "./enhancedCodeBlock";
+import { MathBlock, MathInline } from "./mathNodes";
 
 type NodeLookupItem = NodeReferenceTarget;
 
@@ -164,12 +166,15 @@ function ReadOnlyMarkdownPreview({
     editable: false,
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ code: false }),
+      StarterKit.configure({ code: false, codeBlock: false }),
       Code,
       InternalNodeLink.configure({ nodes, onOpenNode, embedPath }),
       InternalNodeEmbed.configure({ nodes, onOpenNode, embedPath }),
       InternalImageEmbed,
       markdownPreviewExtension,
+      EnhancedCodeBlock,
+      MathInline,
+      MathBlock,
     ],
     content,
   }, [content, nodes, onOpenNode, embedPath.join("\u0000")]);
