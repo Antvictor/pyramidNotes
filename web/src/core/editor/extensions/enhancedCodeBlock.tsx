@@ -235,4 +235,12 @@ export const EnhancedCodeBlock = CodeBlockLowlight.configure({ lowlight }).exten
       return null;
     };
   },
+  addProseMirrorPlugins() {
+    // .extend 后 CodeBlockLowlight 的默认 addProseMirrorPlugins 会先调用 parent
+    // (已 configure 实例,产出一份 LowlightPlugin)再追加自身,导致 lowlight 插件
+    // 重复注册;重复的跨模块 DecorationSet 进入 prosemirror-view 的
+    // DecorationGroup 扁平化时会产生 undefined 成员,编辑器挂载即崩溃。
+    // 这里只透传 parent 链结果(CodeBlock 基类的插件 + 唯一一份 LowlightPlugin)。
+    return this.parent?.() || [];
+  },
 });
