@@ -22,6 +22,7 @@ import { InternalNodeEmbed, InternalNodeLink } from "./extensions/InternalNodeLi
 import { InternalImageEmbed } from "./extensions/InternalImageEmbed";
 import { EnhancedCodeBlock } from "./extensions/enhancedCodeBlock";
 import { MathBlock, MathInline } from "./extensions/mathNodes";
+import { createTableExtensions } from "./extensions/tableExtensions";
 import type { KeyBinding } from "./extensions/commands";
 import { isImageReference, sanitizeFileName } from "./extensions/attachmentUtils";
 import {
@@ -647,7 +648,8 @@ export default function TipTapEditor({
     transformCopiedText: false,
   }), []);
 
-  const starterKit = useMemo(() => StarterKit.configure({ code: false, codeBlock: false }), []);
+  const starterKit = useMemo(() => StarterKit.configure({ code: false, codeBlock: false, hardBreak: false }), []);
+  const tableExtensions = useMemo(() => createTableExtensions(), []);
   const findAndReplace = useMemo(() => FindAndReplace.configure({
     searchDebounceMs: 0,
     injectCSS: false,
@@ -674,8 +676,8 @@ export default function TipTapEditor({
   }), []);
 
   const extensions = useMemo(
-    () => [starterKit, Code, InlineCodePreview, EnhancedCodeBlock, MathInline, MathBlock, EmptyParagraphPreserver, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, InternalNodeTokenNormalizer, markdownExtension, findAndReplace],
-    [starterKit, EmptyParagraphPreserver, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, markdownExtension, findAndReplace],
+    () => [starterKit, ...tableExtensions, Code, InlineCodePreview, EnhancedCodeBlock, MathInline, MathBlock, EmptyParagraphPreserver, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, InternalNodeTokenNormalizer, markdownExtension, findAndReplace],
+    [starterKit, tableExtensions, EmptyParagraphPreserver, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, markdownExtension, findAndReplace],
   );
 
   const handleUpdate = useCallback(({ editor }: { editor: Editor }) => {

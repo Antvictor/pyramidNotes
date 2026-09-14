@@ -16,6 +16,7 @@ import { isImageReference } from "./attachmentUtils";
 import { InternalImageEmbed } from "./InternalImageEmbed";
 import { EnhancedCodeBlock } from "./enhancedCodeBlock";
 import { MathBlock, MathInline } from "./mathNodes";
+import { createTableExtensions } from "./tableExtensions";
 
 type NodeLookupItem = NodeReferenceTarget;
 
@@ -166,7 +167,8 @@ function ReadOnlyMarkdownPreview({
     editable: false,
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ code: false, codeBlock: false }),
+      StarterKit.configure({ code: false, codeBlock: false, hardBreak: false }),
+      ...createTableExtensions(),
       Code,
       InternalNodeLink.configure({ nodes, onOpenNode, embedPath }),
       InternalNodeEmbed.configure({ nodes, onOpenNode, embedPath }),

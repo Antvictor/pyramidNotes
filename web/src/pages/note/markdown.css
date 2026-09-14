@@ -241,6 +241,11 @@
   background: var(--color-table-stripe-bg);
 }
 
+.prose th.selectedCell,
+.prose td.selectedCell {
+  background: var(--muted);
+}
+
 /* Horizontal Rule */
 .cm-md-inline hr,
 .prose hr {
