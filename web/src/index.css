@@ -429,3 +429,13 @@ button:focus-visible {
   width: auto;
   padding: 6px 12px;
 }
+
+/* ReactFlow 节点位置变更时平滑过渡（增删/移动节点后整树重排不再瞬跳） */
+.react-flow__node {
+  transition: transform 180ms ease-out;
+}
+
+/* 拖拽中禁用过渡，避免节点跟手延迟 */
+.react-flow__node.dragging {
+  transition: none;
+}
