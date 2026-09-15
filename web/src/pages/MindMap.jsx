@@ -491,27 +491,24 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     return descendantIds;
   };
 
-  // 删除整个子树
+  // 删除整个子树（根节点永不删除/进回收站）
   const deleteEntireTree = async (id) => {
     const allIds = await getAllDescendantIds(id);
+    const rows = await db.notes.select();
+    const byId = new Map(rows.map((n) => [n.id, n]));
+    const restIds = allIds.filter((nid) => {
+      const r = byId.get(nid);
+      return !(r && r.top === "0");
+    });
 
-    // 先删除所有相关文件
-    for (const nodeId of allIds) {
-      const node = (await db.notes.select({ id: nodeId }))[0];
-      if (node) {
-        const result = window.api.deleteFile(`${nodeId}-${node.name}.md`);
-        if (handleFileError(result)) return;
-      }
+    if (restIds.length) {
+      const result = await window.api.deleteNotes(restIds);
+      if (handleFileError(result)) return;
     }
 
-    // 从数据库中删除所有记录
-    for (const nodeId of allIds) {
-      await db.notes.delete({ "id": nodeId });
-    }
-
-    // DB 操作全部完成后再更新 UI
-    setNotesData(nds => nds.filter(n => !allIds.includes(n.id)));
-    setEdges(eds => eds.filter(e => !allIds.includes(e.source) && !allIds.includes(e.target)));
+    // UI 过滤必须用 restIds（不含根），否则根会从视图消失
+    setNotesData(nds => nds.filter(n => !restIds.includes(n.id)));
+    setEdges(eds => eds.filter(e => !restIds.includes(e.source) && !restIds.includes(e.target)));
   };
 
   // 将子节点提升到祖父节点下
@@ -528,13 +525,11 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     }));
   };
 
-  const _internalDeleteNode = (id, title) => {
+  const _internalDeleteNode = async (id) => {
+    const result = await window.api.deleteNotes([id]);
+    if (handleFileError(result)) return;
     setNotesData(nds => nds.filter(n => n.id !== id));
     setEdges(eds => eds.filter(e => e.source !== id && e.target !== id));
-    db.notes.delete({ "id": id });
-    // 同时删除markdown文件
-    const result = window.api.deleteFile(`${id}-${title}.md`);
-    if (handleFileError(result)) return;
   };
 
   // ========== Unified Request Methods ==========
@@ -589,7 +584,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     } else {
       const grandParentId = deleteConfirmation.grandParentId;
       promoteChildren(deleteConfirmation.id, grandParentId);
-      _internalDeleteNode(deleteConfirmation.id, deleteConfirmation.name);
+      await _internalDeleteNode(deleteConfirmation.id);
     }
 
     if (deleteConfirmation.id === focusNodeId) {
