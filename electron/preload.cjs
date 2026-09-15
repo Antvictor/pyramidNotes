@@ -8,10 +8,13 @@ function subscribeToIpc(channel, callback) {
 
 contextBridge.exposeInMainWorld('api', {
     openFile: (fileName) => ipcRenderer.invoke('openFile', fileName),
-    deleteFile: (fileName, nodeId) => ipcRenderer.invoke('deleteFile', fileName, nodeId),
     renameFile: (oldFileName, newFileName) => ipcRenderer.invoke('renameFile', oldFileName, newFileName),
     saveFile: (fileName, yamlData, content, nodeId) => ipcRenderer.invoke('saveFile', fileName, yamlData, content, nodeId),
     updateYaml: (fileName, newYamlData) => ipcRenderer.invoke('updateYaml', fileName, newYamlData),
+    deleteNotes: (nodeIds) => ipcRenderer.invoke('deleteNotes', nodeIds),
+    listTrash: () => ipcRenderer.invoke('listTrash'),
+    restoreTrash: (nodeId) => ipcRenderer.invoke('restoreTrash', nodeId),
+    purgeExpiredTrash: () => ipcRenderer.invoke('purgeExpiredTrash'),
     getPath: () => ipcRenderer.invoke('getPath'),
     dbQuery: (sql, params) => ipcRenderer.invoke('dbQuery', sql, params),
     searchNotes: (keyword) => ipcRenderer.invoke('searchNotes', keyword),

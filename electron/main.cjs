@@ -10,6 +10,7 @@ const { loadSettings, getCachedSettings } = require('./common/settings.cjs')
 const { resolveAppIconPath } = require('./common/assets.cjs')
 const { registerSettingsIPC } = require('./ipc/settings.cjs')
 const { registerCaptureIPC } = require('./ipc/capture.cjs')
+const { registerTrashIPC } = require('./ipc/trash.cjs')
 const { applyApplicationMenu } = require('./common/locale.cjs')
 const { registerLicenseIPC } = require('./ipc/license.cjs')
 
@@ -38,6 +39,7 @@ app.whenReady().then(async () => {
     registerAttachmentIPC();
     registerSettingsIPC();
     registerCaptureIPC();
+    registerTrashIPC();
     registerLicenseIPC(mainWindow);
 
     // Handler to reload database when storagePath changes

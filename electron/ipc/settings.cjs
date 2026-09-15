@@ -3,6 +3,7 @@ const { loadSettings, saveSettings, getCachedSettings, setCachedSettings, DEFAUL
 const { closeDatabase, initializeDatabase } = require('../db/db.cjs');
 const { initNode } = require('../nodes/initNode');
 const { applyApplicationMenu } = require('../common/locale.cjs');
+const { purgeExpiredTrash } = require('./trash.cjs');
 
 function registerSettingsIPC() {
   ipcMain.handle('getSettings', async () => {
@@ -24,6 +25,15 @@ function registerSettingsIPC() {
 
     if (newSettings.language !== undefined) {
       applyApplicationMenu(mergedSettings.language);
+    }
+
+    // Retention change should purge expired trash immediately
+    if (newSettings.trashRetentionDays !== undefined) {
+      try {
+        purgeExpiredTrash();
+      } catch (err) {
+        console.error('Failed to purge expired trash:', err);
+      }
     }
 
     // If storagePath changed, close old DB, re-init at new path, and re-scan

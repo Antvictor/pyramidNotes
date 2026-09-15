@@ -29,6 +29,8 @@ const DEFAULT_SETTINGS = {
   },
   editorWidthMode: 'constrained',
   showBacklinks: true,
+  deleteMode: 'trash',        // 'trash' | 'systemTrash' | 'permanent'
+  trashRetentionDays: 30,
 };
 
 let cachedSettings = null;
