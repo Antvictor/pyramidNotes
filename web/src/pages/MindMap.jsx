@@ -631,15 +631,17 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     const sourceNode = (await db.notes.select({ id: moveSource.id }))[0];
     if (!sourceNode || sourceNode.top === targetId) return;
 
-    await db.notes.update({ id: moveSource.id }, { top: targetId });
-    await window.api.updateYaml(`${moveSource.id}-${moveSource.name}.md`, { top: targetId });
-
-    const res = await db.notes.select();
-    setNotesData(res);
-    setSelectedNode({ id: moveSource.id, name: moveSource.name });
+    const moved = { id: moveSource.id, name: moveSource.name };
+    // 乐观更新 UI，IO 后台执行
+    setNotesData(nds => nds.map(n => (n.id === moved.id ? { ...n, top: targetId } : n)));
+    setSelectedNode(moved);
     setMoveSource(null);
+
+    await db.notes.update({ id: moved.id }, { top: targetId });
+    await window.api.updateYaml(`${moved.id}-${moved.name}.md`, { top: targetId });
+
     // 移动后居中到节点新位置
-    setTimeout(() => requestCenter(), 300);
+    centerWhenRendered();
   };
 
   useEffect(() => {
@@ -837,6 +839,14 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     if (centerOnSelectedRef.current) centerOnSelectedRef.current();
   }, []);
 
+  // 等所选节点真正进入 ReactFlow 后再居中，替代固定 300ms 延迟
+  const centerWhenRendered = useCallback((tries = 30) => {
+    requestAnimationFrame(() => {
+      const done = centerOnSelectedRef.current && centerOnSelectedRef.current();
+      if (!done && tries > 0) centerWhenRendered(tries - 1);
+    });
+  }, []);
+
   const [menu, setMenu] = useState({
     show: false,
     x: 0,
@@ -903,11 +913,9 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       saveNode(newNodeDb);
       // 创建新节点的 markdown 文件, 把这两个合成一个方法
       addNote(newNodeDb);
-      // 新节点渲染后居中
-      setTimeout(() => {
-        setSelectedNode({ id: `${id}`, name: safeName });
-        requestCenter();
-      }, 300);
+      // 立即选中；待节点渲染后居中（不阻塞、无固定延迟）
+      setSelectedNode({ id: `${id}`, name: safeName });
+      centerWhenRendered();
       if (allNotesNodeMap) {
         const displayRootId = focusNodeId === '1'
           ? notesData.find((n) => n.top === '0')?.id
@@ -918,7 +926,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
         }
       }
     },
-    [allNotesNodeMap, focusNodeId, notesData, setSelectedNode, requestCenter]
+    [allNotesNodeMap, focusNodeId, notesData, setSelectedNode, centerWhenRendered]
   );
   const saveNode = async (node) => {
     const yamlStr = { id: node.id, alias: "", title: node.name, left: node.left, top: node.top };
@@ -971,9 +979,11 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
 
     useEffect(() => {
       centerOnSelectedRef.current = () => {
-        if (!selectedNode) return;
+        if (!selectedNode) return false;
         const n = getNodes().find(nd => nd.id === selectedNode.id);
-        if (n) setCenter(n.position.x + 80, n.position.y + 20, { zoom: 1, duration: 300 });
+        if (!n) return false;
+        setCenter(n.position.x + 80, n.position.y + 20, { zoom: 1, duration: 300 });
+        return true;
       };
     });
 
