@@ -5,6 +5,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 const { getBasePath } = require('../window/window.cjs');
 const { search, reset } = require('./search.cjs');
+const { migrateNotes } = require('./schema.cjs');
 
 let db = null;
 let isInitialized = false;
@@ -78,17 +79,8 @@ function initializeDatabase(storagePath) {
         );
     `);
 
-    // 创建 deleted_notes 表用于软删除
-    db.exec(`
-        create table if not exists deleted_notes(
-            id TEXT primary key not null,
-            filename TEXT NOT NULL,
-            content TEXT,
-            yaml_data TEXT,
-            deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            original_path TEXT
-        );
-    `);
+    // 迁移：新增 delete / last_up_time 列，清理历史软删除表
+    migrateNotes(db);
 
     // 创建 FTS5 全文搜索虚拟表（使用 simple_tokenizer 支持中文分词）
     // id 列使用 UNINDEXED 表示不参与搜索，只存储用于关联
