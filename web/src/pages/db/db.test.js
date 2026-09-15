@@ -20,7 +20,7 @@ describe("db.notes.searchByName", () => {
   it("queries name with escaped wildcards and LIMIT 100", async () => {
     const result = await db.notes.searchByName("x%");
     expect(window.api.dbQuery).toHaveBeenCalledWith(
-      "SELECT id, name FROM notes WHERE name LIKE ? ESCAPE '\\' LIMIT 100",
+      "SELECT id, name FROM notes WHERE name LIKE ? ESCAPE '\\' AND \"delete\" = 0 LIMIT 100",
       ["%x\\%%"],
     );
     expect(result).toEqual([{ id: "1", name: "root" }]);
@@ -38,7 +38,7 @@ describe("db.notes.findBacklinks", () => {
   it("matches both reference formats and excludes the note itself", async () => {
     const result = await db.notes.findBacklinks("abc123");
     expect(window.api.dbQuery).toHaveBeenCalledWith(
-      "SELECT id, name FROM notes WHERE id != ? AND (content LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')",
+      "SELECT id, name FROM notes WHERE id != ? AND (content LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\') AND \"delete\" = 0",
       ["abc123", "%[[abc123|%", "%[[abc123]]%"],
     );
     expect(result).toEqual([{ id: "2", name: "ref" }]);

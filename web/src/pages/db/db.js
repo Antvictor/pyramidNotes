@@ -9,24 +9,27 @@ class Table {
 
 
     async insert(data) {
-        const keys = Object.keys(data).join(", ");
-        const placeholders = Object.keys(data).map(() => "?").join(", ");
-        const values = Object.values(data);
+        const payload = { ...data, last_up_time: data.last_up_time ?? new Date().toISOString() };
+        const keys = Object.keys(payload).join(", ");
+        const placeholders = Object.keys(payload).map(() => "?").join(", ");
+        const values = Object.values(payload);
         const sql = `INSERT INTO ${this.tableName} (${keys}) VALUES (${placeholders})`;
         return await window.api.dbQuery(sql, values);
     }
 
-    async select(whereClause = "", orderBy = "", limit = "") {
-        let sql = `SELECT * FROM ${this.tableName}`;
-        let values = [];
+    async select(whereClause = "", orderBy = "", limit = "", options = {}) {
+        const { includeDeleted = false } = options;
+        const values = [];
+        const conditions = [];
         if (whereClause) {
-            const conditions = Object.keys(whereClause)
-                .map(k => `${k} = ?`)
-                .join(" AND ");
-
-            sql += ` WHERE ${conditions}`;
-            values.push(...Object.values(whereClause));
+            for (const k of Object.keys(whereClause)) {
+                conditions.push(`${k} = ?`);
+                values.push(whereClause[k]);
+            }
         }
+        if (!includeDeleted) conditions.push(`"delete" = 0`);
+        let sql = `SELECT * FROM ${this.tableName}`;
+        if (conditions.length) sql += ` WHERE ${conditions.join(" AND ")}`;
         if (orderBy) sql += ` ORDER BY ${orderBy}`;
         if (limit) sql += ` LIMIT ${limit}`;
         return await window.api.dbQuery(sql, values);
@@ -38,8 +41,9 @@ class Table {
     }
 
     async update(where, data) {
-        const setKeys = Object.keys(data).map(k => `${k} = ?`).join(',');
-        const setValues = Object.values(data);
+        const payload = { ...data, last_up_time: new Date().toISOString() };
+        const setKeys = Object.keys(payload).map(k => `${k} = ?`).join(',');
+        const setValues = Object.values(payload);
 
         const whereKeys = Object.keys(where).map(k => `${k} = ?`).join(' AND ');
         const whereValues = Object.values(where);
@@ -162,13 +166,13 @@ class Table {
 
     async searchByName(keyword) {
         const escaped = escapeLike(keyword);
-        const sql = `SELECT id, name FROM notes WHERE name LIKE ? ESCAPE '\\' LIMIT 100`;
+        const sql = `SELECT id, name FROM notes WHERE name LIKE ? ESCAPE '\\' AND "delete" = 0 LIMIT 100`;
         return await window.api.dbQuery(sql, [`%${escaped}%`]);
     }
 
     async findBacklinks(noteId) {
         const escaped = escapeLike(noteId);
-        const sql = `SELECT id, name FROM notes WHERE id != ? AND (content LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')`;
+        const sql = `SELECT id, name FROM notes WHERE id != ? AND (content LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\') AND "delete" = 0`;
         return await window.api.dbQuery(sql, [noteId, `%[[${escaped}|%`, `%[[${escaped}]]%`]);
     }
 }
