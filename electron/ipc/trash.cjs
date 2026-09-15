@@ -36,21 +36,35 @@ async function deleteNotes(nodeIds) {
     const deletable = filterDeletableIds(nodeIds, rowsById); // 根永不删/进回收站
     const now = new Date().toISOString();
 
+    // 文件操作先做（systemTrash 为异步），DB 写合并为单个事务：
+    // 减少主进程阻塞时间与 WAL 抖动
+    const softIds = [];
+    const hardIds = [];
+    const trashDir = mode === 'trash' ? getTrashDir() : null;
+
     for (const id of deletable) {
       const row = rowsById.get(id);
       const src = path.join(storagePath, fileNameOf(row));
       if (mode === 'trash') {
-        const dest = path.join(getTrashDir(), fileNameOf(row));
+        const dest = path.join(trashDir, fileNameOf(row));
         if (fs.existsSync(src)) fs.renameSync(src, dest);
-        db.prepare('UPDATE notes SET "delete" = 1, last_up_time = ? WHERE id = ?').run(now, id);
+        softIds.push(id);
       } else if (mode === 'systemTrash') {
         if (fs.existsSync(src)) await shell.trashItem(src);
-        db.prepare('DELETE FROM notes WHERE id = ?').run(id);
+        hardIds.push(id);
       } else { // permanent
         if (fs.existsSync(src)) fs.unlinkSync(src);
-        db.prepare('DELETE FROM notes WHERE id = ?').run(id);
+        hardIds.push(id);
       }
     }
+
+    const softStmt = db.prepare('UPDATE notes SET "delete" = 1, last_up_time = ? WHERE id = ?');
+    const hardStmt = db.prepare('DELETE FROM notes WHERE id = ?');
+    db.transaction(() => {
+      for (const id of softIds) softStmt.run(now, id);
+      for (const id of hardIds) hardStmt.run(id);
+    })();
+
     return { ok: true, mode, count: deletable.length };
   } catch (error) {
     console.error('deleteNotes error:', error);
@@ -80,14 +94,19 @@ function restoreTrash(nodeId) {
     const storagePath = resolveStoragePath();
     const trashDir = getTrashDir();
     const now = new Date().toISOString();
+    const idsToRestore = [];
     for (const id of clusterIds) {
       const r = byId.get(id);
       if (!r) continue;
       const src = path.join(trashDir, fileNameOf(r));
       const dest = path.join(storagePath, fileNameOf(r));
       if (fs.existsSync(src)) fs.renameSync(src, dest);
-      db.prepare('UPDATE notes SET "delete" = 0, last_up_time = ? WHERE id = ?').run(now, id);
+      idsToRestore.push(id);
     }
+    const stmt = db.prepare('UPDATE notes SET "delete" = 0, last_up_time = ? WHERE id = ?');
+    db.transaction(() => {
+      for (const id of idsToRestore) stmt.run(now, id);
+    })();
     return { ok: true, restored: clusterIds };
   } catch (error) {
     console.error('restoreTrash error:', error);

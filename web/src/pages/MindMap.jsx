@@ -493,23 +493,19 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   };
 
   // 删除整个子树（根节点永不删除/进回收站）
-  const deleteEntireTree = async (id) => {
+  const deleteEntireTree = async (id, isRoot) => {
     const allIds = await getAllDescendantIds(id);
-    const rows = await db.notes.select();
-    const byId = new Map(rows.map((n) => [n.id, n]));
-    const restIds = allIds.filter((nid) => {
-      const r = byId.get(nid);
-      return !(r && r.top === "0");
-    });
+    // 根节点永不删除：整树删除时剔除根（isRoot 在 requestDeleteNode 时已算出）
+    const restIds = isRoot ? allIds.filter((nid) => nid !== id) : allIds;
+
+    // 先乐观更新 UI（立即响应），IO 随后进行
+    setNotesData(nds => nds.filter(n => !restIds.includes(n.id)));
+    setEdges(eds => eds.filter(e => !restIds.includes(e.source) && !restIds.includes(e.target)));
 
     if (restIds.length) {
       const result = await window.api.deleteNotes(restIds);
       if (handleFileError(result)) return;
     }
-
-    // UI 过滤必须用 restIds（不含根），否则根会从视图消失
-    setNotesData(nds => nds.filter(n => !restIds.includes(n.id)));
-    setEdges(eds => eds.filter(e => !restIds.includes(e.source) && !restIds.includes(e.target)));
   };
 
   // 将子节点提升到祖父节点下
@@ -527,10 +523,11 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   };
 
   const _internalDeleteNode = async (id) => {
-    const result = await window.api.deleteNotes([id]);
-    if (handleFileError(result)) return;
+    // 先乐观更新 UI（立即响应），IO 随后进行
     setNotesData(nds => nds.filter(n => n.id !== id));
     setEdges(eds => eds.filter(e => e.source !== id && e.target !== id));
+    const result = await window.api.deleteNotes([id]);
+    if (handleFileError(result)) return;
   };
 
   // ========== Unified Request Methods ==========
@@ -581,7 +578,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     if (!deleteConfirmation) return;
 
     if (deleteConfirmation.mode === "entire-tree") {
-      await deleteEntireTree(deleteConfirmation.id, deleteConfirmation.name);
+      await deleteEntireTree(deleteConfirmation.id, deleteConfirmation.isRoot);
     } else {
       const grandParentId = deleteConfirmation.grandParentId;
       promoteChildren(deleteConfirmation.id, grandParentId);
