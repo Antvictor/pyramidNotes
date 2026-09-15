@@ -8,7 +8,7 @@ const SEARCH_SQL = `
   SELECT n.id, n.name, simple_snippet(notes_fts, 1, '<mark>', '</mark>', '...', 30) AS content
   FROM notes_fts
   JOIN notes n ON notes_fts.id = n.id
-  WHERE notes_fts MATCH simple_query(?)
+  WHERE notes_fts MATCH simple_query(?) AND n."delete" = 0
   LIMIT 50
 `;
 
