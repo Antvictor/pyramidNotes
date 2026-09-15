@@ -16,6 +16,13 @@ const zhCN = {
     mindMap: '思维导图',
     search: '搜索',
     settings: '设置',
+    trash: '回收站',
+  },
+  trash: {
+    title: '回收站',
+    empty: '回收站为空',
+    deleteDate: '删除日期',
+    restore: '恢复',
   },
   editor: {
     loading: '正在加载笔记…',

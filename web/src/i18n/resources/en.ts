@@ -16,6 +16,13 @@ const en = {
     mindMap: 'Mind map',
     search: 'Search',
     settings: 'Settings',
+    trash: 'Trash',
+  },
+  trash: {
+    title: 'Trash',
+    empty: 'Trash is empty',
+    deleteDate: 'Deleted at',
+    restore: 'Restore',
   },
   editor: {
     loading: 'Loading note…',

@@ -5,6 +5,7 @@ import Settings from "./pages/settings/Settings";
 import MindMap from "./pages/MindMap";
 import Node from "./pages/note/Node"
 import Paywall from "./pages/paywall/Paywall";
+import Trash from "./pages/trash/Trash";
 import { SelectedNodeProvider } from "./contexts/SelectedNodeContext";
 import { LicenseProvider, useLicense } from "./contexts/LicenseContext";
 import TutorialController from "./components/tutorial/TutorialController";
@@ -123,6 +124,7 @@ function AppContent() {
               } />
               <Route path="/settings" element={<Settings shortcuts={shortcuts} />} />
               <Route path="/note/:id/:name" element={<Node shortcuts={shortcuts} />} />
+              <Route path="/trash" element={<Trash />} />
               <Route path="/paywall" element={<Paywall />} />
             </Routes>
           </TutorialController>
