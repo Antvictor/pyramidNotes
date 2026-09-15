@@ -11,6 +11,7 @@ const en = {
     retry: 'Retry',
     skip: 'Skip',
     next: 'Next',
+    days: 'days',
   },
   navigation: {
     mindMap: 'Mind map',
@@ -83,10 +84,11 @@ const en = {
       description_one: 'Node “{{nodeName}}” contains {{count}} child. Choose how to delete it:',
       description_other: 'Node “{{nodeName}}” contains {{count}} children. Choose how to delete them:',
       deleteLeafDescription: 'Delete current node “{{nodeName}}”?',
-      deleteAll: 'Delete all nodes',
+      deleteAll: 'Delete all child nodes (root kept)',
       deleteSubtree: 'Delete entire subtree',
-      deleteRootDescription: 'Delete root node “{{nodeName}}” and all of its descendants. This cannot be undone.',
-      deleteSubtreeDescription: 'Delete “{{nodeName}}” and all of its descendants. This cannot be undone.',
+      deleteRootDescription: 'Delete all child nodes under root “{{nodeName}}”. The root is kept.',
+      deleteSubtreeDescription: 'Delete “{{nodeName}}” and all of its descendants.',
+      deleteSubtreeDescriptionPermanent: 'Delete “{{nodeName}}” and all of its descendants. This cannot be undone.',
       deleteParentOnly: 'Delete “{{nodeName}}” only',
       promoteChildren: 'Move child nodes up one level.',
       confirmSubtree: 'Delete current node “{{nodeName}}” and its descendants?',
@@ -106,6 +108,7 @@ const en = {
     sections: {
       basic: 'Basic information',
       systemSettings: 'System settings',
+      deleteSettings: 'Deletion settings',
       other: 'Other',
     },
     theme: {
@@ -117,6 +120,17 @@ const en = {
     storage: {
       label: 'Data storage',
       change: 'Change',
+    },
+    deleteMode: {
+      label: 'Delete mode',
+      trash: 'Trash',
+      systemTrash: 'System trash',
+      permanent: 'Permanent delete',
+      permanentWarning: 'With this setting, files will be permanently deleted and cannot be recovered. Choose carefully!',
+    },
+    trashRetention: {
+      label: 'Trash retention',
+      hint: 'Trash items older than this many days will be permanently deleted',
     },
     version: 'Application version',
     autoUpdate: 'Automatic updates',

@@ -18,11 +18,14 @@ const Settings = () => {
     systemFontSize: 16,
     noteFontSize: 16,
     nodeSpacing: "normal",
+    deleteMode: "trash",
+    trashRetentionDays: 30,
   });
   const [version, setVersion] = useState("");
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
   const [helpModalOpen, setHelpModalOpen] = useState(false);
+  const [pendingPermanent, setPendingPermanent] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -111,6 +114,27 @@ const Settings = () => {
   const handleShowBacklinksChange = async (value) => {
     setSettings((prev) => ({ ...prev, showBacklinks: value }));
     await window.api.saveSettings({ showBacklinks: value });
+  };
+
+  const handleDeleteModeChange = async (value) => {
+    if (value === "permanent") {
+      setPendingPermanent(true);
+      return;
+    }
+    setSettings((prev) => ({ ...prev, deleteMode: value }));
+    await window.api.saveSettings({ deleteMode: value });
+  };
+
+  const confirmPermanent = async () => {
+    setPendingPermanent(false);
+    setSettings((prev) => ({ ...prev, deleteMode: "permanent" }));
+    await window.api.saveSettings({ deleteMode: "permanent" });
+  };
+
+  const handleTrashRetentionChange = async (value) => {
+    const num = Math.max(1, parseInt(value) || 30);
+    setSettings((prev) => ({ ...prev, trashRetentionDays: num }));
+    await window.api.saveSettings({ trashRetentionDays: num });
   };
 
   const languages = [
@@ -448,6 +472,72 @@ const Settings = () => {
           </div>
         </div>
 
+        {/* Delete Settings Section */}
+        <div style={sectionStyle}>
+          <h3 style={{ marginBottom: 12 }}>{t("settings.sections.deleteSettings")}</h3>
+
+          <div style={settings.deleteMode === "trash" ? rowStyle : { ...rowStyle, borderBottom: "none" }}>
+            <span style={labelStyle}>{t("settings.deleteMode.label")}</span>
+            <div style={controlStyle}>
+              {[
+                { value: "trash", label: t("settings.deleteMode.trash") },
+                { value: "systemTrash", label: t("settings.deleteMode.systemTrash") },
+                { value: "permanent", label: t("settings.deleteMode.permanent") },
+              ].map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => handleDeleteModeChange(value)}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: 6,
+                    border: "1px solid var(--border)",
+                    background:
+                      settings.deleteMode === value
+                        ? "var(--link-color)"
+                        : "var(--bg-primary)",
+                    color:
+                      settings.deleteMode === value ? "white" : "var(--text-primary)",
+                    cursor: "pointer",
+                    fontSize: 13,
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {settings.deleteMode === "trash" && (
+            <div style={{ ...rowStyle, borderBottom: "none" }}>
+              <div>
+                <span style={labelStyle}>{t("settings.trashRetention.label")}</span>
+                <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 2 }}>
+                  {t("settings.trashRetention.hint")}
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <input
+                  type="number"
+                  min={1}
+                  value={settings.trashRetentionDays ?? 30}
+                  onChange={(e) => handleTrashRetentionChange(e.target.value)}
+                  style={{
+                    width: 64,
+                    padding: "4px 8px",
+                    borderRadius: 6,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg-primary)",
+                    color: "var(--text-primary)",
+                    fontSize: 14,
+                    textAlign: "center",
+                  }}
+                />
+                <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t("common.days")}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* License Section */}
         <div style={sectionStyle}>
           <h3 style={{ marginBottom: 12 }}>授权</h3>
@@ -675,6 +765,73 @@ const Settings = () => {
             }}
           >
             <Paywall onClose={() => setPaywallOpen(false)} compact />
+          </div>
+        )}
+
+        {/* Permanent delete warning */}
+        {pendingPermanent && (
+          <div
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setPendingPermanent(false);
+            }}
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(0, 0, 0, 0.6)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1000,
+              padding: "20px",
+            }}
+          >
+            <div
+              style={{
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                padding: 24,
+                maxWidth: 420,
+              }}
+            >
+              <div style={{ fontSize: 15, lineHeight: 1.6, marginBottom: 20, color: "var(--text-primary)" }}>
+                {t("settings.deleteMode.permanentWarning")}
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+                <button
+                  onClick={() => setPendingPermanent(false)}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: 6,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg-primary)",
+                    color: "var(--text-primary)",
+                    cursor: "pointer",
+                    fontSize: 14,
+                  }}
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  onClick={confirmPermanent}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: 6,
+                    border: "none",
+                    background: "#dc2626",
+                    color: "white",
+                    cursor: "pointer",
+                    fontSize: 14,
+                    fontWeight: 500,
+                  }}
+                >
+                  {t("common.confirm")}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -295,6 +295,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const [permissionError, setPermissionError] = useState(null);
   const [searchParams] = useSearchParams();
   const [nodeSpacing, setNodeSpacing] = useState('normal');
+  const [deleteMode, setDeleteMode] = useState('trash');
   const focusNodeId = useMindMapViewStore((s) => s.focusNodeId);
   const setFocusNodeId = useMindMapViewStore((s) => s.setFocusNodeId);
   const loadedNodeIds = useMindMapViewStore((s) => s.loadedNodeIds);
@@ -648,6 +649,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     if (window.api?.getSettings) {
       window.api.getSettings().then((s) => {
         if (s?.nodeSpacing) setNodeSpacing(s.nodeSpacing);
+        if (s?.deleteMode) setDeleteMode(s.deleteMode);
       });
     }
     db.notes.select().then((res) => {
@@ -1225,6 +1227,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           childCount={deleteTarget?.childCount || 0}
           isRootNode={deleteTarget?.isRoot || false}
           requiresChoice={deleteTarget?.requiresChoice ?? true}
+          deleteMode={deleteMode}
           onDeleteEntireTree={() => {
             requestDeleteConfirmation("entire-tree");
           }}

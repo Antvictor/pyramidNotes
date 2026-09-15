@@ -11,6 +11,7 @@ const zhCN = {
     retry: '重试',
     skip: '跳过',
     next: '下一步',
+    days: '天',
   },
   navigation: {
     mindMap: '思维导图',
@@ -83,10 +84,11 @@ const zhCN = {
       description_one: '节点“{{nodeName}}”包含 {{count}} 个子节点，请选择删除方式：',
       description_other: '节点“{{nodeName}}”包含 {{count}} 个子节点，请选择删除方式：',
       deleteLeafDescription: '删除当前节点“{{nodeName}}”，是否确认？',
-      deleteAll: '删除所有节点',
+      deleteAll: '删除所有子节点（根节点保留）',
       deleteSubtree: '删除整个子树',
-      deleteRootDescription: '删除根节点“{{nodeName}}”及其所有子节点，此操作不可撤销。',
-      deleteSubtreeDescription: '删除“{{nodeName}}”及其所有子节点，此操作不可撤销。',
+      deleteRootDescription: '删除根节点「{{nodeName}}」下的所有子节点，根节点保留。',
+      deleteSubtreeDescription: '删除「{{nodeName}}」及其所有子节点。',
+      deleteSubtreeDescriptionPermanent: '删除「{{nodeName}}」及其所有子节点，此操作不可撤销。',
       deleteParentOnly: '仅删除“{{nodeName}}”',
       promoteChildren: '子节点将提升到上一级。',
       confirmSubtree: '删除当前节点“{{nodeName}}”及其子节点，是否确认？',
@@ -106,6 +108,7 @@ const zhCN = {
     sections: {
       basic: '基本信息',
       systemSettings: '系统设置',
+      deleteSettings: '删除设置',
       other: '其他',
     },
     theme: {
@@ -117,6 +120,17 @@ const zhCN = {
     storage: {
       label: '数据存储',
       change: '修改',
+    },
+    deleteMode: {
+      label: '删除方式',
+      trash: '回收站',
+      systemTrash: '系统回收站',
+      permanent: '彻底删除',
+      permanentWarning: '使用该设置，将会彻底删除文件，无法复原，请慎重选择！',
+    },
+    trashRetention: {
+      label: '回收保存时间',
+      hint: '回收站中的条目超过该天数将被彻底删除',
     },
     version: '应用版本',
     autoUpdate: '自动更新',

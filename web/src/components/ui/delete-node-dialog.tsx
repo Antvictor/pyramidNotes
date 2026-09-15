@@ -17,6 +17,7 @@ export function DeleteNodeDialog({
   childCount,
   isRootNode,
   requiresChoice = true,
+  deleteMode = "trash",
   onDeleteEntireTree,
   onDeleteParentOnly,
   onCancel,
@@ -76,7 +77,12 @@ export function DeleteNodeDialog({
                 <div className="text-sm text-muted-foreground">
                   {isRootNode
                     ? t("dialogs.deleteNode.deleteRootDescription", { nodeName })
-                    : t("dialogs.deleteNode.deleteSubtreeDescription", { nodeName })}
+                    : t(
+                        deleteMode === "permanent"
+                          ? "dialogs.deleteNode.deleteSubtreeDescriptionPermanent"
+                          : "dialogs.deleteNode.deleteSubtreeDescription",
+                        { nodeName },
+                      )}
                 </div>
               </div>
             </label>
