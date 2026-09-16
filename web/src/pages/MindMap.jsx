@@ -47,6 +47,24 @@ const SPACING_PRESETS = {
   loose:    { gapBase: 100, hGap: 80 },
 };
 
+// 跨 MindMap 卸载保留的首帧缓存（仅用于快速恢复显示；正确性始终以挂载时的 DB 刷新为准）
+let notesDataCache = null;       // 上次的节点行
+let measuredSizesCache = null;   // 各节点实测尺寸 Map
+let viewportCache = null;        // ReactFlow 视口 { x, y, zoom }
+
+// 只有会改变脑图布局的字段变化才算“图变了”；
+// content / last_up_time 变化（例如在编辑器里改正文）不应触发重排
+function sameGraph(a, b) {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  const byId = new Map(a.map((n) => [n.id, n]));
+  for (const n of b) {
+    const p = byId.get(n.id);
+    if (!p || p.top !== n.top || p.left !== n.left || p.name !== n.name) return false;
+  }
+  return true;
+}
+
 /**
  * 动态树布局（按子树宽度分配 X），避免分支多时互相遮盖。
  *
@@ -208,7 +226,7 @@ function countDescendants(nodeId, nodeMap) {
 }
 
 // ReactFlow 测量完成后用实测尺寸重新布局
-function LayoutOnMeasured({ nodeSpacing, displayedNotes, focusNodeId, setNodes, measuredSizesRef }) {
+function LayoutOnMeasured({ nodeSpacing, displayedNotes, focusNodeId, setNodes }) {
   const { getNodes } = useReactFlow();
   const nodesInitialized = useNodesInitialized({ includeHiddenNodes: false });
   const retryRef = useRef(0);
@@ -246,7 +264,7 @@ function LayoutOnMeasured({ nodeSpacing, displayedNotes, focusNodeId, setNodes, 
       if (!rootId) return;
 
       // 缓存实测尺寸，供主布局复用（两次布局结果一致）
-      if (measuredSizesRef) measuredSizesRef.current = nodeSizes;
+      measuredSizesCache = nodeSizes;
 
       const preset = SPACING_PRESETS[nodeSpacing] || SPACING_PRESETS.normal;
       const posMap = layoutTree(displayedNotes, rootId, 50, 50, nodeSizes, preset);
@@ -441,8 +459,6 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const clickTimerRef = useRef(null);
   const lastClickRef = useRef(null);
   const creatingRootRef = useRef(false);
-  // 上一轮 ReactFlow 实测的节点尺寸；首屏为 null，用估算布局
-  const measuredNodeSizesRef = useRef(null);
 
   // 节点快捷键处理
   useEffect(() => {
@@ -661,9 +677,11 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
         if (s?.deleteMode) setDeleteMode(s.deleteMode);
       });
     }
+    // 首帧：若有缓存先立即渲染，避免返回脑图时的空白闪屏
+    if (notesDataCache) setNotesData(notesDataCache);
+
     db.notes.select().then((res) => {
       // 调用electron api，扫描数据目录下的markdown，并根据yaml头构建节点数据，然后存入sqlite; 最后从sqlite读取节点数据进行展示
-      console.log("res:", res);
       if (!res || res.length === 0) {
         // 新建根节点
         const rootNode = {
@@ -678,10 +696,18 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
         // 同时新建markdown文件, 保存yaml数据，title;left;top等元信息
         saveNode(rootNode);
         setNotesData([rootNode]);
-      } else { setNotesData(res); }
+      } else if (!sameGraph(notesDataCache, res)) {
+        // 结构有变化（如编辑页新增/删除了节点）才更新，避免无谓重排
+        setNotesData(res);
+      }
     })
 
   }, []);
+
+  // notesData 变更时同步缓存，供下次挂载首帧使用
+  useEffect(() => {
+    if (notesData) notesDataCache = notesData;
+  }, [notesData]);
 
   // Listen for settings changes (storagePath change)
   useEffect(() => {
@@ -779,7 +805,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     const preset = SPACING_PRESETS[nodeSpacing] || SPACING_PRESETS.normal;
     // 复用上一轮实测尺寸，使本布局与 LayoutOnMeasured 的结果一致，
     // 避免“估算布局 → 实测再重排”造成的二次跳动
-    const posMap = layoutTree(displayedNotes, rootId, 50, 50, measuredNodeSizesRef.current, preset);
+    const posMap = layoutTree(displayedNotes, rootId, 50, 50, measuredSizesCache, preset);
 
     const displayedIds = new Set(displayedNotes.map(n => n.id));
     const descCountMap = new Map();
@@ -1003,8 +1029,9 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   };
 
   // ESC 返回时：组件挂载且 selectedNode 已存在，居中一次
+  // 若已恢复上次视口，则跳过，避免返回时又平移一下
   useEffect(() => {
-    if (selectedNode) {
+    if (selectedNode && !viewportCache) {
       const timer = setTimeout(() => requestCenter(), 100);
       return () => clearTimeout(timer);
     }
@@ -1049,7 +1076,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       <ReactFlowProvider>
         <CenterOnSelected />
         <RevealOnPending />
-        <LayoutOnMeasured nodeSpacing={nodeSpacing} displayedNotes={displayedNotes} focusNodeId={focusNodeId} setNodes={setNodes} measuredSizesRef={measuredNodeSizesRef} />
+        <LayoutOnMeasured nodeSpacing={nodeSpacing} displayedNotes={displayedNotes} focusNodeId={focusNodeId} setNodes={setNodes} />
         <div style={{
           display: 'flex', alignItems: 'center', gap: 4,
           padding: '6px 12px', fontSize: 13,
@@ -1149,7 +1176,9 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           nodeTypes={memoNodeTypes}
           nodesConnectable={false}
           defaultEdgeOptions={{ type: 'smoothstep', selectable: false, style: { stroke: 'var(--link-color)', strokeWidth: 2 } }}
-          fitView
+          defaultViewport={viewportCache || undefined}
+          fitView={!viewportCache}
+          onMoveEnd={(e, vp) => { viewportCache = vp; }}
           onPaneContextMenu={onPaneContextMenu}
           onNodeContextMenu={onNodeContextMenu}
           nodesDraggable={false} // ✅ 禁止节点拖动
