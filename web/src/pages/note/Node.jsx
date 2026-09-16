@@ -141,7 +141,11 @@ const Note = ({ shortcuts }) => {
   };
 
   const handleSelectSearchResult = ({ id: targetId, name: targetName }) => {
-    navigate(`/note/${encodeURIComponent(targetId)}/${encodeURIComponent(targetName)}`);
+    // 带上来源笔记（与引用跳转一致），这样 ESC 是返回来源笔记而不是 MindMap
+    navigate(
+      `/note/${encodeURIComponent(targetId)}/${encodeURIComponent(targetName)}`,
+      { state: { fromNote: id } },
+    );
   };
 
   const handleNewChild = async (nodeName) => {

@@ -180,6 +180,12 @@ const en = {
       global: 'Global',
     },
     locked: 'Locked',
+    unbound: 'Unbound',
+    conflict: {
+      title: 'Shortcut conflict',
+      message: '"{{key}}" is already used by "{{action}}". Confirming will clear the "{{action}}" binding.',
+      lockedMessage: '"{{key}}" is used by the locked action "{{action}}" and cannot be reassigned.',
+    },
     reset: 'Reset to defaults',
     save: 'Save',
     actions: {

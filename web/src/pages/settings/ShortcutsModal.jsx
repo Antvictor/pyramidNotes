@@ -21,6 +21,7 @@ export default function ShortcutsModal({ open, onOpenChange }) {
   const [shortcuts, setShortcuts] = useState(null);
   const [editingKey, setEditingKey] = useState(null);
   const [activeTab, setActiveTab] = useState("node");
+  const [conflict, setConflict] = useState(null);
 
   // Load shortcuts from settings on mount
   useEffect(() => {
@@ -58,14 +59,47 @@ export default function ShortcutsModal({ open, onOpenChange }) {
     setEditingKey(`${category}.${key}`);
   };
 
-  const handleShortcutChange = (category, key, value) => {
+  // 查找与 value 冲突的其它绑定（跨 node / note / global 三类）
+  const findConflict = (category, key, value) => {
+    if (!value) return null;
+    for (const cat of ["node", "note", "global"]) {
+      for (const [k, v] of Object.entries(shortcuts?.[cat] || {})) {
+        if (cat === category && k === key) continue;
+        if (v === value) return { category: cat, key: k, locked: LOCKED_SHORTCUTS.includes(k) };
+      }
+    }
+    return null;
+  };
+
+  const applyShortcut = (category, key, value) => {
     setShortcuts((prev) => ({
       ...prev,
-      [category]: {
-        ...prev[category],
-        [key]: value,
-      },
+      [category]: { ...prev[category], [key]: value },
     }));
+  };
+
+  const handleShortcutChange = (category, key, value) => {
+    const other = findConflict(category, key, value);
+    if (other) {
+      // 交给冲突确认弹窗，先不写入
+      setConflict({ category, key, value, other });
+      return;
+    }
+    applyShortcut(category, key, value);
+  };
+
+  const confirmConflict = () => {
+    if (!conflict) return;
+    const { category, key, value, other } = conflict;
+    // 锁定项不可被清空 —— 只提示，不分配
+    if (!other.locked) {
+      setShortcuts((prev) => ({
+        ...prev,
+        [other.category]: { ...prev[other.category], [other.key]: "" },
+        [category]: { ...prev[category], [key]: value },
+      }));
+    }
+    setConflict(null);
   };
 
   const handleKeyDown = (e, category, key) => {
@@ -122,7 +156,7 @@ export default function ShortcutsModal({ open, onOpenChange }) {
             fontSize: 13,
           }}
           value={value}
-          onChange={(e) => handleShortcutChange(category, key, e.target.value)}
+          onChange={(e) => applyShortcut(category, key, e.target.value)}
           onBlur={() => setEditingKey(null)}
           onKeyDown={(e) => handleKeyDown(e, category, key)}
         />
@@ -136,11 +170,11 @@ export default function ShortcutsModal({ open, onOpenChange }) {
           padding: "4px 8px",
           borderRadius: 4,
           background: "var(--bg-secondary)",
-          color: "var(--text-primary)",
+          color: value ? "var(--text-primary)" : "var(--text-secondary)",
         }}
         onClick={() => handleEditShortcut(category, key)}
       >
-        {value}
+        {value || t("shortcuts.unbound")}
       </span>
     );
   };
@@ -165,6 +199,11 @@ export default function ShortcutsModal({ open, onOpenChange }) {
     search: t("shortcuts.actions.search"),
     searchFullText: t("shortcuts.actions.searchFullText"),
     backToMap: t("shortcuts.actions.backToMap"),
+  };
+
+  const labelFor = (category, key) => {
+    const maps = { node: nodeLabels, note: noteLabels, global: globalLabels };
+    return maps[category]?.[key] || key;
   };
 
   if (!shortcuts) return null;
@@ -261,6 +300,51 @@ export default function ShortcutsModal({ open, onOpenChange }) {
           </Button>
           <Button onClick={handleSave}>{t("shortcuts.save")}</Button>
         </div>
+
+        {conflict && (
+          <div
+            onClick={(e) => { if (e.target === e.currentTarget) setConflict(null); }}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0, 0, 0, 0.6)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1100,
+              padding: 20,
+            }}
+          >
+            <div
+              style={{
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                padding: 24,
+                maxWidth: 420,
+              }}
+            >
+              <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: "var(--text-primary)" }}>
+                {t("shortcuts.conflict.title")}
+              </div>
+              <div style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 20, color: "var(--text-primary)" }}>
+                {t(
+                  conflict.other.locked ? "shortcuts.conflict.lockedMessage" : "shortcuts.conflict.message",
+                  {
+                    key: conflict.value,
+                    action: labelFor(conflict.other.category, conflict.other.key),
+                  },
+                )}
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+                <Button variant="outline" onClick={() => setConflict(null)}>
+                  {t("common.cancel")}
+                </Button>
+                <Button onClick={confirmConflict}>{t("common.confirm")}</Button>
+              </div>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

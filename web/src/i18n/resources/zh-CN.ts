@@ -180,6 +180,12 @@ const zhCN = {
       global: '全局',
     },
     locked: '锁定',
+    unbound: '未绑定',
+    conflict: {
+      title: '快捷键冲突',
+      message: '「{{key}}」已被「{{action}}」占用。确认后将清空「{{action}}」的绑定。',
+      lockedMessage: '「{{key}}」已被锁定项「{{action}}」占用，无法分配。',
+    },
     reset: '重置为默认',
     save: '保存',
     actions: {
