@@ -1148,6 +1148,8 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
             onClick={() => {
               if (selectedNode) {
                 setFocusNodeId(selectedNode.id);
+                // 聚焦后整棵树会以该节点为重根重排，需把视口跟过去，否则节点会移出屏幕
+                centerWhenRendered();
               }
             }}
             disabled={!selectedNode || selectedNode.id === focusNodeId}
@@ -1166,7 +1168,11 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
             {t("nodeMenu.focusMode")}
           </button>
           <button
-            onClick={() => setFocusNodeId("1")}
+            onClick={() => {
+              setFocusNodeId("1");
+              // 回到全局同理：重排后把视口跟到当前选中节点
+              centerWhenRendered();
+            }}
             disabled={focusNodeId === "1"}
             style={{
               padding: '6px 12px',
