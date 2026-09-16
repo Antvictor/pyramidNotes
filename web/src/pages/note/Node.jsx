@@ -170,11 +170,12 @@ const Note = ({ shortcuts }) => {
     if (!shortcuts) return;
     const handler = (e) => {
       if (matchShortcut(e, shortcuts.global?.backToMap)) {
-        e.preventDefault();
-        // 有弹窗打开 → 让路，交给弹窗自己处理 Esc（通用弹窗与抽成子节点弹窗都带 role=dialog）。
-        // 用 DOM 判断而非 state：弹窗会先于本监听（捕获阶段）关闭自己并重渲染，读 state 会误判。
+        // 有弹窗/浮层打开 → 让路，交给它自己处理 Esc。
+        // ⚠️ 这里**不能** preventDefault：Radix 的 DismissableLayer 会跳过
+        //    「已 defaultPrevented」的 Escape，导致通用弹窗关不掉。
         if (isAnyModalOpen()) return;
-        // 兜底：不带 role=dialog 的旧弹窗，仍按各自 state 关闭
+        e.preventDefault();
+        // 兜底：不带 role=dialog / 未认领 Esc 的旧弹窗，按各自 state 关闭
         if (searchOpen) { setSearchOpen(false); return; }
         if (newNodePromptVisible) { setNewNodePromptVisible(false); return; }
         if (location.state?.fromNote) {
