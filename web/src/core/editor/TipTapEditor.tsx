@@ -874,7 +874,11 @@ export default function TipTapEditor({
     for (const binding of keyBindingsRef.current) {
       if (matchEditorShortcut(event, binding.key)) {
         event.preventDefault();
-        if (!editor || editor.isDestroyed) return true;
+        // destroy() 会把 commandManager 置 null（@tiptap/core），此时 editor.chain() 会崩：
+        //   chain() { return this.commandManager.chain() }  → 读 null 的 .chain
+        // ⚠️ 不要改用 editor.isDestroyed：它读 editorView.isDestroyed，
+        //    而 prosemirror 的实现是 `docView == null`，对存活编辑器也可能为真 → 会把所有编辑器快捷键挡死。
+        if (!editor || !editor.commandManager) return true;
         switch (binding.action) {
           case "bold":
             editor.chain().focus().toggleBold().run();
