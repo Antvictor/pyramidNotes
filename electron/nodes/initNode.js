@@ -1,6 +1,7 @@
 const { getDb } = require("../db/db.cjs");
 const { getDataPath } = require("../ipc/userPath.cjs");
 const { purgeExpiredTrash } = require("../ipc/trash.cjs");
+const { sweepUnreferencedAttachments } = require("../ipc/attachment.cjs");
 const fs = require('fs');
 const path = require("path");
 const matter = require('gray-matter');
@@ -61,6 +62,10 @@ async function initNode() {
     // 保留期清理（回收站中超过 trashRetentionDays 的条目彻底删除）
     const { purged } = purgeExpiredTrash();
     console.log('Purged expired trash entries:', purged);
+
+    // 清理没有任何笔记引用的图片（含编辑器里删掉的图与历史孤儿）
+    const { removed } = sweepUnreferencedAttachments();
+    console.log('Swept unreferenced attachments:', removed);
 
     console.log('Incremental sync completed');
 }
