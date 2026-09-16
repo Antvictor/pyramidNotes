@@ -24,7 +24,7 @@ import "@xyflow/react/dist/style.css";
 // 自定义节点组件
 import NodeCustom from "./note/NodeCustom";
 import db from "./db/db"
-import { computeAncestorChain } from "./treeUtils";
+import { computeAncestorChain, collectExpandedChildren } from "./treeUtils";
 import { useMindMapViewStore } from "@/stores/mindMapViewStore";
 import ContextMenu from "./note/ContextMenu/ContextMenu";
 import OpenPrompt from "./commons/OpenPrompt";
@@ -345,6 +345,22 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     });
     return nodeMap;
   }, [notesData]);
+
+  // 不变量：已展开的节点，其子节点必须都已加载，
+  // 否则会出现“显示为已展开、却看不到子节点/兄弟”的矛盾状态
+  useEffect(() => {
+    if (!allNotesNodeMap) return;
+    const needed = collectExpandedChildren(expandedNodeIds, allNotesNodeMap);
+    if (!needed.size) return;
+    setLoadedNodeIds((prev) => {
+      let changed = false;
+      const next = new Set(prev);
+      for (const cid of needed) {
+        if (!next.has(cid)) { next.add(cid); changed = true; }
+      }
+      return changed ? next : prev;
+    });
+  }, [expandedNodeIds, allNotesNodeMap, setLoadedNodeIds]);
 
   const expandOneLevel = useCallback((nodeId) => {
     if (!allNotesNodeMap) return;
