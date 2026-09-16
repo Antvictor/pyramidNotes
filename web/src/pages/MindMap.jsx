@@ -315,6 +315,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const [nodeId, setNodeId] = useState();
   const [title, setTitle] = useState();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchTab, setSearchTab] = useState("node");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
   const [moveSource, setMoveSource] = useState(null);
@@ -481,13 +482,21 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     if (!shortcuts) return;
     const handler = (e) => {
       if (!shortcuts) return;
-      if (visible || searchOpen || moveSource) return;
-      // Ctrl+K - 搜索 (no selection required)
+      // Ctrl+K / Ctrl+Shift+K：未打开则按对应 tab 打开；已打开则切到该 tab。
+      // 必须放在下面的 searchOpen 守卫之前，否则"已打开→切 tab"永远不会触发
       if (matchKey(shortcuts.global?.search, e)) {
         e.preventDefault();
         setSearchOpen(true);
+        setSearchTab("node");
         return;
       }
+      if (matchKey(shortcuts.global?.searchFullText, e)) {
+        e.preventDefault();
+        setSearchOpen(true);
+        setSearchTab("fulltext");
+        return;
+      }
+      if (visible || searchOpen || moveSource) return;
       // Ctrl+N - 新建节点 (no guard needed - works without selection)
       if (matchKey(shortcuts.node?.newNode, e)) {
         e.preventDefault();
@@ -1247,6 +1256,8 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
         </ReactFlow>
         <NodeSearchDialog
           open={searchOpen}
+          activeTab={searchTab}
+          onActiveTabChange={setSearchTab}
           scopeNodeIds={
             focusNodeId !== '1' && allNotesNodeMap
               ? new Set(getDescendantIdsSync(focusNodeId, allNotesNodeMap))

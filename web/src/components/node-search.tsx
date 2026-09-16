@@ -51,6 +51,9 @@ export interface NodeSearchProps {
   onSelectNode?: (result: NodeSearchResult) => void | undefined;
   open?: boolean | undefined;
   onOpenChange?: ((open: boolean) => void) | undefined;
+  // 受控 tab（不传则退回内部 state）；父组件据此实现「快捷键开/切 tab」
+  activeTab?: "node" | "fulltext";
+  onActiveTabChange?: (tab: "node" | "fulltext") => void;
 }
 
 export function NodeSearchInternal({
@@ -59,9 +62,19 @@ export function NodeSearchInternal({
   open,
   onOpenChange,
   scopeNodeIds,
+  activeTab: activeTabProp,
+  onActiveTabChange,
 }: NodeSearchProps) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"node" | "fulltext">("node");
+  const [innerTab, setInnerTab] = useState<"node" | "fulltext">("node");
+  const activeTab = activeTabProp ?? innerTab;
+  const setActiveTab = useCallback(
+    (value: "node" | "fulltext") => {
+      setInnerTab(value);
+      onActiveTabChange?.(value);
+    },
+    [onActiveTabChange],
+  );
 
   // 搜索弹窗打开时自动聚焦输入框
   useEffect(() => {
@@ -282,6 +295,8 @@ export interface NodeSearchDialogProps {
   open?: boolean | undefined;
   onOpenChange?: ((open: boolean) => void) | undefined;
   title?: string;
+  activeTab?: "node" | "fulltext";
+  onActiveTabChange?: (tab: "node" | "fulltext") => void;
 }
 
 export function NodeSearchDialog({
@@ -290,6 +305,8 @@ export function NodeSearchDialog({
   scopeNodeIds,
   open,
   onOpenChange,
+  activeTab,
+  onActiveTabChange,
 }: NodeSearchDialogProps) {
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange} showCloseButton={false}>
@@ -299,6 +316,8 @@ export function NodeSearchDialog({
         scopeNodeIds={scopeNodeIds}
         open={open}
         onOpenChange={onOpenChange}
+        activeTab={activeTab}
+        onActiveTabChange={onActiveTabChange}
       />
     </CommandDialog>
   );

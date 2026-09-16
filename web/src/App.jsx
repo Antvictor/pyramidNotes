@@ -15,7 +15,6 @@ function AppContent() {
   const { licenseState } = useLicense();
   const [selectedNode, setSelectedNode] = useState(null);
   const [shortcuts, setShortcuts] = useState(null);
-  const [searchOpen, setSearchOpen] = useState(false);
 
   // Load settings on mount
   useEffect(() => {
@@ -89,8 +88,6 @@ function AppContent() {
                   setSelectedNode={setSelectedNode}
                   clearSelectedNode={clearSelectedNode}
                   shortcuts={shortcuts}
-                  searchOpen={searchOpen}
-                  setSearchOpen={setSearchOpen}
                 />
               } />
               <Route path="/settings" element={<Settings shortcuts={shortcuts} />} />
@@ -106,7 +103,7 @@ function AppContent() {
 }
 
 // Wrapper for MindMap that handles shortcuts
-function MindMapWrapper({ selectedNode, setSelectedNode, clearSelectedNode, shortcuts, searchOpen, setSearchOpen }) {
+function MindMapWrapper({ selectedNode, setSelectedNode, clearSelectedNode, shortcuts }) {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -115,42 +112,20 @@ function MindMapWrapper({ selectedNode, setSelectedNode, clearSelectedNode, shor
     if (!shortcuts) return;
 
     const handler = (e) => {
-      // Global search shortcut works everywhere
-      if (e.ctrlKey || e.metaKey) {
-        if (e.key === 'k' || e.key === 'K') {
-          e.preventDefault();
-          if (location.pathname === '/' || location.pathname === '') {
-            setSearchOpen(true);
-          } else if (location.pathname.startsWith('/note/')) {
-            setSearchOpen(true);
-          }
-          return;
-        }
-      }
-
       // Escape key
       if (e.key === 'Escape') {
-        if (searchOpen) {
-          setSearchOpen(false);
-        } else if (location.pathname.startsWith('/note/')) {
+        if (location.pathname.startsWith('/note/')) {
           navigate('/');
         } else {
           clearSelectedNode();
         }
         return;
       }
-
-      // Only process node shortcuts if shortcuts is loaded
-      if (!shortcuts) return;
-
-      // MindMap page shortcuts - they work but the actual operations
-      // are triggered by passing callbacks to MindMap component
-      // For now, we let MindMap handle its own operations internally
     };
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [selectedNode, shortcuts, location.pathname, searchOpen, navigate, setSearchOpen, clearSelectedNode]);
+  }, [selectedNode, shortcuts, location.pathname, navigate, clearSelectedNode]);
 
   return (
     <MindMap
@@ -158,8 +133,6 @@ function MindMapWrapper({ selectedNode, setSelectedNode, clearSelectedNode, shor
       setSelectedNode={setSelectedNode}
       clearSelectedNode={clearSelectedNode}
       shortcuts={shortcuts}
-      searchOpen={searchOpen}
-      setSearchOpen={setSearchOpen}
     />
   );
 }

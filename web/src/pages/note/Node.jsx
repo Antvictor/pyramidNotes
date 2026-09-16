@@ -28,6 +28,7 @@ const Note = ({ shortcuts }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchTab, setSearchTab] = useState("node");
   const [newNodePromptVisible, setNewNodePromptVisible] = useState(false);
 
   // Build keyBindings from shortcuts
@@ -167,12 +168,21 @@ const Note = ({ shortcuts }) => {
         }
         return;
       }
-      if (searchOpen || newNodePromptVisible) return;
+      // Ctrl+K / Ctrl+Shift+K：未打开则按对应 tab 打开；已打开则切到该 tab。
+      // 必须在下面的守卫之前，否则"已打开→切 tab"不会触发
       if (matchShortcut(e, shortcuts.global?.search)) {
         e.preventDefault();
         setSearchOpen(true);
+        setSearchTab("node");
         return;
       }
+      if (matchShortcut(e, shortcuts.global?.searchFullText)) {
+        e.preventDefault();
+        setSearchOpen(true);
+        setSearchTab("fulltext");
+        return;
+      }
+      if (searchOpen || newNodePromptVisible) return;
       if (matchShortcut(e, shortcuts.node?.newNode)) {
         e.preventDefault();
         setNewNodePromptVisible(true);
@@ -225,6 +235,8 @@ const Note = ({ shortcuts }) => {
         <NodeSearchDialog
           open={searchOpen}
           onOpenChange={setSearchOpen}
+          activeTab={searchTab}
+          onActiveTabChange={setSearchTab}
           onSelectNode={handleSelectSearchResult}
         />
         <OpenPrompt
