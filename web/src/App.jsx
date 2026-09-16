@@ -11,35 +11,6 @@ import { LicenseProvider, useLicense } from "./contexts/LicenseContext";
 import TutorialController from "./components/tutorial/TutorialController";
 import { initializeI18n } from "./i18n";
 
-const DEFAULT_SHORTCUTS = {
-  node: {
-    newNode: "Ctrl+N",
-    renameNode: "F2",
-    deleteNode: "Delete",
-  },
-  note: {
-    bold: "Ctrl+B",
-    italic: "Ctrl+I",
-    heading1: "Ctrl+1",
-    heading2: "Ctrl+2",
-    extractNode: "Ctrl+Shift+M",
-    find: "Ctrl+F",
-    replace: "Ctrl+R",
-  },
-  global: {
-    search: "Ctrl+K",
-    backToMap: "Escape",
-  },
-};
-
-function mergeShortcutsWithDefaults(shortcuts) {
-  return {
-    node: { ...DEFAULT_SHORTCUTS.node, ...(shortcuts?.node || {}) },
-    note: { ...DEFAULT_SHORTCUTS.note, ...(shortcuts?.note || {}) },
-    global: { ...DEFAULT_SHORTCUTS.global, ...(shortcuts?.global || {}) },
-  };
-}
-
 function AppContent() {
   const { licenseState } = useLicense();
   const [selectedNode, setSelectedNode] = useState(null);
@@ -50,7 +21,7 @@ function AppContent() {
   useEffect(() => {
     const loadSettings = async () => {
       const settings = await window.api.getSettings();
-      setShortcuts(mergeShortcutsWithDefaults(settings.shortcuts));
+      setShortcuts(settings.shortcuts);
     };
     loadSettings();
   }, []);
@@ -59,7 +30,7 @@ function AppContent() {
   useEffect(() => {
     if (!window.api?.onSettingsChanged) return undefined;
     return window.api.onSettingsChanged((newSettings) => {
-      setShortcuts(mergeShortcutsWithDefaults(newSettings.shortcuts));
+      setShortcuts(newSettings.shortcuts);
       void initializeI18n(newSettings.language, navigator.languages);
     });
   }, []);

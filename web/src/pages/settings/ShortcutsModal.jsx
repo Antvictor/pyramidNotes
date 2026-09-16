@@ -14,40 +14,11 @@ import {
 } from "@/components/ui/tabs";
 import { useTranslation } from "react-i18next";
 
-const DEFAULT_SHORTCUTS = {
-  node: {
-    newNode: "Ctrl+N",
-    renameNode: "F2",
-    deleteNode: "Delete",
-  },
-  note: {
-    bold: "Ctrl+B",
-    italic: "Ctrl+I",
-    heading1: "Ctrl+1",
-    heading2: "Ctrl+2",
-    extractNode: "Ctrl+Shift+M",
-    find: "Ctrl+F",
-    replace: "Ctrl+R",
-  },
-  global: {
-    search: "Ctrl+K",
-    backToMap: "Escape",
-  },
-};
-
 const LOCKED_SHORTCUTS = ["backToMap"];
-
-function mergeShortcutsWithDefaults(shortcuts) {
-  return {
-    node: { ...DEFAULT_SHORTCUTS.node, ...(shortcuts?.node || {}) },
-    note: { ...DEFAULT_SHORTCUTS.note, ...(shortcuts?.note || {}) },
-    global: { ...DEFAULT_SHORTCUTS.global, ...(shortcuts?.global || {}) },
-  };
-}
 
 export default function ShortcutsModal({ open, onOpenChange }) {
   const { t } = useTranslation();
-  const [shortcuts, setShortcuts] = useState(DEFAULT_SHORTCUTS);
+  const [shortcuts, setShortcuts] = useState(null);
   const [editingKey, setEditingKey] = useState(null);
   const [activeTab, setActiveTab] = useState("node");
 
@@ -61,18 +32,14 @@ export default function ShortcutsModal({ open, onOpenChange }) {
     if (!window.api?.onSettingsChanged) return undefined;
     return window.api.onSettingsChanged((newSettings) => {
       if (newSettings.shortcuts) {
-        setShortcuts(mergeShortcutsWithDefaults(newSettings.shortcuts));
+        setShortcuts(newSettings.shortcuts);
       }
     });
   }, []);
 
   const loadShortcuts = async () => {
     const settings = await window.api.getSettings();
-    if (settings.shortcuts) {
-      setShortcuts(mergeShortcutsWithDefaults(settings.shortcuts));
-    } else {
-      setShortcuts(DEFAULT_SHORTCUTS);
-    }
+    setShortcuts(settings.shortcuts || null);
   };
 
   const handleSave = async () => {
@@ -80,8 +47,10 @@ export default function ShortcutsModal({ open, onOpenChange }) {
     onOpenChange(false);
   };
 
-  const handleReset = () => {
-    setShortcuts(DEFAULT_SHORTCUTS);
+  const handleReset = async () => {
+    // 前端已不持有默认值：重置 = 清空存储的 shortcuts，electron 侧会与默认值深合并
+    await window.api.saveSettings({ shortcuts: {} });
+    await loadShortcuts();
   };
 
   const handleEditShortcut = (category, key) => {
@@ -194,8 +163,11 @@ export default function ShortcutsModal({ open, onOpenChange }) {
 
   const globalLabels = {
     search: t("shortcuts.actions.search"),
+    searchFullText: t("shortcuts.actions.searchFullText"),
     backToMap: t("shortcuts.actions.backToMap"),
   };
+
+  if (!shortcuts) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

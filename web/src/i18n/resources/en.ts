@@ -191,6 +191,7 @@ const en = {
       find: 'Find',
       replace: 'Replace',
       search: 'Search',
+      searchFullText: 'Search (full text)',
       backToMap: 'Back to mind map',
     },
   },

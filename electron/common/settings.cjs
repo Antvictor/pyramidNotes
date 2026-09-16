@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS = {
     },
     global: {
       search: 'Ctrl+K',
+      searchFullText: 'Ctrl+Shift+K',
       backToMap: 'Escape',
     },
   },
@@ -32,6 +33,18 @@ const DEFAULT_SETTINGS = {
   deleteMode: 'trash',        // 'trash' | 'systemTrash' | 'permanent'
   trashRetentionDays: 30,
 };
+
+// 把 shortcuts 与默认值深合并（三段分别展开），保证调用方拿到的永远是完整对象。
+// 前端不再持有默认值副本，这里是唯一权威来源。
+function mergeShortcuts(incoming) {
+  const d = DEFAULT_SETTINGS.shortcuts;
+  const s = incoming || {};
+  return {
+    node: { ...d.node, ...(s.node || {}) },
+    note: { ...d.note, ...(s.note || {}) },
+    global: { ...d.global, ...(s.global || {}) },
+  };
+}
 
 let cachedSettings = null;
 
@@ -45,7 +58,7 @@ async function loadSettings() {
   try {
     const data = await fsPromises.readFile(settingsPath, 'utf-8');
     const parsed = JSON.parse(data);
-    cachedSettings = { ...DEFAULT_SETTINGS, ...parsed };
+    cachedSettings = { ...DEFAULT_SETTINGS, ...parsed, shortcuts: mergeShortcuts(parsed.shortcuts) };
     return cachedSettings;
   } catch (error) {
     if (error.code === 'ENOENT') {
@@ -58,6 +71,8 @@ async function loadSettings() {
 }
 
 async function saveSettings(settings) {
+  // 归一化 shortcuts，保证 getSettings() 立刻返回完整对象（例如「重置」传 {}）
+  const normalized = { ...settings, shortcuts: mergeShortcuts(settings.shortcuts) };
   const settingsPath = getSettingsPath();
   try {
     // Ensure parent directory exists before writing
@@ -65,8 +80,8 @@ async function saveSettings(settings) {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    await fsPromises.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
-    cachedSettings = settings;
+    await fsPromises.writeFile(settingsPath, JSON.stringify(normalized, null, 2), 'utf-8');
+    cachedSettings = normalized;
     return true;
   } catch (error) {
     console.error('Failed to save settings:', error);
@@ -84,6 +99,7 @@ function setCachedSettings(settings) {
 
 module.exports = {
   DEFAULT_SETTINGS,
+  mergeShortcuts,
   getSettingsPath,
   loadSettings,
   saveSettings,
