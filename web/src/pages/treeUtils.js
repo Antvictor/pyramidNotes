@@ -11,3 +11,14 @@ export function computeAncestorChain(nodeId, displayRootId, nodeMap) {
   }
   return chain;
 }
+
+// 已展开节点的子节点集合（不变量：已展开 ⇒ 子节点必须已加载）
+export function collectExpandedChildren(expandedIds, nodeMap) {
+  const ids = new Set();
+  for (const id of expandedIds) {
+    const node = nodeMap.get(id);
+    if (!node) continue;
+    for (const child of node.children || []) ids.add(child.id);
+  }
+  return ids;
+}
