@@ -7,6 +7,7 @@ import { nanoid } from "nanoid";
 import db from "../db/db";
 import { buildChildNodeRecord } from "./extractionUtils";
 import { NodeSearchDialog } from "@/components/node-search";
+import { isModalOpen } from "@/components/ui/modalStack";
 import OpenPrompt from "../commons/OpenPrompt";
 import { matchShortcut } from "../../hooks/useShortcuts";
 import { computeAncestorChain } from "../treeUtils";
@@ -163,6 +164,11 @@ const Note = ({ shortcuts }) => {
     const handler = (e) => {
       if (matchShortcut(e, shortcuts.global?.backToMap)) {
         e.preventDefault();
+        // 有弹窗打开 → 让路，交给弹窗自己处理 Esc。
+        // 通用 Dialog（含搜索/全文搜索）与编辑器内自制弹窗（抽成子节点）都登记在 modalStack。
+        // 不能只靠下面的 state 判断：弹窗会先于本监听关闭自己，本监听（捕获阶段）读到的已是重置后的 state。
+        if (isModalOpen()) return;
+        // 兜底：未在 modalStack 登记的弹窗，仍按各自 state 关闭
         if (searchOpen) { setSearchOpen(false); return; }
         if (newNodePromptVisible) { setNewNodePromptVisible(false); return; }
         if (location.state?.fromNote) {

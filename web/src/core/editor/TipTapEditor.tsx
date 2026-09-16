@@ -3,6 +3,7 @@ import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, RefObject } from "react";
 import { Extension } from "@tiptap/core";
 import { EditorProvider, Editor, useCurrentEditor } from "@tiptap/react";
+import { useModalRegistration } from "@/components/ui/modalStack";
 import StarterKit from "@tiptap/starter-kit";
 import { Code } from "@tiptap/extension-code";
 import Image from "@tiptap/extension-image";
@@ -638,6 +639,9 @@ export default function TipTapEditor({
   const [suggestion, setSuggestion] = useState<SuggestionState | null>(null);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
   const [extractionDraft, setExtractionDraft] = useState<ExtractionDraft | null>(null);
+  // 抽成子节点对话框是自制 overlay（非通用 Dialog），也要登记"有弹窗打开"，
+  // 否则 Node 的全局 Esc 监听会抢在它之前判定"无弹窗"而回退到上一层。
+  useModalRegistration(!!extractionDraft);
   const [extractionName, setExtractionName] = useState("");
   const [isSubmittingExtraction, setIsSubmittingExtraction] = useState(false);
   const [editorResetKey, setEditorResetKey] = useState(0);
@@ -1135,6 +1139,10 @@ export default function TipTapEditor({
       {extractionDraft && (
         <div
           className="editor-extraction-dialog-backdrop"
+          onKeyDownCapture={(event) => {
+            // 焦点不在输入框时也能关（原先只有输入框自己处理 Esc）
+            if (event.key === "Escape") closeExtractionDialog();
+          }}
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) closeExtractionDialog();
           }}
