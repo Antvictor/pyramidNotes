@@ -1,8 +1,8 @@
 // TipTapEditor.tsx
 import { useEffect, useCallback, useMemo, useRef, useState } from "react";
-import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, RefObject } from "react";
 import { Extension } from "@tiptap/core";
-import { EditorProvider, Editor } from "@tiptap/react";
+import { EditorProvider, Editor, useCurrentEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Code } from "@tiptap/extension-code";
 import Image from "@tiptap/extension-image";
@@ -598,6 +598,20 @@ function focusInternalReference(editor: Editor, refId: string) {
   return true;
 }
 
+// 让 editorRef 始终指向「当前」editor。
+// 只靠 EditorProvider 的 onCreate 不够：main.jsx 用了 <StrictMode>，
+// 开发模式下 editor 会创建/销毁两轮，editorRef 可能停在已被 destroy 的实例上
+// （它的 commandManager 为 null → editor.chain() 抛
+//   "Cannot read properties of null (reading 'chain')"，且所有编辑器快捷键失效）。
+// 从 context 读「当前 editor」才能拿到真正持有当前 view 的那个实例。
+function SyncEditorRef({ editorRef }: { editorRef: RefObject<Editor | null> }) {
+  const { editor } = useCurrentEditor();
+  useEffect(() => {
+    if (editor) editorRef.current = editor;
+  }, [editor, editorRef]);
+  return null;
+}
+
 export default function TipTapEditor({
   content,
   onChange,
@@ -1083,6 +1097,7 @@ export default function TipTapEditor({
         }}
       >
         <div className="min-h-full" />
+        <SyncEditorRef editorRef={editorRef} />
         <FindReplaceBar ref={findBarRef} />
       </EditorProvider>
       {contextMenu && (
