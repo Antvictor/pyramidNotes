@@ -201,7 +201,7 @@ const en = {
       replace: 'Replace',
       search: 'Search',
       searchFullText: 'Search (full text)',
-      backToMap: 'Back to mind map',
+      backToMap: 'Back',
     },
   },
   help: {

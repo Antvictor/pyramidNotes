@@ -201,7 +201,7 @@ const zhCN = {
       replace: '替换',
       search: '搜索',
       searchFullText: '搜索（全文）',
-      backToMap: '返回思维导图',
+      backToMap: '返回',
     },
   },
   help: {
