@@ -606,9 +606,10 @@ function focusInternalReference(editor: Editor, refId: string) {
 // 从 context 读「当前 editor」才能拿到真正持有当前 view 的那个实例。
 function SyncEditorRef({ editorRef }: { editorRef: RefObject<Editor | null> }) {
   const { editor } = useCurrentEditor();
-  useEffect(() => {
-    if (editor) editorRef.current = editor;
-  }, [editor, editorRef]);
+  // 每次渲染都同步，而不是放在 effect 里靠依赖数组：
+  // 「抽成子节点」那条路径会显式把 editorRef 置 null 再重置编辑器，
+  // 若 editor 实例身份没变，effect 不会重跑，ref 就会一直停在 null → 编辑器快捷键全失效。
+  editorRef.current = editor ?? null;
   return null;
 }
 

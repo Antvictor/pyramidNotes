@@ -163,6 +163,8 @@ const Note = ({ shortcuts }) => {
     const handler = (e) => {
       if (matchShortcut(e, shortcuts.global?.backToMap)) {
         e.preventDefault();
+        // TODO 临时诊断日志（定位"Esc 关弹窗却回退"），修好后删除
+        console.log('[esc]', { searchOpen, newNodePromptVisible, fromNote: !!location.state?.fromNote });
         if (searchOpen) { setSearchOpen(false); return; }
         if (newNodePromptVisible) { setNewNodePromptVisible(false); return; }
         if (location.state?.fromNote) {
