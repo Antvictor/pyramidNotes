@@ -7,6 +7,7 @@ const { getCachedSettings, DEFAULT_SETTINGS } = require('../common/settings.cjs'
 const {
   filterDeletableIds, collectCluster, listTrashBoundaries, isExpired,
 } = require('./trashUtils.cjs');
+const { sweepUnreferencedAttachments } = require('./attachment.cjs');
 
 function getTrashDir() {
   const dir = path.join(resolveStoragePath(), '.delete');
@@ -64,6 +65,9 @@ async function deleteNotes(nodeIds) {
       for (const id of softIds) softStmt.run(now, id);
       for (const id of hardIds) hardStmt.run(id);
     })();
+
+    // trash 模式下文件仍在回收站（可恢复），不扫除
+    if (mode !== 'trash') sweepUnreferencedAttachments();
 
     return { ok: true, mode, count: deletable.length };
   } catch (error) {
@@ -131,6 +135,9 @@ function purgeExpiredTrash() {
       db.prepare('DELETE FROM notes WHERE id = ?').run(r.id);
       purged += 1;
     }
+
+    if (purged > 0) sweepUnreferencedAttachments();
+
     return { purged };
   } catch (error) {
     console.error('purgeExpiredTrash error:', error);
@@ -163,6 +170,9 @@ function purgeTrashNodes(nodeIds) {
     db.transaction(() => {
       for (const cid of ids) stmt.run(cid);
     })();
+
+    if (ids.length) sweepUnreferencedAttachments();
+
     return { ok: true, purged: ids.length };
   } catch (error) {
     console.error('purgeTrashNodes error:', error);
