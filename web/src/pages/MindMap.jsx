@@ -216,7 +216,11 @@ function LayoutOnMeasured({ nodeSpacing, displayedNotes, focusNodeId, setNodes, 
   useEffect(() => {
     if (!nodesInitialized || !displayedNotes?.length) return;
 
+    let raf = 0;
+    let cancelled = false;
+
     const doLayout = () => {
+      if (cancelled) return;
       const currentNodes = getNodes();
       const nodeSizes = new Map();
       currentNodes.forEach(n => {
@@ -225,10 +229,11 @@ function LayoutOnMeasured({ nodeSpacing, displayedNotes, focusNodeId, setNodes, 
         }
       });
 
-      // 等待所有节点都测量完毕
-      if (nodeSizes.size < currentNodes.length && retryRef.current < 5) {
+      // 等待所有节点测量完成：逐帧重试（最多 ~30 帧），而不是固定 200ms 延迟，
+      // 这样实测布局紧跟主布局，视觉上只有一次平滑移动
+      if (nodeSizes.size < currentNodes.length && retryRef.current < 30) {
         retryRef.current++;
-        timer = setTimeout(doLayout, 150);
+        raf = requestAnimationFrame(doLayout);
         return;
       }
       retryRef.current = 0;
@@ -252,9 +257,9 @@ function LayoutOnMeasured({ nodeSpacing, displayedNotes, focusNodeId, setNodes, 
       })));
     };
 
-    let timer = setTimeout(doLayout, 200);
+    raf = requestAnimationFrame(doLayout);
 
-    return () => clearTimeout(timer);
+    return () => { cancelled = true; cancelAnimationFrame(raf); };
   }, [nodesInitialized, nodeSpacing, focusNodeId, displayedNotes]);
 
   return null;
