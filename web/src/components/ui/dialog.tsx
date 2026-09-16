@@ -5,7 +5,6 @@ import { Dialog as DialogPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useTranslation } from "react-i18next"
-import { useModalRegistration } from "@/components/ui/modalStack"
 
 function Dialog({
   ...props
@@ -56,8 +55,6 @@ function DialogContent({
   showCloseButton?: boolean
 }) {
   const { t } = useTranslation()
-  // DialogContent 只在弹窗打开时挂载 → 挂载期间即"有弹窗打开"
-  useModalRegistration(true)
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
