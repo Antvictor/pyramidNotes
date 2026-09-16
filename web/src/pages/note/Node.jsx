@@ -37,9 +37,9 @@ const Note = ({ shortcuts }) => {
     { key: shortcuts.note.italic, action: "italic" },
     { key: shortcuts.note.heading1, action: "heading1" },
     { key: shortcuts.note.heading2, action: "heading2" },
-    { key: shortcuts.note.extractNode || "Ctrl+Shift+M", action: "extractNode" },
-    { key: shortcuts.note.find || "Ctrl+F", action: "find" },
-    { key: shortcuts.note.replace || "Ctrl+R", action: "replace" },
+    { key: shortcuts.note.extractNode, action: "extractNode" },
+    { key: shortcuts.note.find, action: "find" },
+    { key: shortcuts.note.replace, action: "replace" },
   ] : [
     { key: "Ctrl+B", action: "bold" },
     { key: "Ctrl+I", action: "italic" },

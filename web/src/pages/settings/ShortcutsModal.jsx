@@ -139,7 +139,12 @@ export default function ShortcutsModal({ open, onOpenChange }) {
 
   const renderShortcutValue = (category, key, value) => {
     if (LOCKED_SHORTCUTS.includes(key)) {
-      return <span style={{ color: "var(--text-secondary)" }}>[{t("shortcuts.locked")}]</span>;
+      // 锁定项也显示实际按键，否则看不出它绑的是什么
+      return (
+        <span style={{ color: "var(--text-secondary)" }}>
+          {value} [{t("shortcuts.locked")}]
+        </span>
+      );
     }
 
     if (editingKey === `${category}.${key}`) {
