@@ -105,7 +105,7 @@ const FindReplaceBar = forwardRef<FindReplaceBarHandle, object>(function FindRep
   if (!findMode) return null;
 
   return (
-    <div className="editor-find-bar" onKeyDown={(e) => {
+    <div className="editor-find-bar" data-esc-claim="true" onKeyDown={(e) => {
       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeFindPanel(); }
       if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); goToNext(); }
       if (e.key === "Enter" && e.shiftKey) { e.preventDefault(); e.stopPropagation(); goToPrevious(); }

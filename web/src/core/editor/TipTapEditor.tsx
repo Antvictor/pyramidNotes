@@ -1137,6 +1137,7 @@ export default function TipTapEditor({
           className="editor-extraction-dialog-backdrop"
           role="dialog"
           data-state="open"
+          data-esc-claim="true"
           aria-modal="true"
           onKeyDownCapture={(event) => {
             // 焦点不在输入框时也能关（原先只有输入框自己处理 Esc）

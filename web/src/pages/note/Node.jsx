@@ -13,11 +13,13 @@ import { computeAncestorChain } from "../treeUtils";
 import { useMindMapViewStore } from "@/stores/mindMapViewStore";
 
 
-// 是否有弹窗打开？用 DOM 判断，而不是 React state：
+// 是否有弹窗/浮层打开并在自行处理 Esc？用 DOM 判断，而不是 React state：
 // 弹窗（Radix）会先于全局监听关闭自己并触发重渲染，此时读 state 会误得"没有弹窗"。
-// 通用弹窗与编辑器内自制弹窗（抽成子节点）都带 role="dialog" + data-state="open"。
+// 两类契约：
+//   - 通用弹窗：role="dialog" + data-state="open"（Radix 自带）
+//   - 自制浮层：data-esc-claim="true"（查找替换栏、抽成子节点弹窗）
 const isAnyModalOpen = () =>
-  !!document.querySelector('[role="dialog"][data-state="open"]');
+  !!document.querySelector('[role="dialog"][data-state="open"], [data-esc-claim="true"]');
 
 const Note = ({ shortcuts }) => {
   const { t } = useTranslation();
