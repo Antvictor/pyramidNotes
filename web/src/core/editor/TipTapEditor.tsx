@@ -874,7 +874,7 @@ export default function TipTapEditor({
     for (const binding of keyBindingsRef.current) {
       if (matchEditorShortcut(event, binding.key)) {
         event.preventDefault();
-        if (!editor) return true;
+        if (!editor || editor.isDestroyed) return true;
         switch (binding.action) {
           case "bold":
             editor.chain().focus().toggleBold().run();
