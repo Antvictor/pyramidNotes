@@ -121,6 +121,14 @@ const Note = ({ shortcuts }) => {
     await db.notes.insert(newNode);
     await window.api.saveFile(`${childId}-${safeName}.md`, yamlStr, content, childId);
     setAllNodes((nodes) => [...nodes, newNode]);
+    // 揭示新节点：展开其父链，返回脑图时立即可见
+    // （此处 allNodes 是插入前快照，只用来算父节点 id 的祖先链，父节点必在其中）
+    const nodeMap = new Map(allNodes.map((n) => [n.id, n]));
+    const displayRootId = allNodes.find((n) => n.top === '0')?.id;
+    if (displayRootId) {
+      const parentChain = computeAncestorChain(id, displayRootId, nodeMap);
+      useMindMapViewStore.getState().revealNodeIds(newNode.id, parentChain);
+    }
     return newNode;
   };
 
@@ -138,12 +146,7 @@ const Note = ({ shortcuts }) => {
   const handleNewChild = async (nodeName) => {
     setNewNodePromptVisible(false);
     const newNode = await createChildFromSelection(nodeName, "");
-    const nodeMap = new Map(allNodes.map((n) => [n.id, n]));
-    const displayRootId = allNodes.find((n) => n.top === '0')?.id;
-    if (displayRootId) {
-      const parentChain = computeAncestorChain(id, displayRootId, nodeMap);
-      useMindMapViewStore.getState().revealNodeIds(newNode.id, parentChain);
-    }
+    // reveal 已由 createChildFromSelection 统一负责
     navigate(
       `/note/${encodeURIComponent(newNode.id)}/${encodeURIComponent(newNode.name)}`,
       { state: { fromNote: id } },
