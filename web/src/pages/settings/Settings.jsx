@@ -5,6 +5,7 @@ import HelpModal from "./HelpModal";
 import Paywall from "../paywall/Paywall";
 import { useLicense } from "../../contexts/LicenseContext";
 import { useTranslation } from "react-i18next";
+import NumberField from "../../components/ui/number-field";
 
 const Settings = () => {
   const { t } = useTranslation();
@@ -88,15 +89,14 @@ const Settings = () => {
     setLangDropdownOpen(false);
   };
 
-  const handleSystemFontSizeChange = async (value) => {
-    const num = Math.max(12, Math.min(32, parseInt(value) || 16));
+  // 以下三个 "Size/Retention" 回调接收的是 NumberField 已夹取后的数字
+  const handleSystemFontSizeChange = async (num) => {
     setSettings((prev) => ({ ...prev, systemFontSize: num }));
     document.documentElement.style.fontSize = num + 'px';
     await window.api.saveSettings({ systemFontSize: num });
   };
 
-  const handleNoteFontSizeChange = async (value) => {
-    const num = Math.max(12, Math.min(32, parseInt(value) || 16));
+  const handleNoteFontSizeChange = async (num) => {
     setSettings((prev) => ({ ...prev, noteFontSize: num }));
     await window.api.saveSettings({ noteFontSize: num });
   };
@@ -131,8 +131,7 @@ const Settings = () => {
     await window.api.saveSettings({ deleteMode: "permanent" });
   };
 
-  const handleTrashRetentionChange = async (value) => {
-    const num = Math.max(1, parseInt(value) || 30);
+  const handleTrashRetentionChange = async (num) => {
     setSettings((prev) => ({ ...prev, trashRetentionDays: num }));
     await window.api.saveSettings({ trashRetentionDays: num });
   };
@@ -294,12 +293,12 @@ const Settings = () => {
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <input
-                type="number"
+              <NumberField
                 min={12}
                 max={32}
+                fallback={16}
                 value={settings.systemFontSize ?? 16}
-                onChange={(e) => handleSystemFontSizeChange(e.target.value)}
+                onCommit={handleSystemFontSizeChange}
                 style={{
                   width: 56,
                   padding: "4px 8px",
@@ -323,12 +322,12 @@ const Settings = () => {
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <input
-                type="number"
+              <NumberField
                 min={12}
                 max={32}
+                fallback={16}
                 value={settings.noteFontSize ?? 16}
-                onChange={(e) => handleNoteFontSizeChange(e.target.value)}
+                onCommit={handleNoteFontSizeChange}
                 style={{
                   width: 56,
                   padding: "4px 8px",
@@ -516,11 +515,11 @@ const Settings = () => {
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <input
-                  type="number"
+                <NumberField
                   min={1}
+                  fallback={30}
                   value={settings.trashRetentionDays ?? 30}
-                  onChange={(e) => handleTrashRetentionChange(e.target.value)}
+                  onCommit={handleTrashRetentionChange}
                   style={{
                     width: 64,
                     padding: "4px 8px",
