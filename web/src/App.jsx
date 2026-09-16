@@ -10,6 +10,7 @@ import { SelectedNodeProvider } from "./contexts/SelectedNodeContext";
 import { LicenseProvider, useLicense } from "./contexts/LicenseContext";
 import TutorialController from "./components/tutorial/TutorialController";
 import { initializeI18n } from "./i18n";
+import { isOverlayEscClaimed } from "./components/ui/overlayEsc";
 
 function AppContent() {
   const { licenseState } = useLicense();
@@ -114,6 +115,10 @@ function MindMapWrapper({ selectedNode, setSelectedNode, clearSelectedNode, shor
     const handler = (e) => {
       // Escape key
       if (e.key === 'Escape') {
+        // 有浮层正在自行处理 Esc（通用弹窗 / 自制浮层）→ 让路。
+        // ⚠️ 不要 preventDefault：Radix 的 DismissableLayer 会跳过已 defaultPrevented 的 Escape
+        if (isOverlayEscClaimed()) return;
+        e.preventDefault();
         if (location.pathname.startsWith('/note/')) {
           navigate('/');
         } else {
@@ -123,8 +128,9 @@ function MindMapWrapper({ selectedNode, setSelectedNode, clearSelectedNode, shor
       }
     };
 
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    // 捕获阶段注册：必须在弹窗自己关闭（并触发重渲染）之前观察到"有浮层打开"
+    window.addEventListener('keydown', handler, true);
+    return () => window.removeEventListener('keydown', handler, true);
   }, [selectedNode, shortcuts, location.pathname, navigate, clearSelectedNode]);
 
   return (
