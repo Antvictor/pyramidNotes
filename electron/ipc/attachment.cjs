@@ -1,7 +1,9 @@
 const { ipcMain } = require('electron');
 const fs = require('fs');
 const path = require('path');
-const { resolveAttachmentDir } = require('../common/utils/fileHelper');
+const { resolveStoragePath, resolveAttachmentDir } = require('../common/utils/fileHelper');
+const { getDb } = require('../db/db.cjs');
+const { extractImageRefs, pickUnreferenced } = require('./attachmentRefs.cjs');
 
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'];
 
@@ -43,6 +45,43 @@ function getNextCounter(safeName, attachmentDir) {
     // directory doesn't exist yet, counter stays 0
   }
   return maxCounter + 1;
+}
+
+// 删除 attachment/img 下没有任何笔记引用的文件。
+// 引用来源 = 全部 notes.content（含 delete=1 的回收站条目），
+// 因此回收站中的笔记仍"占住"它的图片，恢复后不会缺图。
+// 只应在「应用启动」与「永久删除之后」调用 —— 保存时调用会因撤销丢图。
+function sweepUnreferencedAttachments() {
+  try {
+    const db = getDb();
+    // 用 resolveStoragePath() 拼路径而不是 resolveAttachmentDir() —— 后者会 mkdir，
+    // 会让从没用过图片的用户每次启动都多出一个空目录
+    const attachmentDir = path.join(resolveStoragePath(), 'attachment', 'img');
+    if (!fs.existsSync(attachmentDir)) return { removed: 0 };
+
+    const referenced = new Set();
+    for (const row of db.prepare('SELECT content FROM notes').all()) {
+      for (const ref of extractImageRefs(row.content)) referenced.add(ref);
+    }
+
+    let removed = 0;
+    for (const file of pickUnreferenced(fs.readdirSync(attachmentDir), referenced)) {
+      const p = path.resolve(attachmentDir, file);
+      if (!p.startsWith(attachmentDir + path.sep)) continue; // 路径穿越校验
+      try {
+        if (fs.statSync(p).isFile()) {
+          fs.unlinkSync(p);
+          removed += 1;
+        }
+      } catch {
+        // 已不存在或不可读，跳过
+      }
+    }
+    return { removed };
+  } catch (error) {
+    console.error('sweepUnreferencedAttachments error:', error);
+    return { removed: 0, error: error.message };
+  }
 }
 
 function registerAttachmentIPC() {
@@ -105,6 +144,9 @@ function registerAttachmentIPC() {
       return { error: error.message };
     }
   });
+
+  // 手动触发扫除（供未来前端/调试使用）
+  ipcMain.handle('sweepAttachments', () => sweepUnreferencedAttachments());
 }
 
-module.exports = { registerAttachmentIPC };
+module.exports = { registerAttachmentIPC, sweepUnreferencedAttachments };
