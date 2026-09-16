@@ -163,8 +163,6 @@ const Note = ({ shortcuts }) => {
     const handler = (e) => {
       if (matchShortcut(e, shortcuts.global?.backToMap)) {
         e.preventDefault();
-        // TODO 临时诊断日志（定位"Esc 关弹窗却回退"），修好后删除
-        console.log('[esc]', { searchOpen, newNodePromptVisible, fromNote: !!location.state?.fromNote });
         if (searchOpen) { setSearchOpen(false); return; }
         if (newNodePromptVisible) { setNewNodePromptVisible(false); return; }
         if (location.state?.fromNote) {
@@ -195,8 +193,11 @@ const Note = ({ shortcuts }) => {
         return;
       }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    // 用捕获阶段注册：必须在弹窗（Radix）自己处理 Esc 并关闭**之前**观察到"确实有弹窗打开"。
+    // 若用冒泡阶段，弹窗会先关闭并触发重渲染，这里读到的两个 state 都是 false →
+    // 误判为"没有弹窗"从而直接回退到上一层（实测日志证实）。
+    window.addEventListener('keydown', handler, true);
+    return () => window.removeEventListener('keydown', handler, true);
   }, [shortcuts, searchOpen, newNodePromptVisible, location.state, navigate]);
 
   return (
