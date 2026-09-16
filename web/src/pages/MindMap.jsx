@@ -208,7 +208,7 @@ function countDescendants(nodeId, nodeMap) {
 }
 
 // ReactFlow 测量完成后用实测尺寸重新布局
-function LayoutOnMeasured({ nodeSpacing, displayedNotes, focusNodeId, setNodes }) {
+function LayoutOnMeasured({ nodeSpacing, displayedNotes, focusNodeId, setNodes, measuredSizesRef }) {
   const { getNodes } = useReactFlow();
   const nodesInitialized = useNodesInitialized({ includeHiddenNodes: false });
   const retryRef = useRef(0);
@@ -239,6 +239,9 @@ function LayoutOnMeasured({ nodeSpacing, displayedNotes, focusNodeId, setNodes }
         ? focusNodeId
         : displayedNotes.find(n => n.top === "0")?.id;
       if (!rootId) return;
+
+      // 缓存实测尺寸，供主布局复用（两次布局结果一致）
+      if (measuredSizesRef) measuredSizesRef.current = nodeSizes;
 
       const preset = SPACING_PRESETS[nodeSpacing] || SPACING_PRESETS.normal;
       const posMap = layoutTree(displayedNotes, rootId, 50, 50, nodeSizes, preset);
@@ -433,6 +436,8 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const clickTimerRef = useRef(null);
   const lastClickRef = useRef(null);
   const creatingRootRef = useRef(false);
+  // 上一轮 ReactFlow 实测的节点尺寸；首屏为 null，用估算布局
+  const measuredNodeSizesRef = useRef(null);
 
   // 节点快捷键处理
   useEffect(() => {
@@ -767,7 +772,9 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     const rootId = rootNode.id;
     creatingRootRef.current = false;
     const preset = SPACING_PRESETS[nodeSpacing] || SPACING_PRESETS.normal;
-    const posMap = layoutTree(displayedNotes, rootId, 50, 50, null, preset);
+    // 复用上一轮实测尺寸，使本布局与 LayoutOnMeasured 的结果一致，
+    // 避免“估算布局 → 实测再重排”造成的二次跳动
+    const posMap = layoutTree(displayedNotes, rootId, 50, 50, measuredNodeSizesRef.current, preset);
 
     const displayedIds = new Set(displayedNotes.map(n => n.id));
     const descCountMap = new Map();
@@ -1037,7 +1044,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       <ReactFlowProvider>
         <CenterOnSelected />
         <RevealOnPending />
-        <LayoutOnMeasured nodeSpacing={nodeSpacing} displayedNotes={displayedNotes} focusNodeId={focusNodeId} setNodes={setNodes} />
+        <LayoutOnMeasured nodeSpacing={nodeSpacing} displayedNotes={displayedNotes} focusNodeId={focusNodeId} setNodes={setNodes} measuredSizesRef={measuredNodeSizesRef} />
         <div style={{
           display: 'flex', alignItems: 'center', gap: 4,
           padding: '6px 12px', fontSize: 13,
