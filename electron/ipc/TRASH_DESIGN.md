@@ -26,6 +26,10 @@
 
 模式只影响**后续**删除；已在回收站的条目不受切换影响 —— `listTrash` 永远返回全部 `"delete"=1`。
 
+**回收站页面的「彻底删除」是独立入口**：`purgeTrashNodes(nodeIds)` —— **无条件**物理删除选中条目及其**整簇**
+（顶层 + 其 `"delete"=1` 后代），不复用按 `settings.deleteMode` 分支的 `deleteNotes`。
+不复用 `collectCluster` 之外的手写遍历，否则会在回收站留下孤儿。
+
 ## 删除簇与恢复（核心）
 
 回收站**不额外标记**"这是整树删除还是单节点删除"，靠结构天然区分：
@@ -90,6 +94,7 @@ ORDER BY n.last_up_time DESC
 | 改默认保留期 | `electron/common/settings.cjs` 的 `DEFAULT_SETTINGS.trashRetentionDays` + `Settings.jsx` 的兜底值 |
 | 新增删除模式 | `trash.cjs` 的 `deleteNotes` 分支 + `settings.deleteMode` 联合类型 + 设置页按钮 + i18n |
 | 改回收站列表字段 | `trash.cjs` 的 `listTrash` + `web/src/pages/trash/Trash.jsx` |
+| 改回收站「彻底删除」 | `trash.cjs` 的 `purgeTrashNodes` + `Trash.jsx` 的选中/确认弹窗 |
 | 改簇判定规则 | `electron/ipc/trashUtils.cjs`（纯函数，有单测）**且** `listTrash` 的 SQL 必须同步修改 |
 | 改保留期清理语义 | `trashUtils.isExpired` + 单测 |
 
@@ -117,6 +122,7 @@ ELECTRON_RUN_AS_NODE=1 ./electron/node_modules/.bin/electron --test electron/db/
 
 ## 修复历史
 
+- **2026-09-16**：新增回收站多选「彻底删除」（`purgeTrashNodes`，整簇物理删除，带警告确认）。
 - **2026-09-15**：首次实现 —— 删除簇判定、整簇恢复、三种删除模式、可配置保留期、全局查询过滤；
   移除旧 `deleted_notes` 表与"只写不读"的旧软删除逻辑。
   同日修复：删除改回乐观 UI；写库合并为单事务、`getTrashDir` 移出循环。
