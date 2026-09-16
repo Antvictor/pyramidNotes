@@ -138,11 +138,44 @@ function purgeExpiredTrash() {
   }
 }
 
+// 回收站内「彻底删除」：无条件物理删除选中条目及其所在整簇（顶层 + 其 delete=1 后代）。
+// 不复用 deleteNotes —— 后者按 settings.deleteMode 分支，而这里必须始终物理删除。
+function purgeTrashNodes(nodeIds) {
+  try {
+    const db = getDb();
+    const rows = db.prepare('SELECT id, name, top, "delete" FROM notes').all();
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    const cluster = new Set();
+    for (const id of nodeIds) {
+      if (byId.get(id)?.delete !== 1) continue; // 只处理回收站中的条目
+      for (const cid of collectCluster(id, rows)) cluster.add(cid);
+    }
+    const trashDir = getTrashDir();
+    const ids = [];
+    for (const cid of cluster) {
+      const r = byId.get(cid);
+      if (!r || r.delete !== 1) continue;
+      const p = path.join(trashDir, fileNameOf(r));
+      if (fs.existsSync(p)) fs.unlinkSync(p);
+      ids.push(cid);
+    }
+    const stmt = db.prepare('DELETE FROM notes WHERE id = ?');
+    db.transaction(() => {
+      for (const cid of ids) stmt.run(cid);
+    })();
+    return { ok: true, purged: ids.length };
+  } catch (error) {
+    console.error('purgeTrashNodes error:', error);
+    return { error: classifyError(error), originalError: error.message };
+  }
+}
+
 function registerTrashIPC() {
   ipcMain.handle('deleteNotes', (event, nodeIds) => deleteNotes(nodeIds));
   ipcMain.handle('listTrash', () => listTrash());
   ipcMain.handle('restoreTrash', (event, nodeId) => restoreTrash(nodeId));
   ipcMain.handle('purgeExpiredTrash', () => purgeExpiredTrash());
+  ipcMain.handle('purgeTrashNodes', (event, nodeIds) => purgeTrashNodes(nodeIds));
 }
 
-module.exports = { registerTrashIPC, deleteNotes, listTrash, restoreTrash, purgeExpiredTrash };
+module.exports = { registerTrashIPC, deleteNotes, listTrash, restoreTrash, purgeExpiredTrash, purgeTrashNodes };

@@ -24,6 +24,9 @@ const en = {
     empty: 'Trash is empty',
     deleteDate: 'Deleted at',
     restore: 'Restore',
+    selectAll: 'Select all',
+    permanentDelete: 'Delete permanently',
+    permanentDeleteWarning: 'Permanently deleted items cannot be recovered. Choose carefully.',
   },
   editor: {
     loading: 'Loading note…',

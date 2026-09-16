@@ -24,6 +24,9 @@ const zhCN = {
     empty: '回收站为空',
     deleteDate: '删除日期',
     restore: '恢复',
+    selectAll: '全选',
+    permanentDelete: '彻底删除',
+    permanentDeleteWarning: '彻底删除后无法恢复，请慎重选择',
   },
   editor: {
     loading: '正在加载笔记…',
