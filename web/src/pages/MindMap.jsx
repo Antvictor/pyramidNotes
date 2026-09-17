@@ -47,6 +47,15 @@ const SPACING_PRESETS = {
   loose:    { gapBase: 100, hGap: 80 },
 };
 
+// 视角平滑移动的时长（居中/平移）。太短会像"闪一下"，太长会拖沓。
+const CENTER_ANIM_MS = 700;
+// 节点的位置过渡时长（对应 index.css 里 .react-flow__node 的 transition）
+const NODE_SLIDE_MS = 180;
+// 创建节点：先让节点滑到位，视角再跟过去
+const CREATE_ANIM_MS = 900;
+// 移动节点：视角与节点一起出发，但比节点慢很多，形成"镜头追随"的感觉
+const MOVE_ANIM_MS = 1300;
+
 // 跨 MindMap 卸载保留的首帧缓存（仅用于快速恢复显示；正确性始终以挂载时的 DB 刷新为准）
 let notesDataCache = null;       // 上次的节点行
 let measuredSizesCache = null;   // 各节点实测尺寸 Map
@@ -269,10 +278,18 @@ function LayoutOnMeasured({ nodeSpacing, displayedNotes, focusNodeId, setNodes }
       const preset = SPACING_PRESETS[nodeSpacing] || SPACING_PRESETS.normal;
       const posMap = layoutTree(displayedNotes, rootId, 50, 50, nodeSizes, preset);
 
-      setNodes(nds => nds.map(n => ({
-        ...n,
-        position: posMap.get(n.id) || n.position
-      })));
+      // 实测布局与主布局结果一致时（都复用 measuredSizesCache），不要新建节点对象：
+      // 否则整图节点会白白重渲染一轮。增删/移动节点时的卡顿主要来自这里。
+      setNodes(nds => {
+        let changed = false;
+        const next = nds.map(n => {
+          const p = posMap.get(n.id);
+          if (!p || (p.x === n.position.x && p.y === n.position.y)) return n;
+          changed = true;
+          return { ...n, position: p };
+        });
+        return changed ? next : nds;
+      });
     };
 
     raf = requestAnimationFrame(doLayout);
@@ -306,7 +323,9 @@ function matchKey(shortcutStr, e) {
 }
 
 export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNode, shortcuts }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // 抽成变量：既用于写进节点 data，也作为重建 nodes 的依赖
+  const selectedNodeId = selectedNode?.id ?? null;
   // const flowWrapperRef = useRef(null);
   // 查询sqlite中的节点数据
   const [notesData, setNotesData] = useState(null);
@@ -347,6 +366,11 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     return nodeMap;
   }, [notesData]);
 
+  // 供节点回调读取最新的节点图，同时保持回调引用稳定：否则每次数据变化都会
+  // 让所有节点的 onExpand* 变成新函数，React.memo 全部失效、整图重渲染。
+  const allNotesNodeMapRef = useRef(allNotesNodeMap);
+  allNotesNodeMapRef.current = allNotesNodeMap;
+
   // 不变量：已展开的节点，其子节点必须都已加载，
   // 否则会出现“显示为已展开、却看不到子节点/兄弟”的矛盾状态
   useEffect(() => {
@@ -364,8 +388,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   }, [expandedNodeIds, allNotesNodeMap, setLoadedNodeIds]);
 
   const expandOneLevel = useCallback((nodeId) => {
-    if (!allNotesNodeMap) return;
-    const node = allNotesNodeMap.get(nodeId);
+    const node = allNotesNodeMapRef.current?.get(nodeId);
     if (!node?.children?.length) return;
     setLoadedNodeIds(prev => {
       const next = new Set(prev);
@@ -378,12 +401,13 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       return next;
     });
     setSelectedNode({ id: nodeId, name: node.name });
-  }, [allNotesNodeMap, setSelectedNode]);
+  }, [setSelectedNode]);
 
   const expandAll = useCallback((nodeId) => {
-    if (!allNotesNodeMap) return;
-    const node = allNotesNodeMap.get(nodeId);
-    const descIds = getDescendantIdsSync(nodeId, allNotesNodeMap);
+    const map = allNotesNodeMapRef.current;
+    if (!map) return;
+    const node = map.get(nodeId);
+    const descIds = getDescendantIdsSync(nodeId, map);
     setLoadedNodeIds(prev => {
       const next = new Set(prev);
       for (const id of descIds) next.add(id);
@@ -395,12 +419,13 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       return next;
     });
     if (node) setSelectedNode({ id: nodeId, name: node.name });
-  }, [allNotesNodeMap, setSelectedNode]);
+  }, [setSelectedNode]);
 
   const collapseNode = useCallback((nodeId) => {
-    if (!allNotesNodeMap) return;
-    const node = allNotesNodeMap.get(nodeId);
-    const descIds = getDescendantIdsSync(nodeId, allNotesNodeMap);
+    const map = allNotesNodeMapRef.current;
+    if (!map) return;
+    const node = map.get(nodeId);
+    const descIds = getDescendantIdsSync(nodeId, map);
     const childIds = new Set(descIds.filter(id => id !== nodeId));
     setLoadedNodeIds(prev => {
       const next = new Set(prev);
@@ -414,7 +439,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       return next;
     });
     if (node) setSelectedNode({ id: nodeId, name: node.name });
-  }, [allNotesNodeMap, setSelectedNode]);
+  }, [setSelectedNode]);
 
   const handleRevealNode = useCallback(({ id, name }) => {
     if (!allNotesNodeMap) return;
@@ -691,8 +716,8 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     await db.notes.update({ id: moved.id }, { top: targetId });
     await window.api.updateYaml(`${moved.id}-${moved.name}.md`, { top: targetId });
 
-    // 移动后居中到节点新位置
-    centerWhenRendered();
+    // 移动后视角跟着节点一起飞过去，但比节点慢很多，形成"镜头追随"的感觉
+    centerWhenRendered({ keepZoom: true, durationMs: MOVE_ANIM_MS });
   };
 
   useEffect(() => {
@@ -855,6 +880,10 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
         descendantCount: descCountMap.get(n.id) || 0,
         hasHiddenChildren: hiddenChildrenMap.get(n.id) || false,
         isExpanded: expandedNodeIds.has(n.id),
+        // 选中态与语言写进 data：让 NodeCustom 的 memo 能正确失效，
+        // 而不是靠订阅 context（那样任何选中变化都会重渲染整图）
+        isSelected: selectedNodeId === n.id,
+        lang: i18n.language,
         onExpandOneLevel: expandOneLevel,
         onExpandAll: expandAll,
         onCollapseNode: collapseNode,
@@ -887,9 +916,31 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       }
     });
 
-    setNodes(initNodes);
+    // 未变化的节点复用旧对象（NodeCustom 带 memo），这样新建/移动/选中
+    // 只重渲染真正变化的节点，而不是整图 30+ 个节点一起刷新。
+    setNodes(prev => {
+      const prevById = new Map(prev.map(n => [n.id, n]));
+      let changed = initNodes.length !== prev.length;
+      const next = initNodes.map(n => {
+        const p = prevById.get(n.id);
+        if (
+          p &&
+          p.data.name === n.data.name &&
+          p.data.descendantCount === n.data.descendantCount &&
+          p.data.hasHiddenChildren === n.data.hasHiddenChildren &&
+          p.data.isExpanded === n.data.isExpanded &&
+          p.data.isSelected === n.data.isSelected &&
+          p.data.lang === n.data.lang &&
+          p.position.x === n.position.x &&
+          p.position.y === n.position.y
+        ) return p;
+        changed = true;
+        return n;
+      });
+      return changed ? next : prev;
+    });
     setEdges(initEdges);
-  }, [displayedNotes, setEdges, setNodes, allNotesNodeMap, loadedNodeIds, expandedNodeIds, expandOneLevel, expandAll, collapseNode]);
+  }, [displayedNotes, setEdges, setNodes, allNotesNodeMap, loadedNodeIds, expandedNodeIds, expandOneLevel, expandAll, collapseNode, selectedNodeId, i18n.language]);
 
   // 添加连接
   const onConnect = useCallback(
@@ -898,16 +949,22 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   );
 
   const centerOnSelectedRef = useRef(null);
-  const requestCenter = useCallback(() => {
-    if (centerOnSelectedRef.current) centerOnSelectedRef.current();
+  const requestCenter = useCallback((opts) => {
+    if (centerOnSelectedRef.current) centerOnSelectedRef.current(opts);
   }, []);
 
   // 等所选节点真正进入 ReactFlow 后再居中，替代固定 300ms 延迟
-  const centerWhenRendered = useCallback((tries = 30) => {
-    requestAnimationFrame(() => {
-      const done = centerOnSelectedRef.current && centerOnSelectedRef.current();
-      if (!done && tries > 0) centerWhenRendered(tries - 1);
-    });
+  const centerWhenRendered = useCallback((opts = {}, tries = 30) => {
+    const run = (o) => {
+      requestAnimationFrame(() => {
+        const done = centerOnSelectedRef.current && centerOnSelectedRef.current(o);
+        // 重试时不再重复延时，否则每帧都要重新等一遍
+        if (!done && tries > 0) centerWhenRendered({ ...o, delayMs: 0 }, tries - 1);
+      });
+    };
+    // delayMs：等节点的位置过渡跑完再动视角 —— "节点先到位，视角再跟过去"
+    if (opts.delayMs) setTimeout(() => run(opts), opts.delayMs);
+    else run(opts);
   }, []);
 
   const [menu, setMenu] = useState({
@@ -976,9 +1033,9 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       saveNode(newNodeDb);
       // 创建新节点的 markdown 文件, 把这两个合成一个方法
       addNote(newNodeDb);
-      // 立即选中；待节点渲染后居中（不阻塞、无固定延迟）
+      // 立即选中；节点先滑到位，视角再跟过去（保持当前缩放）
       setSelectedNode({ id: `${id}`, name: safeName });
-      centerWhenRendered();
+      centerWhenRendered({ keepZoom: true, delayMs: NODE_SLIDE_MS + 60, durationMs: CREATE_ANIM_MS });
       if (allNotesNodeMap) {
         const displayRootId = focusNodeId === '1'
           ? notesData.find((n) => n.top === '0')?.id
@@ -1038,14 +1095,16 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
 
   // 居中辅助组件：通过 ref 暴露居中方法，供 requestCenter 显式调用
   const CenterOnSelected = () => {
-    const { setCenter, getNodes } = useReactFlow();
+    const { setCenter, getNodes, getZoom } = useReactFlow();
 
     useEffect(() => {
-      centerOnSelectedRef.current = () => {
+      centerOnSelectedRef.current = (opts = {}) => {
         if (!selectedNode) return false;
         const n = getNodes().find(nd => nd.id === selectedNode.id);
         if (!n) return false;
-        setCenter(n.position.x + 80, n.position.y + 20, { zoom: 1, duration: 300 });
+        // keepZoom：返回脑图时保持当前缩放，只平滑平移把选中节点带到画面中心
+        const zoom = opts.keepZoom ? getZoom() : 1;
+        setCenter(n.position.x + 80, n.position.y + 20, { zoom, duration: opts.durationMs ?? CENTER_ANIM_MS });
         return true;
       };
     });
@@ -1053,11 +1112,11 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     return null;
   };
 
-  // ESC 返回时：组件挂载且 selectedNode 已存在，居中一次
-  // 若已恢复上次视口，则跳过，避免返回时又平移一下
+  // 返回脑图时：视口已恢复，但视角中心可能还停在旧节点上（例如在 A 的视图里
+  // 双击 B 进入笔记，退回来却仍盯着 A）。保持缩放不变，平滑平移把选中节点带到中心。
   useEffect(() => {
-    if (selectedNode && !viewportCache) {
-      const timer = setTimeout(() => requestCenter(), 100);
+    if (selectedNode) {
+      const timer = setTimeout(() => requestCenter({ keepZoom: true }), 100);
       return () => clearTimeout(timer);
     }
   }, []);
@@ -1209,7 +1268,14 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           defaultEdgeOptions={{ type: 'smoothstep', selectable: false, style: { stroke: 'var(--link-color)', strokeWidth: 2 } }}
           defaultViewport={viewportCache || undefined}
           fitView={!viewportCache}
-          onMoveEnd={(e, vp) => { viewportCache = vp; }}
+          onMoveEnd={(e, vp) => {
+            // 只有脑图路由激活时才记录视口。离开脑图后，旧实例在真正卸载前
+            // 仍会因容器重排继续发 onMoveEnd；若照单全收就会把错误视口写进
+            // viewportCache，返回时 zoom 被逐次放大。
+            const path = location.hash.slice(1) || "/";
+            if (path !== "/") return;
+            viewportCache = vp;
+          }}
           onPaneContextMenu={onPaneContextMenu}
           onNodeContextMenu={onNodeContextMenu}
           nodesDraggable={false} // ✅ 禁止节点拖动

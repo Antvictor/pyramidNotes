@@ -1,13 +1,13 @@
 import React from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { useSelectedNode } from '../../contexts/SelectedNodeContext'
 import { useTranslation } from 'react-i18next'
 
-export default function NodeCustom({ data }) {
-  const { selectedNode } = useSelectedNode()
+function NodeCustom({ data }) {
   const { t } = useTranslation()
 
-  const isSelected = selectedNode && selectedNode.id === data.id
+  // 选中态由 MindMap 写进节点 data（不再订阅全局 context），
+  // 这样选中变化只影响相关节点，而不是整图 30+ 个节点一起重渲染。
+  const isSelected = !!data.isSelected
   const {
     hasHiddenChildren, descendantCount, isExpanded,
     onExpandOneLevel, onExpandAll, onCollapseNode,
@@ -95,3 +95,7 @@ export default function NodeCustom({ data }) {
     </div>
   )
 }
+
+// 只在 data 对象变化时重渲染。MindMap 重建 nodes 时会复用未变化节点的 data，
+// 因此新建/移动/选中只会刷新真正变化的节点，而不是整图。
+export default React.memo(NodeCustom, (a, b) => a.data === b.data)
