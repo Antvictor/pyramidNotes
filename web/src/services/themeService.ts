@@ -4,11 +4,7 @@ const THEME_KEY = 'pyramid-notes-theme';
 const DARK_CLASS = 'dark';
 
 export interface ThemeService {
-  toggle(): void;
-  setTheme(isDark: boolean): void;
-  getTheme(): boolean;
   setThemeMode(mode: ThemeMode): void;
-  getThemeMode(): ThemeMode;
 }
 
 class ThemeServiceImpl implements ThemeService {
@@ -52,45 +48,10 @@ class ThemeServiceImpl implements ThemeService {
     }
   }
 
-  toggle(): void {
-    const isDark = this.getTheme();
-    this.setTheme(!isDark);
-  }
-
-  setTheme(isDark: boolean): void {
-    const html = this.getHtmlElement();
-    if (isDark) {
-      html.classList.add(DARK_CLASS);
-    } else {
-      html.classList.remove(DARK_CLASS);
-    }
-    localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
-  }
-
-  getTheme(): boolean {
-    const stored = localStorage.getItem(THEME_KEY);
-    if (stored === 'dark') {
-      return true;
-    }
-    if (stored === 'light') {
-      return false;
-    }
-    return false;
-  }
-
   setThemeMode(mode: ThemeMode): void {
     this.themeMode = mode;
     localStorage.setItem(THEME_KEY, mode);
     this.applyThemeForMode(mode);
-  }
-
-  getThemeMode(): ThemeMode {
-    const stored = localStorage.getItem(THEME_KEY);
-    if (stored === 'dark' || stored === 'light' || stored === 'system') {
-      this.themeMode = stored;
-      return stored;
-    }
-    return 'system';
   }
 }
 
