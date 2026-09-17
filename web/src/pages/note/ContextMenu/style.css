@@ -5,7 +5,9 @@
   border-radius: 4px;
   padding: 6px 0;
   z-index: 9999;
-  width: 140px;
+  /* 最小宽度而非固定宽度：英文等更长的文案会让菜单自然变宽，不会溢出菜单框 */
+  width: max-content;
+  min-width: 140px;
   box-shadow: 0 2px 8px rgba(0,0,0,.15);
   user-select: none;
 }
