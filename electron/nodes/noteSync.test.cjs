@@ -8,8 +8,6 @@ const {
   ROOT_ID, normalizeFields, isProtectedRoot, scanNoteFiles, planReconcile, writeNoteTop,
 } = require('./noteSync.cjs');
 
-const DEMO_ZH = path.join(__dirname, '..', '..', 'demo-data', 'zh');
-
 const tmpDir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'pn-sync-'));
 const write = (dir, file, body) => fs.writeFileSync(path.join(dir, file), body, 'utf-8');
 
@@ -47,8 +45,16 @@ test('isProtectedRoot 同时认定 id 为 1 与 top 为 0 的行', () => {
   assert.equal(isProtectedRoot(undefined), false);
 });
 
-test('scanNoteFiles 读取 demo 夹具（只读，不写入）', () => {
-  const { notes, skipped } = scanNoteFiles(DEMO_ZH);
+test('scanNoteFiles 读一批带引号 frontmatter 的文件（含自定义根 id）', () => {
+  // demo-data/ 与 openspec/specs 一样被 .git/info/exclude 排除，不是仓库资源，
+  // 所以夹具在这里现造，保证新克隆上也能通过。
+  const dir = tmpDir();
+  write(dir, 'root-os.md', '---\nid: "zho01root001"\nname: "操作系统"\nalias: ""\ntop: "0"\nleft: ""\n---\n\n# 操作系统\n');
+  for (let i = 1; i <= 11; i += 1) {
+    write(dir, `n${i}.md`, `---\nid: "zho${String(i).padStart(2, '0')}leaf0001"\nname: "节点${i}"\nalias: ""\ntop: "zho01root001"\nleft: ""\n---\n\n正文${i}\n`);
+  }
+
+  const { notes, skipped } = scanNoteFiles(dir);
   assert.equal(notes.length, 12);
   assert.deepEqual(skipped, []);
   const root = notes.find((n) => n.id === 'zho01root001');
@@ -56,6 +62,10 @@ test('scanNoteFiles 读取 demo 夹具（只读，不写入）', () => {
   assert.equal(root.name, '操作系统');
   assert.ok(notes.every((n) => typeof n.top === 'string' && typeof n.content === 'string'));
   assert.ok(notes.every((n) => !n.content.startsWith('---')));
+  // 自定义根 id 下所有子节点都可达
+  const plan = planReconcile({ notes, rows: [] });
+  assert.equal(plan.inserts.length, 12);
+  assert.deepEqual(plan.warn, []);
 });
 
 test('scanNoteFiles 跳过无 id 的文件并给出原因', () => {
