@@ -2,72 +2,61 @@ const { getDb } = require("../db/db.cjs");
 const { getDataPath } = require("../ipc/userPath.cjs");
 const { purgeExpiredTrash } = require("../ipc/trash.cjs");
 const { sweepUnreferencedAttachments } = require("../ipc/attachment.cjs");
+const { scanNoteFiles, planReconcile } = require("./noteSync.cjs");
 const fs = require('fs');
-const path = require("path");
-const matter = require('gray-matter');
 
 async function initNode() {
-    console.log('Starting incremental sync...');
-
     const db = getDb();
     const storagePath = getDataPath();
-
-    console.log('Using storage path:', storagePath);
 
     if (!fs.existsSync(storagePath)) {
         fs.mkdirSync(storagePath, { recursive: true });
     }
 
-    // 扫描 storagePath 下的 .md（.delete/.data 为子目录/非 .md，天然跳过）
-    let fileSet = new Set();
+    // 顶层 .md 是唯一事实源：扫目录 → 与 SQL 双向对账（.delete/.data/attachment 天然跳过）
+    const { notes, skipped } = scanNoteFiles(storagePath);
+    const rows = db.prepare('SELECT id, name, alias, top, "left", content, "delete" FROM notes').all();
+    const plan = planReconcile({ notes, skipped, rows });
+
+    const now = new Date().toISOString();
+    const insertStmt = db.prepare(`
+        INSERT INTO notes (id, name, content, alias, top, "left", last_up_time, "delete")
+        VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+    `);
+    const updateStmt = db.prepare(`
+        UPDATE notes SET name = ?, alias = ?, top = ?, "left" = ?, content = ?, "delete" = 0, last_up_time = ?
+        WHERE id = ?
+    `);
+    const deleteStmt = db.prepare('DELETE FROM notes WHERE id = ?');
+
+    // 单事务：避免部分写入留下文件与库不一致的中间态
+    db.transaction(() => {
+        for (const n of plan.inserts) {
+            insertStmt.run(n.id, n.name, n.content, n.alias, n.top, n.left, now);
+        }
+        for (const n of plan.updates) {
+            updateStmt.run(n.name, n.alias, n.top, n.left, n.content, now, n.id);
+        }
+        for (const id of plan.removes) {
+            deleteStmt.run(id);
+        }
+    })();
+
+    for (const s of plan.skipped) console.warn(`[initNode] 跳过文件 ${s.file}: ${s.reason}`);
+    for (const w of plan.warn) console.warn(`[initNode] ${w}`);
+    console.log(`[initNode] ${storagePath} 扫描 ${notes.length} 个 .md；新增 ${plan.inserts.length}，修复/恢复 ${plan.updates.length}，删除 ${plan.removes.length}`);
+
+    // 保留期清理与孤儿附件清理：失败不应阻断启动（main.cjs 的 catch 会 app.quit）
     try {
-        for (const file of fs.readdirSync(storagePath)) {
-            if (path.extname(file) === '.md') fileSet.add(file);
-        }
+        console.log('Purged expired trash entries:', purgeExpiredTrash().purged);
     } catch (error) {
-        console.error('Error reading storage directory:', error);
+        console.error('purgeExpiredTrash failed:', error);
     }
-    console.log('Found', fileSet.size, 'markdown files in storagePath');
-
-    const notes = db.prepare('SELECT id FROM notes').all();
-    const dbIds = new Set(notes.map((n) => n.id));
-
-    // 文件存在但 DB 无记录 → 插入
-    for (const file of fileSet) {
-        const filePath = path.join(storagePath, file);
-        try {
-            const content = fs.readFileSync(filePath, 'utf-8');
-            const parsed = matter(content);
-            if (parsed.data && parsed.data.id && !dbIds.has(parsed.data.id)) {
-                console.log('Inserting new note:', parsed.data.id, 'from file:', file);
-                db.prepare(`
-                    INSERT INTO notes (id, name, content, alias, top, "left", last_up_time)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(id) DO UPDATE SET content=excluded.content
-                `).run(
-                    parsed.data.id,
-                    parsed.data.title || parsed.data.name || "",
-                    content,
-                    parsed.data.alias || null,
-                    parsed.data.top || null,
-                    parsed.data.left || null,
-                    new Date().toISOString()
-                );
-            }
-        } catch (error) {
-            console.error('Error processing file', file, ':', error.message);
-        }
+    try {
+        console.log('Swept unreferenced attachments:', sweepUnreferencedAttachments().removed);
+    } catch (error) {
+        console.error('sweepUnreferencedAttachments failed:', error);
     }
-
-    // 保留期清理（回收站中超过 trashRetentionDays 的条目彻底删除）
-    const { purged } = purgeExpiredTrash();
-    console.log('Purged expired trash entries:', purged);
-
-    // 清理没有任何笔记引用的图片（含编辑器里删掉的图与历史孤儿）
-    const { removed } = sweepUnreferencedAttachments();
-    console.log('Swept unreferenced attachments:', removed);
-
-    console.log('Incremental sync completed');
 }
 
 module.exports = { initNode };

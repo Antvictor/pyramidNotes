@@ -584,10 +584,18 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     }
   };
 
-  // 将子节点提升到祖父节点下
-  const promoteChildren = (parentId, grandParentId) => {
+  // 将子节点提升到祖父节点下。
+  // 数据库和 .md 文件都要改：启动对账以文件为准（见 electron/nodes/noteSync.cjs），
+  // 只改库会让文件里那个已经不存在的旧上级在下次启动时被当成真相，
+  // 这些节点会被一路挪到别的父节点底下。
+  const promoteChildren = async (parentId, grandParentId) => {
+    const children = await db.notes.select({ top: parentId });
+
     // 更新所有直接子节点的 top 为 grandParentId
-    db.notes.update({ top: parentId }, { top: grandParentId });
+    await db.notes.update({ top: parentId }, { top: grandParentId });
+    for (const child of children) {
+      await window.api.updateYaml(`${child.id}-${child.name}.md`, { top: grandParentId });
+    }
 
     // 更新 notesData 状态
     setNotesData(nds => nds.map(n => {
@@ -657,7 +665,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       await deleteEntireTree(deleteConfirmation.id, deleteConfirmation.isRoot);
     } else {
       const grandParentId = deleteConfirmation.grandParentId;
-      promoteChildren(deleteConfirmation.id, grandParentId);
+      await promoteChildren(deleteConfirmation.id, grandParentId);
       await _internalDeleteNode(deleteConfirmation.id);
     }
 

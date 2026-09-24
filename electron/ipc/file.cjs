@@ -7,8 +7,11 @@ const path = require("path");
 const matter = require('gray-matter');
 const yaml = require('yaml');
 
-async function findFileByNoteId(dataPath, noteId) {
-    if (!noteId) {
+// 文件名格式恒为 `${id}-${title}.md`，而 id 自身可能含 '-'（如 zbysv-KrUE3M、Fe-9MDeqq4oD），
+// 所以不能按 '-' 切分反推 id，只能拿 frontmatter 里的 id 去匹配文件名前缀。
+async function resolveFallbackFile(dataPath, fileName) {
+    const target = String(fileName || '');
+    if (!target) {
         return null;
     }
 
@@ -20,9 +23,9 @@ async function findFileByNoteId(dataPath, noteId) {
 
         const candidatePath = path.join(dataPath, entry.name);
         try {
-            const candidateContent = await fs.readFile(candidatePath, 'utf-8');
-            const parsed = matter(candidateContent);
-            if (parsed.data?.id === noteId) {
+            const parsed = matter(await fs.readFile(candidatePath, 'utf-8'));
+            const id = parsed.data?.id;
+            if (id && target.startsWith(`${id}-`)) {
                 return candidatePath;
             }
         } catch {
@@ -52,8 +55,7 @@ function registerFileIPC() {
                     throw accessError;
                 }
 
-                const noteId = String(fileName || '').split('-')[0];
-                const fallbackPath = await findFileByNoteId(dataPath, noteId);
+                const fallbackPath = await resolveFallbackFile(dataPath, fileName);
                 if (!fallbackPath) {
                     throw accessError;
                 }
