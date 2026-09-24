@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const matter = require('gray-matter');
+const yaml = require('yaml');
 const { ROOT_TOP } = require('../ipc/trashUtils.cjs');
 
 const ROOT_ID = '1';
@@ -46,7 +47,7 @@ function scanNoteFiles(storagePath) {
         skipped.push({ file, reason: 'frontmatter 缺少 id' });
         continue;
       }
-      notes.push({ ...fields, content: parsed.content });
+      notes.push({ ...fields, content: parsed.content, file });
     } catch (error) {
       skipped.push({ file, reason: error.message });
     }
@@ -57,6 +58,18 @@ function scanNoteFiles(storagePath) {
 // 根行保护：不看 top 单字段，因为历史 bug 已把根行 top 写成 NULL
 function isProtectedRoot(row) {
   return !!row && (String(row.id) === ROOT_ID || row.top === ROOT_TOP);
+}
+
+// 把修正后的 top 写回文件，保留其余 frontmatter 与正文。
+// 与 file.cjs 的 updateYaml 同语义：那里是渲染侧改一个节点，这里是启动对账修正一批陈旧文件。
+// 不回写的话，文件里那个不可达的旧上级会每次启动都被重新判一次（幂等但一直在刷告警）。
+function writeNoteTop(filePath, top) {
+  const parsed = matter(fs.readFileSync(filePath, 'utf-8'));
+  const merged = {
+    ...(parsed.data && typeof parsed.data === 'object' ? parsed.data : {}),
+    top,
+  };
+  fs.writeFileSync(filePath, `---\n${yaml.stringify(merged).trim()}\n---\n${parsed.content}`, 'utf-8');
 }
 
 function differs(row, note) {
@@ -124,6 +137,7 @@ function planReconcile({ notes, skipped = [], rows }) {
   };
 
   // 可见性不变量：delete=0 的节点必须可从根可达
+  const reattached = [];
   for (const note of survivors) {
     if (note.id === rootId) continue;
     if (note.top === ROOT_TOP) continue;
@@ -136,6 +150,7 @@ function planReconcile({ notes, skipped = [], rows }) {
     const where = target === rootId ? '根' : '最近可用祖先';
     warn.push(`父节点不可达，重挂到${where}: ${note.id} (top=${note.top ?? 'null'} -> ${target})`);
     note.top = target;
+    if (note.file) reattached.push({ file: note.file, id: note.id, top: target });
   }
 
   const inserts = [];
@@ -150,9 +165,9 @@ function planReconcile({ notes, skipped = [], rows }) {
     if (Number(row.delete) === 1 || differs(row, note)) updates.push(note);
   }
 
-  return { inserts, updates, removes, skipped, warn };
+  return { inserts, updates, removes, skipped, warn, reattached };
 }
 
 module.exports = {
-  ROOT_ID, normalizeFields, isProtectedRoot, scanNoteFiles, planReconcile,
+  ROOT_ID, normalizeFields, isProtectedRoot, scanNoteFiles, planReconcile, writeNoteTop,
 };

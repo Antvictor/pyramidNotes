@@ -2,8 +2,9 @@ const { getDb } = require("../db/db.cjs");
 const { getDataPath } = require("../ipc/userPath.cjs");
 const { purgeExpiredTrash } = require("../ipc/trash.cjs");
 const { sweepUnreferencedAttachments } = require("../ipc/attachment.cjs");
-const { scanNoteFiles, planReconcile } = require("./noteSync.cjs");
+const { scanNoteFiles, planReconcile, writeNoteTop } = require("./noteSync.cjs");
 const fs = require('fs');
+const path = require('path');
 
 async function initNode() {
     const db = getDb();
@@ -42,9 +43,21 @@ async function initNode() {
         }
     })();
 
+    // 重挂结果回写文件：让文件与库一致，否则文件里那个不可达的旧上级
+    // 会每次启动都被重新判定一遍（幂等，但一直刷告警）
+    let rewritten = 0;
+    for (const n of plan.reattached) {
+        try {
+            writeNoteTop(path.join(storagePath, n.file), n.top);
+            rewritten += 1;
+        } catch (error) {
+            console.warn(`[initNode] 回写文件失败 ${n.file}: ${error.message}`);
+        }
+    }
+
     for (const s of plan.skipped) console.warn(`[initNode] 跳过文件 ${s.file}: ${s.reason}`);
     for (const w of plan.warn) console.warn(`[initNode] ${w}`);
-    console.log(`[initNode] ${storagePath} 扫描 ${notes.length} 个 .md；新增 ${plan.inserts.length}，修复/恢复 ${plan.updates.length}，删除 ${plan.removes.length}`);
+    console.log(`[initNode] ${storagePath} 扫描 ${notes.length} 个 .md；新增 ${plan.inserts.length}，修复/恢复 ${plan.updates.length}，删除 ${plan.removes.length}，回写文件 ${rewritten}`);
 
     // 保留期清理与孤儿附件清理：失败不应阻断启动（main.cjs 的 catch 会 app.quit）
     try {

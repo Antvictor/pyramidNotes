@@ -3,8 +3,9 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const matter = require('gray-matter');
 const {
-  ROOT_ID, normalizeFields, isProtectedRoot, scanNoteFiles, planReconcile,
+  ROOT_ID, normalizeFields, isProtectedRoot, scanNoteFiles, planReconcile, writeNoteTop,
 } = require('./noteSync.cjs');
 
 const DEMO_ZH = path.join(__dirname, '..', '..', 'demo-data', 'zh');
@@ -192,6 +193,38 @@ test('planReconcile 祖先链成环时不死循环，回退到根', () => {
     rows: [rootRow(), row({ id: 't1', top: 't2', delete: 1 }), row({ id: 't2', top: 't1', delete: 1 })],
   });
   assert.equal(plan.inserts.find((n) => n.id === 'c').top, '1');
+});
+
+test('planReconcile 把重挂结果登记为待回写的文件', () => {
+  const plan = planReconcile({
+    notes: [
+      rootNote(),
+      note({ id: 'gp', top: '1', file: 'gp-祖父.md' }),
+      note({ id: 'c', top: 'trashed', file: 'c-子.md' }),
+    ],
+    rows: [
+      rootRow(),
+      row({ id: 'gp', top: '1' }),
+      row({ id: 'trashed', top: 'gp', delete: 1 }),
+      row({ id: 'c', top: 'trashed' }),
+    ],
+  });
+  assert.deepEqual(plan.reattached, [{ file: 'c-子.md', id: 'c', top: 'gp' }]);
+});
+
+test('writeNoteTop 只改 top，保留其余 frontmatter 与正文', () => {
+  const dir = tmpDir();
+  const file = path.join(dir, 'n-标题.md');
+  fs.writeFileSync(file, '---\nid: n\ntitle: 标题\nalias: "a"\ntop: gone\nleft: ""\n---\n正文\n', 'utf-8');
+
+  writeNoteTop(file, '1');
+
+  const parsed = matter(fs.readFileSync(file, 'utf-8'));
+  assert.equal(parsed.data.top, '1');
+  assert.equal(parsed.data.id, 'n');
+  assert.equal(parsed.data.title, '标题');
+  assert.equal(parsed.data.alias, 'a');
+  assert.match(parsed.content, /正文/);
 });
 
 test('planReconcile 在没有任何根时只告警不重挂', () => {

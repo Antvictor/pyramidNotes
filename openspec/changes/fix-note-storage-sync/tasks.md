@@ -47,3 +47,8 @@
 - [x] 6.5 在副本上用真实数据复验：7 个子节点由「被挪到根」变为「保持 `Y_28g9iuQagi` 不动」，对账对该批节点产生 0 条 UPDATE
 - [x] 6.6 渲染侧 lint 无新增问题（既有 2 处 `no-unused-vars` 与本次改动无关）
 - [ ] 6.7 记录：`promoteChildren` 属渲染侧，无单测；`promoteChildren` 的正确性只能靠真实删除操作 + 重启验证
+- [x] 6.8 `scanNoteFiles` 为每条笔记记录来源文件名；`planReconcile` 返回 `reattached`（待回写的文件名 + 修正后的 top）
+- [x] 6.9 新增 `writeNoteTop(filePath, top)`：合并 frontmatter 写回，保留其余字段与正文
+- [x] 6.10 `initNode` 落库后逐个回写 `reattached`，失败只告警不阻断；汇总日志加「回写文件 N」
+- [x] 6.11 补 2 个单测：`reattached` 登记、`writeNoteTop` 保留其它 frontmatter 与正文
+- [x] 6.12 副本复验收敛：第 1 次重挂 7 条 + 回写 7 个文件，第 2 次均为 0，文件里不再残留旧上级

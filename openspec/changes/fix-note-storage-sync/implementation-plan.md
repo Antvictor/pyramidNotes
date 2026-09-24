@@ -927,20 +927,77 @@ test('planReconcile 祖先链成环时不死循环，回退到根', () => {
       await _internalDeleteNode(deleteConfirmation.id);
 ```
 
-- [ ] **Step 5: 验证**
+- [ ] **Step 5: 重挂修正回写文件**
+
+`noteSync.cjs` 里给每条笔记记录来源文件名，新增 `writeNoteTop`：
+
+```js
+      notes.push({ ...fields, content: parsed.content, file });
+```
+
+```js
+// 把修正后的 top 写回文件，保留其余 frontmatter 与正文。
+// 与 file.cjs 的 updateYaml 同语义：那里是渲染侧改一个节点，这里是启动对账修正一批陈旧文件。
+// 不回写的话，文件里那个不可达的旧上级会每次启动都被重新判一次（幂等但一直在刷告警）。
+function writeNoteTop(filePath, top) {
+  const parsed = matter(fs.readFileSync(filePath, 'utf-8'));
+  const merged = {
+    ...(parsed.data && typeof parsed.data === 'object' ? parsed.data : {}),
+    top,
+  };
+  fs.writeFileSync(filePath, `---\n${yaml.stringify(merged).trim()}\n---\n${parsed.content}`, 'utf-8');
+}
+```
+
+`planReconcile` 的重挂循环里登记待回写项，并在返回值带上 `reattached`：
+
+```js
+  const reattached = [];
+  for (const note of survivors) {
+    // …（前置判定不变）
+    note.top = target;
+    if (note.file) reattached.push({ file: note.file, id: note.id, top: target });
+  }
+
+  return { inserts, updates, removes, skipped, warn, reattached };
+```
+
+`module.exports` 追加 `writeNoteTop`。
+
+- [ ] **Step 6: initNode 落库后回写**
+
+在事务之后、日志之前插入（并给 `initNode.js` 补 `path` 与 `writeNoteTop` 的 require）：
+
+```js
+    // 重挂结果回写文件：让文件与库一致，否则文件里那个不可达的旧上级
+    // 会每次启动都被重新判定一遍（幂等，但一直刷告警）
+    let rewritten = 0;
+    for (const n of plan.reattached) {
+        try {
+            writeNoteTop(path.join(storagePath, n.file), n.top);
+            rewritten += 1;
+        } catch (error) {
+            console.warn(`[initNode] 回写文件失败 ${n.file}: ${error.message}`);
+        }
+    }
+```
+
+汇总日志末尾加 `，回写文件 ${rewritten}`。
+
+- [ ] **Step 7: 验证**
 
 ```bash
 node --check electron/nodes/noteSync.cjs
-node --test electron/nodes/noteSync.test.cjs          # 期望 21 passed
+node --test electron/nodes/noteSync.test.cjs          # 期望 23 passed
 cd web && npx eslint src/pages/MindMap.jsx            # 期望无新增问题（仅既有 2 处 no-unused-vars）
 ```
 
-副本端到端复验（不碰真实数据）：把真实存储目录 `cp -a` 到 `/tmp`，跑一次对账，确认被删父节点的子节点**保持**在原祖父节点下、且对该批节点产生 0 条 UPDATE。
+副本端到端复验（不碰真实数据）：把真实存储目录 `cp -a` 到 `/tmp`，**连跑两次**对账。第 1 次应重挂 7 条并回写 7 个文件、0 条 UPDATE；第 2 次重挂与回写都应归零（文件已不再是陈旧值）。
 
-- [ ] **Step 6: 提交**
+- [ ] **Step 8: 提交**
 
 ```bash
-git add electron/nodes/noteSync.cjs electron/nodes/noteSync.test.cjs web/src/pages/MindMap.jsx
-git commit -m "fix(notes): 删节点时同步写文件，对账重挂改为最近可用祖先"
+git add electron/nodes/noteSync.cjs electron/nodes/noteSync.test.cjs electron/nodes/initNode.js web/src/pages/MindMap.jsx
+git commit -m "fix(notes): 删节点时同步写文件，对账重挂改为最近可用祖先并回写"
 ```
 

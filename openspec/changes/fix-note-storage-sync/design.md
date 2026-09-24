@@ -69,6 +69,14 @@ toStr(v) = (v === undefined || v === null) ? null
 
 根 id 同样不硬编码为 `'1'`：根是 survivors 里 `top === '0'` 的那个节点（`demo-data/zh` 用 `id: "zho01root001"`）。仅当 survivors 里没有任何根时才回退到数据库里可见的 `'1'`，否则只告警不重挂，交给渲染侧「无根则新建根并收编孤儿」的既有逻辑（`MindMap.jsx` 约 830 行）处理。
 
+### 重挂修正回写文件
+
+对账修正了某笔记的 `top` 之后，`initNode` 会把新值写回该 `.md`（`writeNoteTop`，语义与 `file.cjs` 的 `updateYaml` 一致：合并 frontmatter、保留正文）。
+
+不回写的话，文件里那个不可达的旧上级会**每次启动都被重新判定一次**——因为对账以文件为准。它虽然幂等（落点与库中现值相同，`differs` 为假，不产生 UPDATE），但会一直刷告警日志，并且文件和库长期不一致。回写之后文件与库一次收敛，实测第二次启动重挂与回写都是 0 条。
+
+回写只针对「对账修正过 `top`」的笔记，不对任何其它字段做反向写入——方向仍然是文件→库，例外仅限这一处已被判定为不可达的字段。
+
 ### 已修复的交互缺陷：promoteChildren 只改库不写文件
 
 实测发现（补验场景 A）：`promoteChildren` 只执行 `db.notes.update({ top: parentId }, { top: grandParentId })`，**不写 `.md` 文件**，而 App 里「移动节点」（`executeMoveNode`）是「改库 + `updateYaml` 写文件」两件都做。
