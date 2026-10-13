@@ -23,6 +23,7 @@ import { InternalImageEmbed } from "./extensions/InternalImageEmbed";
 import { EnhancedCodeBlock } from "./extensions/enhancedCodeBlock";
 import { MathBlock, MathInline } from "./extensions/mathNodes";
 import { createTableExtensions } from "./extensions/tableExtensions";
+import { TabIndentation } from "./extensions/tabIndentation";
 import type { KeyBinding } from "./extensions/commands";
 import { isImageReference, sanitizeFileName } from "./extensions/attachmentUtils";
 import {
@@ -691,7 +692,7 @@ export default function TipTapEditor({
   }), []);
 
   const extensions = useMemo(
-    () => [starterKit, ...tableExtensions, Code, InlineCodePreview, EnhancedCodeBlock, MathInline, MathBlock, EmptyParagraphPreserver, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, InternalNodeTokenNormalizer, markdownExtension, findAndReplace],
+    () => [starterKit, ...tableExtensions, TabIndentation, Code, InlineCodePreview, EnhancedCodeBlock, MathInline, MathBlock, EmptyParagraphPreserver, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, InternalNodeTokenNormalizer, markdownExtension, findAndReplace],
     [starterKit, tableExtensions, EmptyParagraphPreserver, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, markdownExtension, findAndReplace],
   );
 

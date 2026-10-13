@@ -6,6 +6,7 @@ import { NodeSelection } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 
 import { EnhancedCodeBlock, resolveRenderedCodeLanguage } from "./enhancedCodeBlock";
+import { TabIndentation } from "./tabIndentation";
 
 vi.mock("mermaid", () => ({
   default: {
@@ -454,6 +455,33 @@ describe("EnhancedCodeBlock stale cache tolerance", () => {
     const renderLayer = editor.view.dom.querySelector(".rendered-code-view") as HTMLElement;
     expect(renderLayer.classList.contains("has-error")).toBe(false);
     expect(renderLayer.innerHTML).toContain("katex");
+    editor.destroy();
+  });
+});
+
+describe("Tab indentation inside a code block", () => {
+  function pressKey(editor: Editor, key: string) {
+    const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+    return Boolean(editor.view.someProp("handleKeyDown", (handler) => handler(editor.view, event)));
+  }
+
+  it("inserts two spaces on Tab", () => {
+    const editor = new Editor({
+      extensions: [
+        StarterKit.configure({ code: false, codeBlock: false, hardBreak: false }),
+        EnhancedCodeBlock,
+        TabIndentation,
+      ],
+      content: "<pre><code>const a = 1</code></pre>",
+    });
+    let pos = -1;
+    editor.state.doc.descendants((node, p) => {
+      if (node.isText && pos < 0) pos = p + node.text!.length;
+      return undefined;
+    });
+    editor.commands.setTextSelection(pos);
+    expect(pressKey(editor, "Tab")).toBe(true);
+    expect(editor.state.doc.firstChild!.textContent).toBe("const a = 1  ");
     editor.destroy();
   });
 });

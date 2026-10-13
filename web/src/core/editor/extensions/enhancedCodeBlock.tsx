@@ -465,6 +465,8 @@ function enterAdjacentRenderedBlock(editor: Editor, direction: "backward" | "for
 }
 
 // ---- 扩展:仅 mermaid/math 分支自定义 NodeView,其余语言返回 null(现有行为零变化) ----
+// 代码块内 Tab 缩进不在这里开 enableTabIndentation：Tiptap CodeBlock 的 Tab 走
+// insertContent("  ")，纯空白会被当空串丢弃、实际不插入。改由 TabIndentation 扩展兜底。
 export const EnhancedCodeBlock = CodeBlockLowlight.configure({ lowlight }).extend({
   addNodeView() {
     return ({ node, editor, getPos }) => {
