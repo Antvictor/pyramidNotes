@@ -4,6 +4,7 @@ import { Markdown } from "tiptap-markdown";
 import { describe, expect, it } from "vitest";
 
 import { createTableExtensions } from "./tableExtensions";
+import { TabIndentation } from "./tabIndentation";
 
 const TABLE_MD = "| a | b |\n| --- | --- |\n| 1 | 2 |";
 
@@ -83,13 +84,105 @@ describe("cell content constraint", () => {
   });
 });
 
-describe("cell keyboard guard", () => {
-  it("swallows Enter inside a cell (no second block)", () => {
+function tableRowCount(editor: Editor): number {
+  const table = editor.state.doc.firstChild;
+  return table?.type.name === "table" ? table.childCount : -1;
+}
+
+function cellTextAt(editor: Editor): string {
+  const { $from } = editor.state.selection;
+  for (let depth = $from.depth; depth > 0; depth -= 1) {
+    const name = $from.node(depth).type.name;
+    if (name === "tableCell" || name === "tableHeader") return $from.node(depth).textContent;
+  }
+  return "";
+}
+
+// 把光标放到内容为 text 的单元格内的文本末尾。
+function placeInCellWithText(editor: Editor, text: string) {
+  let target = -1;
+  editor.state.doc.descendants((node, pos) => {
+    if (target < 0 && node.isText && node.text === text) target = pos + node.text!.length;
+    return undefined;
+  });
+  editor.commands.setTextSelection(target);
+}
+
+// 把光标放到表格第 rowIndex 行第一个单元格的内容起始处。
+function placeInRowFirstCell(editor: Editor, rowIndex: number) {
+  const table = editor.state.doc.firstChild!;
+  let pos = 1; // 表格起始于 0，内容从 1 开始
+  for (let index = 0; index < rowIndex; index += 1) pos += table.child(index).nodeSize;
+  editor.commands.setTextSelection(pos + 3); // 行起点 →+1 到行内容 →+1 到格 →+1 到段落
+}
+
+describe("cell keyboard: Enter / Backspace", () => {
+  it("Enter 在非末格：移到下一格、行数不变", () => {
     const editor = makeEditor(TABLE_MD);
-    placeInFirstText(editor);
+    placeInCellWithText(editor, "1");
     expect(pressKey(editor, "Enter")).toBe(true);
-    const firstCell = editor.state.doc.firstChild!.firstChild!.firstChild!;
-    expect(firstCell.childCount).toBe(1);
+    expect(tableRowCount(editor)).toBe(2);
+    expect(cellTextAt(editor)).toBe("2");
+    editor.destroy();
+  });
+
+  it("Enter 在末格：新增一行", () => {
+    const editor = makeEditor(TABLE_MD);
+    placeInCellWithText(editor, "2");
+    expect(pressKey(editor, "Enter")).toBe(true);
+    expect(tableRowCount(editor)).toBe(3);
+    editor.destroy();
+  });
+
+  it("Enter 不在单元格内产生第二段", () => {
+    const editor = makeEditor(TABLE_MD);
+    placeInCellWithText(editor, "1");
+    pressKey(editor, "Enter");
+    expect(editor.state.doc.firstChild!.firstChild!.firstChild!.childCount).toBe(1);
+    editor.destroy();
+  });
+
+  it("空行首格退格 → 删该行、光标到上一行末格", () => {
+    const editor = makeEditor("| a | b |\n| --- | --- |\n|  |  |\n|  |  |");
+    placeInRowFirstCell(editor, 1);
+    expect(pressKey(editor, "Backspace")).toBe(true);
+    expect(tableRowCount(editor)).toBe(2);
+    expect(cellTextAt(editor)).toBe("b");
+    editor.destroy();
+  });
+
+  it("多行表：空行首格退格逐行删，不删整表", () => {
+    const editor = makeEditor("| a | b |\n| --- | --- |\n|  |  |");
+    placeInRowFirstCell(editor, 1);
+    expect(pressKey(editor, "Backspace")).toBe(true);
+    expect(tableRowCount(editor)).toBe(1); // 只剩表头一行
+    expect(editor.state.doc.firstChild?.type.name).toBe("table");
+    editor.destroy();
+  });
+
+  it("仅剩一行(空)首格退格 → 删整表", () => {
+    const editor = makeEditor("|  |  |\n| --- | --- |");
+    placeInRowFirstCell(editor, 0);
+    expect(pressKey(editor, "Backspace")).toBe(true);
+    expect(editor.state.doc.firstChild?.type.name).not.toBe("table");
+    editor.destroy();
+  });
+
+  it("有内容的行首格退格 → 跳到左侧单元格、不删行", () => {
+    const editor = makeEditor(TABLE_MD);
+    placeInRowFirstCell(editor, 1); // 位于 "1" 单元格起始
+    expect(pressKey(editor, "Backspace")).toBe(true);
+    expect(tableRowCount(editor)).toBe(2);
+    expect(cellTextAt(editor)).toBe("b"); // 跳到左侧单元格（上一行末格）
+    editor.destroy();
+  });
+
+  it("非首格起始退格 → 跳到左侧单元格", () => {
+    const editor = makeEditor(TABLE_MD);
+    placeInCellWithText(editor, "2"); // 光标在 "2" 末尾
+    editor.commands.setTextSelection(editor.state.selection.from - 1); // 移到 "2" 起始
+    expect(pressKey(editor, "Backspace")).toBe(true);
+    expect(cellTextAt(editor)).toBe("1"); // 左侧单元格
     editor.destroy();
   });
 
@@ -180,6 +273,37 @@ describe("auto-convert typed pipe syntax", () => {
     const editor = makePlainEditor("<p>head</p><p>|123|123|</p><p>|---|---</p>");
     trigger(editor);
     expect(findTable(editor)).toBeNull();
+    editor.destroy();
+  });
+});
+
+// 含 TabIndentation 的编辑器（贴近 App 配置）。
+function makeEditorWithTab(content: string) {
+  return new Editor({
+    extensions: [
+      StarterKit.configure({ code: false, codeBlock: false, hardBreak: false }),
+      ...createTableExtensions(),
+      TabIndentation,
+      Markdown.configure({ html: false }),
+    ],
+    content,
+  });
+}
+
+describe("tab indentation", () => {
+  it("段落 Tab → 插入两个空格且已处理", () => {
+    const editor = makeEditorWithTab("hello");
+    editor.commands.setTextSelection(6);
+    expect(pressKey(editor, "Tab")).toBe(true);
+    expect(editor.state.doc.firstChild!.textContent).toBe("hello  ");
+    editor.destroy();
+  });
+
+  it("表格 Tab 行为不变（移到下一格）", () => {
+    const editor = makeEditorWithTab(TABLE_MD);
+    placeInCellWithText(editor, "1");
+    expect(pressKey(editor, "Tab")).toBe(true);
+    expect(cellTextAt(editor)).toBe("2");
     editor.destroy();
   });
 });

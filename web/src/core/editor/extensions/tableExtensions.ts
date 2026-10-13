@@ -10,22 +10,80 @@ import { MarkdownHardBreak } from "./markdownHardBreak";
 export const SingleBlockTableCell = TableCell.extend({ content: "paragraph" });
 export const SingleBlockTableHeader = TableHeader.extend({ content: "paragraph" });
 
-function selectionInTableCell(editor: Editor): boolean {
+// 光标所在单元格的行/列上下文；不在单元格内返回 null。
+function getTableCellContext(editor: Editor) {
   const { $from } = editor.state.selection;
   for (let depth = $from.depth; depth > 0; depth--) {
     const name = $from.node(depth).type.name;
-    if (name === "tableCell" || name === "tableHeader") return true;
+    if (name === "tableCell" || name === "tableHeader") {
+      return {
+        cellDepth: depth,
+        rowIndex: $from.index(depth - 2),
+        cellIndex: $from.index(depth - 1),
+        row: $from.node(depth - 1),
+        table: $from.node(depth - 2),
+      };
+    }
   }
-  return false;
+  return null;
 }
 
-// 单元格内 Enter 不产生第二段（单段落约束下本就无效，这里显式拦截以求确定）。
-// Shift-Enter 放行：由 HardBreak 插入换行，序列化为 <br>（见 markdownHardBreak.ts）。
-const TableCellGuard = Extension.create({
+function selectionInTableCell(editor: Editor): boolean {
+  return getTableCellContext(editor) !== null;
+}
+
+// 单元格内编辑键：
+// - Enter：先右后下（与 Table 扩展 Tab 一致）——移到下一格，末格新增一行并进入；不产生第二段。
+// - Backspace：在单元格内容起始（分隔线）处——整行为空且在首格时逐行删除（仅当只剩最后一行时删整表），
+//   否则跳到左侧单元格；不在起始处则交默认删字符。
+// Shift-Enter 仍由 HardBreak 插入 <br>（见 markdownHardBreak.ts）。
+const TableCellKeymap = Extension.create({
   name: "tableCellGuard",
   addKeyboardShortcuts() {
     return {
-      Enter: ({ editor }: { editor: Editor }) => selectionInTableCell(editor),
+      Enter: ({ editor }: { editor: Editor }) => {
+        if (!selectionInTableCell(editor)) return false;
+        if (editor.commands.goToNextCell()) return true;
+        if (!editor.can().addRowAfter()) return false;
+        return editor.chain().addRowAfter().goToNextCell().run();
+      },
+      Backspace: ({ editor }: { editor: Editor }) => {
+        const { selection } = editor.state;
+        if (!selection.empty) return false;
+
+        const context = getTableCellContext(editor);
+        if (!context) return false;
+        const { cellDepth, rowIndex, cellIndex, row, table } = context;
+        const { $from } = selection;
+        // 只在单元格内容起始（分隔线）处接管；否则交给默认（删除字符）。
+        if ($from.parentOffset !== 0) return false;
+
+        // 整行为空且在首格：逐行删除；仅当表格只剩这一行时才删整表。
+        if (cellIndex === 0) {
+          let rowEmpty = true;
+          row.forEach((cell) => {
+            if (cell.textContent.length > 0) rowEmpty = false;
+          });
+          if (rowEmpty) {
+            if (table.childCount === 1) {
+              return editor.commands.deleteTable();
+            }
+            if (rowIndex >= 1) {
+              const tableStart = $from.start(cellDepth - 2);
+              let prevRowStart = tableStart;
+              for (let index = 0; index < rowIndex - 1; index += 1) {
+                prevRowStart += table.child(index).nodeSize;
+              }
+              const prevRow = table.child(rowIndex - 1);
+              const targetPos = prevRowStart + prevRow.nodeSize - 3;
+              return editor.chain().deleteRow().setTextSelection(targetPos).run();
+            }
+          }
+        }
+
+        // 单元格内容起始处退格：跳到左侧单元格（阅读顺序的上一个）。
+        return editor.commands.goToPreviousCell();
+      },
     };
   },
 });
@@ -112,7 +170,7 @@ export function createTableExtensions() {
     TableRow,
     SingleBlockTableHeader,
     SingleBlockTableCell,
-    TableCellGuard,
+    TableCellKeymap,
     TableAutoConvert,
     // 单元格内换行用 <br> 承载（替换默认 HardBreak 的 markdown 存储）。
     // 需与 StarterKit.configure({ hardBreak: false }) 配套，避免重复注册。
