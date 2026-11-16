@@ -36,7 +36,6 @@ const MENU_LABELS = {
     cut: 'Cut',
     copy: 'Copy',
     paste: 'Paste',
-    selectAll: 'Select All',
     view: 'View',
     reload: 'Reload',
     forceReload: 'Force Reload',
@@ -59,7 +58,6 @@ const MENU_LABELS = {
     cut: '剪切',
     copy: '复制',
     paste: '粘贴',
-    selectAll: '全选',
     view: '视图',
     reload: '重新加载',
     forceReload: '强制重新加载',
@@ -78,9 +76,9 @@ function getMenuLabels(language) {
   return MENU_LABELS[language] || MENU_LABELS.en
 }
 
-function buildApplicationMenu(language) {
+function buildApplicationMenuTemplate(language) {
   const labels = getMenuLabels(language)
-  const template = [
+  return [
     ...(process.platform === 'darwin'
       ? [{
           label: labels.app,
@@ -100,7 +98,8 @@ function buildApplicationMenu(language) {
         { role: 'cut', label: labels.cut },
         { role: 'copy', label: labels.copy },
         { role: 'paste', label: labels.paste },
-        { role: 'selectAll', label: labels.selectAll },
+        // 不注册 selectAll 菜单项：菜单级 CmdOrCtrl+A 加速键会被 Electron 主进程消费，
+        // 按键进不了渲染进程，绕过 ProseMirror 的选区同步，导致「全选后 Backspace 无效、输入却能替换」。
       ],
     },
     {
@@ -125,7 +124,10 @@ function buildApplicationMenu(language) {
       ],
     },
   ]
-  return Menu.buildFromTemplate(template)
+}
+
+function buildApplicationMenu(language) {
+  return Menu.buildFromTemplate(buildApplicationMenuTemplate(language))
 }
 
 function getSystemLanguages() {
@@ -150,6 +152,7 @@ module.exports = {
   normalizeLanguagePreference,
   resolveLanguage,
   getMenuLabels,
+  buildApplicationMenuTemplate,
   buildApplicationMenu,
   applyApplicationMenu,
   getWindowTitle,

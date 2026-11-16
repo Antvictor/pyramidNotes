@@ -216,11 +216,13 @@
 .cm-md-inline table,
 .prose table {
   width: 100%;
+  max-width: 100%;
   border-collapse: collapse;
   margin: 1em 0;
   font-size: 0.9em;
 }
 
+/* 长 URL/长串可在格内断行；同时降低 min-content，让 auto 布局的表格能收缩回内容列内 */
 .cm-md-inline th,
 .prose th {
   background: var(--color-table-header-bg);
@@ -228,12 +230,14 @@
   text-align: left;
   padding: var(--spacing-table-cell);
   border: 1px solid var(--color-table-border);
+  overflow-wrap: anywhere;
 }
 
 .cm-md-inline td,
 .prose td {
   padding: var(--spacing-table-cell);
   border: 1px solid var(--color-table-border);
+  overflow-wrap: anywhere;
 }
 
 .cm-md-inline tr:nth-child(even),

@@ -1,5 +1,7 @@
 import { Extension, type Editor } from "@tiptap/core";
-import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
+import { NodeSelection, Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
+import { CellSelection } from "@tiptap/pm/tables";
+import type { Node as PMNode, ResolvedPos } from "@tiptap/pm/model";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 
 import { MarkdownHardBreak } from "./markdownHardBreak";
@@ -32,10 +34,68 @@ function selectionInTableCell(editor: Editor): boolean {
   return getTableCellContext(editor) !== null;
 }
 
+const isTableCellRole = (role: string | undefined) =>
+  role === "cell" || role === "header_cell";
+
+function findTableAncestor($pos: ResolvedPos): { node: PMNode; pos: number } | null {
+  for (let depth = $pos.depth; depth > 0; depth -= 1) {
+    const node = $pos.node(depth);
+    if (node.type.spec.tableRole === "table") {
+      return { node, pos: $pos.before(depth) };
+    }
+  }
+  return null;
+}
+
+// 整表选区直接删整表：NodeSelection 命中 table / CellSelection 覆盖全部单元格 /
+// TextSelection 从首格文本起点到末格文本终点。
+function deleteWholeTableSelection(editor: Editor): boolean {
+  const { selection } = editor.state;
+  if (selection.empty) return false;
+
+  // 表格自身的 NodeSelection：deleteTable 依赖锚点在单元格内，这里交给 deleteSelection。
+  if (selection instanceof NodeSelection) {
+    if (selection.node.type.spec.tableRole !== "table") return false;
+    return editor.commands.deleteSelection();
+  }
+
+  if (selection instanceof CellSelection) {
+    const table = selection.$anchorCell.node(-1);
+    let cellCount = 0;
+    table.descendants((node) => {
+      if (isTableCellRole(node.type.spec.tableRole)) cellCount += 1;
+      return undefined;
+    });
+    return cellCount === selection.ranges.length && editor.commands.deleteTable();
+  }
+
+  // 视觉上整表被选中的 TextSelection：首格文本起点 → 末格文本终点。
+  if (!(selection instanceof TextSelection)) return false;
+
+  const table = findTableAncestor(selection.$from);
+  if (!table) return false;
+  if (selection.to > table.pos + table.node.nodeSize) return false;
+
+  let firstCellStart = Infinity;
+  let lastCellEnd = -Infinity;
+  table.node.descendants((node, relPos) => {
+    if (!isTableCellRole(node.type.spec.tableRole)) return undefined;
+    const cellPos = table.pos + 1 + relPos;
+    firstCellStart = Math.min(firstCellStart, cellPos + 2);
+    lastCellEnd = Math.max(lastCellEnd, cellPos + node.nodeSize - 2);
+    return undefined;
+  });
+
+  if (firstCellStart > lastCellEnd) return false;
+  if (selection.from > firstCellStart || selection.to < lastCellEnd) return false;
+  return editor.commands.deleteTable();
+}
+
 // 单元格内编辑键：
 // - Enter：先右后下（与 Table 扩展 Tab 一致）——移到下一格，末格新增一行并进入；不产生第二段。
 // - Backspace：在单元格内容起始（分隔线）处——整行为空且在首格时逐行删除（仅当只剩最后一行时删整表），
 //   否则跳到左侧单元格；不在起始处则交默认删字符。
+// - 整表被选中时（NodeSelection / 全覆盖 CellSelection / 跨单元格 TextSelection）直接删整表。
 // Shift-Enter 仍由 HardBreak 插入 <br>（见 markdownHardBreak.ts）。
 const TableCellKeymap = Extension.create({
   name: "tableCellGuard",
@@ -49,7 +109,7 @@ const TableCellKeymap = Extension.create({
       },
       Backspace: ({ editor }: { editor: Editor }) => {
         const { selection } = editor.state;
-        if (!selection.empty) return false;
+        if (!selection.empty) return deleteWholeTableSelection(editor);
 
         const context = getTableCellContext(editor);
         if (!context) return false;
@@ -83,6 +143,11 @@ const TableCellKeymap = Extension.create({
 
         // 单元格内容起始处退格：跳到左侧单元格（阅读顺序的上一个）。
         return editor.commands.goToPreviousCell();
+      },
+      Delete: ({ editor }: { editor: Editor }) => {
+        const { selection } = editor.state;
+        if (selection.empty) return false;
+        return deleteWholeTableSelection(editor);
       },
     };
   },

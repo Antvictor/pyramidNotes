@@ -1,5 +1,7 @@
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
+import { CellSelection } from "@tiptap/pm/tables";
+import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import { Markdown } from "tiptap-markdown";
 import { describe, expect, it } from "vitest";
 
@@ -273,6 +275,91 @@ describe("auto-convert typed pipe syntax", () => {
     const editor = makePlainEditor("<p>head</p><p>|123|123|</p><p>|---|---</p>");
     trigger(editor);
     expect(findTable(editor)).toBeNull();
+    editor.destroy();
+  });
+});
+
+describe("whole-table selection deletion", () => {
+  function hasTable(editor: Editor): boolean {
+    let found = false;
+    editor.state.doc.descendants((node) => {
+      if (node.type.name === "table") found = true;
+      return undefined;
+    });
+    return found;
+  }
+
+  function tableInfo(editor: Editor): { node: import("@tiptap/pm/model").Node; pos: number } | null {
+    let info: { node: import("@tiptap/pm/model").Node; pos: number } | null = null;
+    editor.state.doc.descendants((node, pos) => {
+      if (info) return false;
+      if (node.type.name === "table") info = { node, pos };
+      return undefined;
+    });
+    return info;
+  }
+
+  function cellSpans(editor: Editor) {
+    const cells: { pos: number; size: number }[] = [];
+    editor.state.doc.descendants((node, pos) => {
+      if (node.type.name === "tableCell" || node.type.name === "tableHeader") {
+        cells.push({ pos, size: node.nodeSize });
+      }
+      return undefined;
+    });
+    return cells;
+  }
+
+  it("整表 NodeSelection + Backspace 删除整表", () => {
+    const editor = makeEditor(TABLE_MD);
+    editor.view.dispatch(editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, 0)));
+    expect(pressKey(editor, "Backspace")).toBe(true);
+    expect(hasTable(editor)).toBe(false);
+    expect(editor.state.doc.firstChild?.type.name).toBe("paragraph");
+    editor.destroy();
+  });
+
+  it("全覆盖 CellSelection + Backspace 删除整表", () => {
+    const editor = makeEditor(TABLE_MD);
+    const cells = cellSpans(editor);
+    const selection = CellSelection.create(editor.state.doc, cells[0].pos, cells[cells.length - 1].pos);
+    editor.view.dispatch(editor.state.tr.setSelection(selection));
+    expect(pressKey(editor, "Backspace")).toBe(true);
+    expect(hasTable(editor)).toBe(false);
+    editor.destroy();
+  });
+
+  it("跨单元格 TextSelection（首格文本起点 → 末格文本终点）+ Backspace 删除整表", () => {
+    const editor = makeEditor(TABLE_MD);
+    const cells = cellSpans(editor);
+    const last = cells[cells.length - 1];
+    const selection = TextSelection.create(editor.state.doc, cells[0].pos + 2, last.pos + last.size - 2);
+    editor.view.dispatch(editor.state.tr.setSelection(selection));
+    expect(pressKey(editor, "Backspace")).toBe(true);
+    expect(hasTable(editor)).toBe(false);
+    editor.destroy();
+  });
+
+  it("单元格内局部选区 + Backspace 只删字符、保留表格", () => {
+    const editor = makeEditor(TABLE_MD);
+    const cells = cellSpans(editor);
+    const selection = TextSelection.create(editor.state.doc, cells[0].pos + 2, cells[0].pos + 3);
+    editor.view.dispatch(editor.state.tr.setSelection(selection));
+    expect(pressKey(editor, "Backspace")).toBe(true);
+    expect(hasTable(editor)).toBe(true);
+    expect(editor.state.doc.firstChild?.firstChild?.firstChild?.textContent).toBe("");
+    editor.destroy();
+  });
+
+  it("表格前后有段落时只删表，保留前后文本", () => {
+    const editor = makeEditor("before\n\n| a | b |\n| --- | --- |\n| 1 | 2 |\n\nafter");
+    const info = tableInfo(editor);
+    expect(info).not.toBeNull();
+    editor.view.dispatch(editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, info!.pos)));
+    expect(pressKey(editor, "Backspace")).toBe(true);
+    expect(hasTable(editor)).toBe(false);
+    expect(editor.state.doc.textContent).toContain("before");
+    expect(editor.state.doc.textContent).toContain("after");
     editor.destroy();
   });
 });
