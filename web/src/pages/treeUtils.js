@@ -22,3 +22,8 @@ export function collectExpandedChildren(expandedIds, nodeMap) {
   }
   return ids;
 }
+
+// 移动节点：当前 sort 不大于目标父下兄弟最大值时，需要抬升以保证落在最右
+export function needsSortBump(currentSort, siblingMax) {
+  return (Number(currentSort) || 0) <= (Number(siblingMax) || 0);
+}

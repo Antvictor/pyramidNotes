@@ -12,6 +12,7 @@ describe("extractionUtils", () => {
       nodeName: "alpha",
       content: "hello",
       createId: vi.fn().mockReturnValue("child-1"),
+      sort: 9,
     });
 
     expect(record).toEqual({
@@ -24,6 +25,7 @@ describe("extractionUtils", () => {
         alias: "",
         top: "parent-1",
         left: "",
+        sort: 9,
       },
       yamlStr: {
         id: "child-1",
@@ -31,6 +33,7 @@ describe("extractionUtils", () => {
         title: "alpha",
         left: "",
         top: "parent-1",
+        sort: 9,
       },
     });
   });

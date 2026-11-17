@@ -9,6 +9,7 @@ declare module '@/pages/db/db.js' {
   interface Table {
     insert(data: Record<string, unknown>): Promise<unknown>;
     select(whereClause?: string, orderBy?: string, limit?: string): Promise<unknown[]>;
+    nextSort(): Promise<number>;
     update(where: Record<string, unknown>, data: Record<string, unknown>): Promise<unknown>;
     delete(where: Record<string, unknown>): Promise<unknown>;
     search(keyword: string): Promise<FullTextSearchResult[]>;

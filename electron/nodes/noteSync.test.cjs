@@ -37,6 +37,14 @@ test('normalizeFields 优先 title 并容忍缺失字段', () => {
   assert.equal(normalizeFields(null).id, null);
 });
 
+test('normalizeFields 把 sort 规整为整数，缺省为 0', () => {
+  assert.equal(normalizeFields({ id: 'a' }).sort, 0);
+  assert.equal(normalizeFields({ id: 'a', sort: 5 }).sort, 5);
+  assert.equal(normalizeFields({ id: 'a', sort: '7' }).sort, 7);
+  assert.equal(normalizeFields({ id: 'a', sort: 3.9 }).sort, 3);
+  assert.equal(normalizeFields({ id: 'a', sort: 'x' }).sort, 0);
+});
+
 test('isProtectedRoot 同时认定 id 为 1 与 top 为 0 的行', () => {
   assert.equal(ROOT_ID, '1');
   assert.equal(isProtectedRoot({ id: '1', top: null }), true);
@@ -118,6 +126,15 @@ test('planReconcile 修复脏行：top 1.0 与带 frontmatter 的 content', () =
   assert.equal(plan.updates[0].top, '1');
   assert.equal(plan.updates[0].content, '正文');
   assert.deepEqual(plan.inserts, []);
+});
+
+test('planReconcile 在 sort 不一致时更新', () => {
+  const plan = planReconcile({
+    notes: [rootNote(), note({ id: 'n1', top: '1', sort: 3 })],
+    rows: [rootRow(), row({ id: 'n1', top: '1', sort: 1 })],
+  });
+  assert.deepEqual(plan.updates.map((n) => n.id), ['n1']);
+  assert.equal(plan.updates[0].sort, 3);
 });
 
 test('planReconcile 恢复回到目录的软删笔记', () => {

@@ -9,6 +9,42 @@ describe("escapeLike", () => {
   });
 });
 
+describe("db.notes.select", () => {
+  beforeEach(() => {
+    vi.stubGlobal("window", {
+      api: { dbQuery: vi.fn().mockResolvedValue([]) },
+    });
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("orders by sort then rowid when orderBy omitted", async () => {
+    await db.notes.select();
+    expect(window.api.dbQuery).toHaveBeenCalledWith(
+      'SELECT * FROM notes WHERE "delete" = 0 ORDER BY "sort" ASC, rowid ASC',
+      [],
+    );
+  });
+});
+
+describe("db.notes.nextSort", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("returns MAX(sort)+1", async () => {
+    vi.stubGlobal("window", {
+      api: { dbQuery: vi.fn().mockResolvedValue([{ m: 7 }]) },
+    });
+    await expect(db.notes.nextSort()).resolves.toBe(8);
+    expect(window.api.dbQuery).toHaveBeenCalledWith("SELECT MAX(sort) AS m FROM notes");
+  });
+
+  it("treats null MAX as 0", async () => {
+    vi.stubGlobal("window", {
+      api: { dbQuery: vi.fn().mockResolvedValue([{ m: null }]) },
+    });
+    await expect(db.notes.nextSort()).resolves.toBe(1);
+  });
+});
+
 describe("db.notes.searchByName", () => {
   beforeEach(() => {
     vi.stubGlobal("window", {

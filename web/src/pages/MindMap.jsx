@@ -24,7 +24,7 @@ import "@xyflow/react/dist/style.css";
 // 自定义节点组件
 import NodeCustom from "./note/NodeCustom";
 import db from "./db/db"
-import { computeAncestorChain, collectExpandedChildren } from "./treeUtils";
+import { computeAncestorChain, collectExpandedChildren, needsSortBump } from "./treeUtils";
 import { useMindMapViewStore } from "@/stores/mindMapViewStore";
 import ContextMenu from "./note/ContextMenu/ContextMenu";
 import OpenPrompt from "./commons/OpenPrompt";
@@ -69,7 +69,8 @@ function sameGraph(a, b) {
   const byId = new Map(a.map((n) => [n.id, n]));
   for (const n of b) {
     const p = byId.get(n.id);
-    if (!p || p.top !== n.top || p.left !== n.left || p.name !== n.name) return false;
+    if (!p || p.top !== n.top || p.left !== n.left || p.name !== n.name
+      || (Number(n.sort) || 0) !== (Number(p.sort) || 0)) return false;
   }
   return true;
 }
@@ -715,14 +716,30 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     const sourceNode = (await db.notes.select({ id: moveSource.id }))[0];
     if (!sourceNode || sourceNode.top === targetId) return;
 
+    // 目标父下兄弟的最大 sort：不满足「严格大于」则抬升到全局 max+1，
+    // 既保证落到最右，也保持全局序号唯一。
+    const siblings = await db.notes.select({ top: targetId });
+    const siblingMax = siblings.reduce((m, s) => Math.max(m, Number(s.sort) || 0), 0);
+    let nextSort = Number(sourceNode.sort) || 0;
+    let sortChanged = false;
+    if (needsSortBump(nextSort, siblingMax)) {
+      nextSort = await db.notes.nextSort();
+      sortChanged = true;
+    }
+
     const moved = { id: moveSource.id, name: moveSource.name };
-    // 乐观更新 UI，IO 后台执行
-    setNotesData(nds => nds.map(n => (n.id === moved.id ? { ...n, top: targetId } : n)));
+    // 乐观更新 UI，IO 后台执行；按 sort 稳定重排，移动后的节点立即落到同级最右
+    setNotesData(nds => {
+      const next = nds.map(n => (n.id === moved.id ? { ...n, top: targetId, sort: nextSort } : n));
+      next.sort((a, b) => (Number(a.sort) || 0) - (Number(b.sort) || 0));
+      return next;
+    });
     setSelectedNode(moved);
     setMoveSource(null);
 
-    await db.notes.update({ id: moved.id }, { top: targetId });
-    await window.api.updateYaml(`${moved.id}-${moved.name}.md`, { top: targetId });
+    const sortPatch = sortChanged ? { sort: nextSort } : {};
+    await db.notes.update({ id: moved.id }, { top: targetId, ...sortPatch });
+    await window.api.updateYaml(`${moved.id}-${moved.name}.md`, { top: targetId, ...sortPatch });
 
     // 移动后视角跟着节点一起飞过去，但比节点慢很多，形成"镜头追随"的感觉
     centerWhenRendered({ keepZoom: true, durationMs: MOVE_ANIM_MS });
@@ -748,7 +765,8 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           content: "",
           alias: "",
           top: "0",
-          left: "0"
+          left: "0",
+          sort: 0
         }
         db.notes.insert(rootNode);
         // 同时新建markdown文件, 保存yaml数据，title;left;top等元信息
@@ -837,7 +855,8 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
         content: "",
         alias: "",
         top: "0",
-        left: "0"
+        left: "0",
+        sort: 0
       };
 
       db.notes.insert(newRoot);
@@ -1024,21 +1043,23 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     setNodeAction(() => insertNode);
   }
   const insertNode = useCallback(
-    (parent, name) => {
+    async (parent, name) => {
       setVisible(false);
       const safeName = name.replace(/\//g, '-');
       const id = nanoid(12);
+      const sort = await db.notes.nextSort();
       const newNodeDb = {
         id: `${id}`,
         name: safeName,
         content: "",
         alias: "",
         top: `${parent}`,
-        left: ""
+        left: "",
+        sort
       }
       console.log("newNodeDb:", newNodeDb);
-      db.notes.insert(newNodeDb);
-      saveNode(newNodeDb);
+      await db.notes.insert(newNodeDb);
+      await saveNode(newNodeDb);
       // 创建新节点的 markdown 文件, 把这两个合成一个方法
       addNote(newNodeDb);
       // 立即选中；节点先滑到位，视角再跟过去（保持当前缩放）
@@ -1057,7 +1078,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     [allNotesNodeMap, focusNodeId, notesData, setSelectedNode, centerWhenRendered]
   );
   const saveNode = async (node) => {
-    const yamlStr = { id: node.id, alias: "", title: node.name, left: node.left, top: node.top };
+    const yamlStr = { id: node.id, alias: "", title: node.name, left: node.left, top: node.top, sort: node.sort };
     const markdownContent = "";
     const result = await window.api.saveFile(`${node.id}-${node.name}.md`, yamlStr, markdownContent, node.id);
     if (handleFileError(result)) return;

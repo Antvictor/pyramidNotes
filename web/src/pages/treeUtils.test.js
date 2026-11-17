@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeAncestorChain, collectExpandedChildren } from "./treeUtils.js";
+import { computeAncestorChain, collectExpandedChildren, needsSortBump } from "./treeUtils.js";
 
 function map(nodes) {
   const m = new Map();
@@ -59,5 +59,23 @@ describe("collectExpandedChildren", () => {
   it("handles nodes without a children array", () => {
     const m = map([{ id: "x", top: "0" }]);
     expect(collectExpandedChildren(new Set(["x"]), m).size).toBe(0);
+  });
+});
+
+describe("needsSortBump", () => {
+  it("bumps when current sort is not greater than sibling max", () => {
+    expect(needsSortBump(0, 0)).toBe(true);
+    expect(needsSortBump(3, 3)).toBe(true);
+    expect(needsSortBump(2, 5)).toBe(true);
+  });
+
+  it("keeps when current sort is greater than sibling max", () => {
+    expect(needsSortBump(5, 3)).toBe(false);
+    expect(needsSortBump(1, 0)).toBe(false);
+  });
+
+  it("treats missing values as 0", () => {
+    expect(needsSortBump(undefined, undefined)).toBe(true);
+    expect(needsSortBump("", "")).toBe(true);
   });
 });

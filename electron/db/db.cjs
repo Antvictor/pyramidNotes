@@ -75,7 +75,8 @@ function initializeDatabase(storagePath) {
             content TEXT,
             alias TEXT,
             top TEXT,
-            left TEXT
+            left TEXT,
+            sort INTEGER DEFAULT 0
         );
     `);
 

@@ -30,9 +30,15 @@ class Table {
         if (!includeDeleted) conditions.push(`"delete" = 0`);
         let sql = `SELECT * FROM ${this.tableName}`;
         if (conditions.length) sql += ` WHERE ${conditions.join(" AND ")}`;
-        if (orderBy) sql += ` ORDER BY ${orderBy}`;
+        const order = orderBy || '"sort" ASC, rowid ASC';
+        if (order) sql += ` ORDER BY ${order}`;
         if (limit) sql += ` LIMIT ${limit}`;
         return await window.api.dbQuery(sql, values);
+    }
+
+    async nextSort() {
+        const rows = await window.api.dbQuery(`SELECT MAX(sort) AS m FROM ${this.tableName}`);
+        return (Number(rows?.[0]?.m) || 0) + 1;
     }
 
     async count(whereClause = {}) {

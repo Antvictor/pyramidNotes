@@ -26,6 +26,16 @@ test('existing rows default delete=0 and null last_up_time', () => {
   assert.equal(r.t, null);
 });
 
+test('adds sort column with default 0', () => {
+  const db = freshDb();
+  db.prepare('INSERT INTO notes (id, name, top) VALUES (?,?,?)').run('1', 'root', '0');
+  migrateNotes(db);
+  const cols = db.prepare('PRAGMA table_info(notes)').all().map((c) => c.name);
+  assert.ok(cols.includes('sort'));
+  const r = db.prepare('SELECT sort FROM notes WHERE id=?').get('1');
+  assert.equal(r.sort, 0);
+});
+
 test('is idempotent', () => {
   const db = freshDb();
   migrateNotes(db);

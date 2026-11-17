@@ -16,6 +16,12 @@ function toStr(value) {
   return s === '' ? null : s;
 }
 
+// sort 是全局递增整数：缺省/非法值统一为 0，与 DB 列默认值一致，避免每次对账都判为差异。
+function toSort(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.trunc(n) : 0;
+}
+
 function normalizeFields(data) {
   const d = data && typeof data === 'object' ? data : {};
   return {
@@ -24,6 +30,7 @@ function normalizeFields(data) {
     alias: toStr(d.alias),
     top: toStr(d.top),
     left: toStr(d.left),
+    sort: toSort(d.sort),
   };
 }
 
@@ -77,7 +84,8 @@ function differs(row, note) {
     || (row.alias ?? null) !== note.alias
     || (row.top ?? null) !== note.top
     || (row.left ?? null) !== note.left
-    || (row.content ?? null) !== note.content;
+    || (row.content ?? null) !== note.content
+    || Number(row.sort ?? 0) !== Number(note.sort ?? 0);
 }
 
 // 纯函数：输入文件侧解析结果 + DB 行，输出待执行的增/改/删与告警，不碰 db

@@ -7,6 +7,7 @@ export function buildChildNodeRecord({
   nodeName,
   content,
   createId,
+  sort,
 }) {
   const safeName = sanitizeNodeName(nodeName);
   const childId = createId();
@@ -17,8 +18,9 @@ export function buildChildNodeRecord({
     alias: "",
     top: parentId,
     left: "",
+    sort,
   };
-  const yamlStr = { id: childId, alias: "", title: safeName, left: "", top: parentId };
+  const yamlStr = { id: childId, alias: "", title: safeName, left: "", top: parentId, sort };
 
   return { safeName, childId, newNode, yamlStr };
 }

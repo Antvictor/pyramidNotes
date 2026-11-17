@@ -119,6 +119,7 @@ const Note = ({ shortcuts }) => {
       nodeName,
       content,
       createId: () => nanoid(12),
+      sort: await db.notes.nextSort(),
     });
     await db.notes.insert(newNode);
     await window.api.saveFile(`${childId}-${safeName}.md`, yamlStr, content, childId);
