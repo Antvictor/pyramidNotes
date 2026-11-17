@@ -753,6 +753,16 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     await db.notes.update({ id: moved.id }, { top: targetId, ...sortPatch });
     await window.api.updateYaml(`${moved.id}-${moved.name}.md`, { top: targetId, ...sortPatch });
 
+    // 目标可能处于折叠状态（甚至祖先链也被折叠）：展开目标并揭示祖先链，
+    // 让移入节点作为目标的直接子级正常落位，同时让目标出现折叠按钮。
+    const displayRootId = focusNodeId === '1'
+      ? notesData.find((n) => n.top === '0')?.id
+      : focusNodeId;
+    if (displayRootId && allNotesNodeMap) {
+      const chain = computeAncestorChain(targetId, displayRootId, allNotesNodeMap);
+      useMindMapViewStore.getState().revealNodeIds(moved.id, chain);
+    }
+
     // 移动后视角跟着节点一起飞过去，但比节点慢很多，形成"镜头追随"的感觉
     centerWhenRendered({ keepZoom: true, durationMs: MOVE_ANIM_MS });
   };
@@ -941,26 +951,30 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       hiddenChildrenMap.set(n.id, allDescIds.some(id => !loadedNodeIds.has(id)));
     }
 
-    const initNodes = displayedNotes.map((n) => ({
-      id: n.id,
-      type: "custom",
-      data: {
-        name: n.name,
-        label: n.name,
-        ...n,
-        descendantCount: descCountMap.get(n.id) || 0,
-        hasHiddenChildren: hiddenChildrenMap.get(n.id) || false,
-        isExpanded: expandedNodeIds.has(n.id),
-        // 选中态与语言写进 data：让 NodeCustom 的 memo 能正确失效，
-        // 而不是靠订阅 context（那样任何选中变化都会重渲染整图）
-        isSelected: selectedNodeId === n.id,
-        lang: i18n.language,
-        onExpandOneLevel: expandOneLevel,
-        onExpandAll: expandAll,
-        onCollapseNode: collapseNode,
-      },
-      position: posMap.get(n.id) || { x: Math.random() * 400, y: Math.random() * 400 },
-    }));
+    const initNodes = displayedNotes.map((n) => {
+      const descendantCount = descCountMap.get(n.id) || 0;
+      return {
+        id: n.id,
+        type: "custom",
+        data: {
+          name: n.name,
+          label: n.name,
+          ...n,
+          descendantCount,
+          hasHiddenChildren: hiddenChildrenMap.get(n.id) || false,
+          // 无后代时不再显示折叠按钮（如源父节点被移走最后一个子节点）
+          isExpanded: descendantCount > 0 && expandedNodeIds.has(n.id),
+          // 选中态与语言写进 data：让 NodeCustom 的 memo 能正确失效，
+          // 而不是靠订阅 context（那样任何选中变化都会重渲染整图）
+          isSelected: selectedNodeId === n.id,
+          lang: i18n.language,
+          onExpandOneLevel: expandOneLevel,
+          onExpandAll: expandAll,
+          onCollapseNode: collapseNode,
+        },
+        position: posMap.get(n.id) || { x: Math.random() * 400, y: Math.random() * 400 },
+      };
+    });
 
     const displayedIdsEdge = new Set(displayedNotes.map(n => n.id));
     const initEdges = [];
