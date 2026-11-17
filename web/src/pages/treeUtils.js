@@ -48,3 +48,10 @@ export function applySwapSorts(notes, a, b) {
   next.sort((x, y) => (Number(x.sort) || 0) - (Number(y.sort) || 0));
   return next;
 }
+
+// 交换位置弹窗：空关键词列出全部兄弟，否则按名称包含过滤（不区分大小写）
+export function filterSiblingsByName(siblings, keyword) {
+  const kw = String(keyword || "").trim().toLowerCase();
+  if (!kw) return siblings;
+  return siblings.filter((s) => String(s.name || "").toLowerCase().includes(kw));
+}

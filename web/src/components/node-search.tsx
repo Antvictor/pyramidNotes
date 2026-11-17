@@ -54,6 +54,8 @@ export interface NodeSearchProps {
   // 受控 tab（不传则退回内部 state）；父组件据此实现「快捷键开/切 tab」
   activeTab?: "node" | "fulltext";
   onActiveTabChange?: (tab: "node" | "fulltext") => void;
+  // 打开时以空关键词执行一次「节点」搜索（用于范围已明确的场景，如交换位置）
+  autoSearchOnOpen?: boolean;
 }
 
 export function NodeSearchInternal({
@@ -64,6 +66,7 @@ export function NodeSearchInternal({
   scopeNodeIds,
   activeTab: activeTabProp,
   onActiveTabChange,
+  autoSearchOnOpen,
 }: NodeSearchProps) {
   const { t } = useTranslation();
   const [innerTab, setInnerTab] = useState<"node" | "fulltext">("node");
@@ -137,21 +140,41 @@ export function NodeSearchInternal({
     [onSearch, defaultOnSearch, fullTextSearch, scopeNodeIds],
   );
 
+  // 打开即列出候选：每次打开只自动执行一次，避免父级重渲染导致重复请求
+  const autoSearchDoneRef = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      autoSearchDoneRef.current = false;
+      return;
+    }
+    if (!autoSearchOnOpen || autoSearchDoneRef.current) return;
+    autoSearchDoneRef.current = true;
+    runSearch("", "node");
+  }, [open, autoSearchOnOpen, runSearch]);
+
   const onChange = useCallback(
     (value: string) => {
       setSearchString(value);
       const kw = value.trim();
       if (!kw) {
+        // 取消上一次输入排队中的搜索，否则它会在清空后用旧关键词覆盖结果
+        clearTimeout(debounceTimerRef.current);
         requestSeqRef.current++;
-        setSearchResults([]);
-        setFullTextSearchResults([]);
+        if (autoSearchOnOpen) {
+          // 清空输入后回到默认候选列表
+          setFullTextSearchResults([]);
+          runSearch("", "node");
+        } else {
+          setSearchResults([]);
+          setFullTextSearchResults([]);
+        }
         return;
       }
       onOpenChange?.(true);
       clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = setTimeout(() => runSearch(kw, activeTab), 300);
     },
-    [runSearch, activeTab, onOpenChange],
+    [runSearch, activeTab, onOpenChange, autoSearchOnOpen],
   );
 
   // 切换 tab 后，如果有搜索词，重新执行对应类型的搜索
@@ -297,6 +320,7 @@ export interface NodeSearchDialogProps {
   title?: string;
   activeTab?: "node" | "fulltext";
   onActiveTabChange?: (tab: "node" | "fulltext") => void;
+  autoSearchOnOpen?: boolean;
 }
 
 export function NodeSearchDialog({
@@ -307,6 +331,7 @@ export function NodeSearchDialog({
   onOpenChange,
   activeTab,
   onActiveTabChange,
+  autoSearchOnOpen,
 }: NodeSearchDialogProps) {
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange} showCloseButton={false}>
@@ -318,6 +343,7 @@ export function NodeSearchDialog({
         onOpenChange={onOpenChange}
         activeTab={activeTab}
         onActiveTabChange={onActiveTabChange}
+        autoSearchOnOpen={autoSearchOnOpen}
       />
     </CommandDialog>
   );

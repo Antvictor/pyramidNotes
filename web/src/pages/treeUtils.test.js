@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeAncestorChain, collectExpandedChildren, needsSortBump, canSwapNodes, applySwapSorts } from "./treeUtils.js";
+import { computeAncestorChain, collectExpandedChildren, needsSortBump, canSwapNodes, applySwapSorts, filterSiblingsByName } from "./treeUtils.js";
 
 function map(nodes) {
   const m = new Map();
@@ -130,5 +130,28 @@ describe("applySwapSorts", () => {
     const list = notes();
     expect(applySwapSorts(list, null, { id: "b", sort: 5 })).toBe(list);
     expect(applySwapSorts(null, { id: "a" }, { id: "b" })).toBeNull();
+  });
+});
+
+describe("filterSiblingsByName", () => {
+  const list = [
+    { id: "a", name: "Alpha" },
+    { id: "b", name: "beta" },
+    { id: "c", name: "Gamma" },
+  ];
+
+  it("returns all siblings for an empty keyword", () => {
+    expect(filterSiblingsByName(list, "")).toBe(list);
+    expect(filterSiblingsByName(list, "   ")).toBe(list);
+    expect(filterSiblingsByName(list, undefined)).toBe(list);
+  });
+
+  it("filters case-insensitively by name substring", () => {
+    expect(filterSiblingsByName(list, "ALP").map((s) => s.id)).toEqual(["a"]);
+    expect(filterSiblingsByName(list, "a").map((s) => s.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("returns an empty array when nothing matches", () => {
+    expect(filterSiblingsByName(list, "zzz")).toEqual([]);
   });
 });

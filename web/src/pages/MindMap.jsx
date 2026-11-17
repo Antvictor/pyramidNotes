@@ -24,7 +24,7 @@ import "@xyflow/react/dist/style.css";
 // 自定义节点组件
 import NodeCustom from "./note/NodeCustom";
 import db from "./db/db"
-import { computeAncestorChain, collectExpandedChildren, needsSortBump, canSwapNodes, applySwapSorts } from "./treeUtils";
+import { computeAncestorChain, collectExpandedChildren, needsSortBump, canSwapNodes, applySwapSorts, filterSiblingsByName } from "./treeUtils";
 import { useMindMapViewStore } from "@/stores/mindMapViewStore";
 import ContextMenu from "./note/ContextMenu/ContextMenu";
 import OpenPrompt from "./commons/OpenPrompt";
@@ -378,6 +378,19 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
         .map((n) => n.id),
     );
   }, [swapSource, notesData]);
+
+  // 交换位置的默认候选：全部兄弟（notesData 已按 sort 排序）
+  const swapSiblings = useMemo(() => {
+    if (!swapSource || !notesData) return [];
+    return notesData
+      .filter((n) => n.top === swapSource.top && n.id !== swapSource.id)
+      .map((n) => ({ id: n.id, name: n.name }));
+  }, [swapSource, notesData]);
+
+  const searchSwapSiblings = useCallback(
+    (keyword) => filterSiblingsByName(swapSiblings, keyword),
+    [swapSiblings],
+  );
 
   // 供节点回调读取最新的节点图，同时保持回调引用稳定：否则每次数据变化都会
   // 让所有节点的 onExpand* 变成新函数，React.memo 全部失效、整图重渲染。
@@ -1438,6 +1451,8 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           <NodeSearchDialog
             open={!!swapSource}
             scopeNodeIds={swapScopeIds}
+            autoSearchOnOpen
+            onSearch={searchSwapSiblings}
             onOpenChange={(open) => {
               if (!open) setSwapSource(null);
             }}
