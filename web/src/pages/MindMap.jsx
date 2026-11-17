@@ -24,7 +24,7 @@ import "@xyflow/react/dist/style.css";
 // 自定义节点组件
 import NodeCustom from "./note/NodeCustom";
 import db from "./db/db"
-import { computeAncestorChain, collectExpandedChildren, needsSortBump } from "./treeUtils";
+import { computeAncestorChain, collectExpandedChildren, needsSortBump, canSwapNodes, applySwapSorts } from "./treeUtils";
 import { useMindMapViewStore } from "@/stores/mindMapViewStore";
 import ContextMenu from "./note/ContextMenu/ContextMenu";
 import OpenPrompt from "./commons/OpenPrompt";
@@ -339,6 +339,8 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
   const [moveSource, setMoveSource] = useState(null);
+  const [swapSource, setSwapSource] = useState(null);
+  const [swapTarget, setSwapTarget] = useState(null);
   const [permissionError, setPermissionError] = useState(null);
   const [searchParams] = useSearchParams();
   const [nodeSpacing, setNodeSpacing] = useState('normal');
@@ -366,6 +368,16 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     });
     return nodeMap;
   }, [notesData]);
+
+  // 交换位置：搜索范围仅限同一父级下的其他兄弟
+  const swapScopeIds = useMemo(() => {
+    if (!swapSource || !notesData) return undefined;
+    return new Set(
+      notesData
+        .filter((n) => n.top === swapSource.top && n.id !== swapSource.id)
+        .map((n) => n.id),
+    );
+  }, [swapSource, notesData]);
 
   // 供节点回调读取最新的节点图，同时保持回调引用稳定：否则每次数据变化都会
   // 让所有节点的 onExpand* 变成新函数，React.memo 全部失效、整图重渲染。
@@ -522,7 +534,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
         setSearchTab("fulltext");
         return;
       }
-      if (visible || searchOpen || moveSource) return;
+      if (visible || searchOpen || moveSource || swapSource || swapTarget) return;
       // Ctrl+N - 新建节点 (no guard needed - works without selection)
       if (matchKey(shortcuts.node?.newNode, e)) {
         e.preventDefault();
@@ -546,7 +558,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [shortcuts, selectedNode, visible, searchOpen, moveSource]);
+  }, [shortcuts, selectedNode, visible, searchOpen, moveSource, swapSource, swapTarget]);
 
   const addNote = (note) => {
     setNotesData((prevData) => [...prevData, note]);
@@ -743,6 +755,38 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
 
     // 移动后视角跟着节点一起飞过去，但比节点慢很多，形成"镜头追随"的感觉
     centerWhenRendered({ keepZoom: true, durationMs: MOVE_ANIM_MS });
+  };
+
+  // Request swap position - opens a sibling-scoped search dialog
+  const requestSwapNode = (nodeId) => {
+    const source = notesData?.find((n) => n.id === nodeId);
+    if (!source || !source.top || source.top === '0') return;
+    setSwapTarget(null);
+    setSwapSource({ id: source.id, name: source.name, top: source.top });
+  };
+
+  // Execute position swap: exchange sort and persist to DB + markdown
+  const executeSwap = async () => {
+    const pair = swapTarget;
+    if (!pair) return;
+    setSwapTarget(null);
+    const [aRows, bRows] = await Promise.all([
+      db.notes.select({ id: pair.source.id }),
+      db.notes.select({ id: pair.id }),
+    ]);
+    const a = aRows?.[0];
+    const b = bRows?.[0];
+    if (!canSwapNodes(a, b)) return;
+    const aSort = Number(a.sort) || 0;
+    const bSort = Number(b.sort) || 0;
+    setNotesData(nds => applySwapSorts(nds, a, b));
+    setSelectedNode({ id: a.id, name: a.name });
+    // 相同 sort 时互换为恒等，不写库/文件
+    if (aSort === bSort) return;
+    await db.notes.update({ id: a.id }, { sort: bSort });
+    await db.notes.update({ id: b.id }, { sort: aSort });
+    await window.api.updateYaml(`${a.id}-${a.name}.md`, { sort: bSort });
+    await window.api.updateYaml(`${b.id}-${b.name}.md`, { sort: aSort });
   };
 
   useEffect(() => {
@@ -1375,6 +1419,30 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
             onSelectNode={(node) => executeMoveNode(node.id)}
           />
         )}
+        {/* 选中时把 source 快照进 target：搜索关闭会立即清空 swapSource */}
+        {swapSource && (
+          <NodeSearchDialog
+            open={!!swapSource}
+            scopeNodeIds={swapScopeIds}
+            onOpenChange={(open) => {
+              if (!open) setSwapSource(null);
+            }}
+            onSelectNode={(node) => setSwapTarget({ ...node, source: swapSource })}
+          />
+        )}
+        <ConfirmDialog
+          open={!!swapTarget}
+          title={t("dialogs.swapNode.title")}
+          message={swapTarget ? t("dialogs.swapNode.message", {
+            source: swapTarget.source.name,
+            target: swapTarget.name,
+          }) : ""}
+          onConfirm={executeSwap}
+          onCancel={() => setSwapTarget(null)}
+          onOpenChange={(open) => {
+            if (!open) setSwapTarget(null);
+          }}
+        />
         <ContextMenu
           menu={menu}
           onClose={closeMenu}
@@ -1382,6 +1450,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           requestEditNode={requestEditNode}
           requestDeleteNode={requestDeleteNode}
           onRequestMoveNode={requestMoveNode}
+          onRequestSwapNode={requestSwapNode}
         />
         <OpenPrompt
           visible={visible}

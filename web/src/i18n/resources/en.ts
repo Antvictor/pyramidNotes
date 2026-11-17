@@ -53,6 +53,7 @@ const en = {
     create: 'Create node',
     rename: 'Rename node',
     move: 'Move node',
+    swap: 'Swap position',
     delete: 'Delete node',
     focus: 'Focus',
     focusMode: 'Focus Mode',
@@ -96,6 +97,10 @@ const en = {
       promoteChildren: 'Move child nodes up one level.',
       confirmSubtree: 'Delete current node “{{nodeName}}” and its descendants?',
       confirmParentOnly: 'Delete current node “{{nodeName}}”?',
+    },
+    swapNode: {
+      title: 'Confirm swap',
+      message: 'Swap the positions of “{{source}}” and “{{target}}”?',
     },
     permission: {
       title: 'Permission required',

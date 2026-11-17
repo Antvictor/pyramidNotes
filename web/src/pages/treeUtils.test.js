@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeAncestorChain, collectExpandedChildren, needsSortBump } from "./treeUtils.js";
+import { computeAncestorChain, collectExpandedChildren, needsSortBump, canSwapNodes, applySwapSorts } from "./treeUtils.js";
 
 function map(nodes) {
   const m = new Map();
@@ -77,5 +77,58 @@ describe("needsSortBump", () => {
   it("treats missing values as 0", () => {
     expect(needsSortBump(undefined, undefined)).toBe(true);
     expect(needsSortBump("", "")).toBe(true);
+  });
+});
+
+describe("canSwapNodes", () => {
+  it("allows siblings under the same non-root parent", () => {
+    expect(canSwapNodes({ id: "a", top: "p" }, { id: "b", top: "p" })).toBe(true);
+  });
+
+  it("rejects nodes under different parents", () => {
+    expect(canSwapNodes({ id: "a", top: "p" }, { id: "b", top: "q" })).toBe(false);
+  });
+
+  it("rejects the same node", () => {
+    expect(canSwapNodes({ id: "a", top: "p" }, { id: "a", top: "p" })).toBe(false);
+  });
+
+  it("rejects root-level nodes", () => {
+    expect(canSwapNodes({ id: "a", top: "0" }, { id: "b", top: "0" })).toBe(false);
+  });
+
+  it("rejects missing nodes or parents", () => {
+    expect(canSwapNodes(null, { id: "b", top: "p" })).toBe(false);
+    expect(canSwapNodes({ id: "a" }, { id: "b" })).toBe(false);
+  });
+});
+
+describe("applySwapSorts", () => {
+  const notes = () => [
+    { id: "a", sort: 1 },
+    { id: "b", sort: 5 },
+    { id: "c", sort: 3 },
+  ];
+
+  it("swaps the sort values and re-sorts", () => {
+    const next = applySwapSorts(notes(), { id: "a", sort: 1 }, { id: "b", sort: 5 });
+    expect(next.map((n) => n.id)).toEqual(["b", "c", "a"]);
+    expect(next.map((n) => n.sort)).toEqual([1, 3, 5]);
+  });
+
+  it("keeps stable order when both sorts are equal", () => {
+    const list = [
+      { id: "a", sort: 0 },
+      { id: "b", sort: 0 },
+      { id: "c", sort: 2 },
+    ];
+    const next = applySwapSorts(list, { id: "a", sort: 0 }, { id: "b", sort: 0 });
+    expect(next.map((n) => n.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("returns the input unchanged when arguments are missing", () => {
+    const list = notes();
+    expect(applySwapSorts(list, null, { id: "b", sort: 5 })).toBe(list);
+    expect(applySwapSorts(null, { id: "a" }, { id: "b" })).toBeNull();
   });
 });

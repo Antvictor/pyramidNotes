@@ -27,3 +27,24 @@ export function collectExpandedChildren(expandedIds, nodeMap) {
 export function needsSortBump(currentSort, siblingMax) {
   return (Number(currentSort) || 0) <= (Number(siblingMax) || 0);
 }
+
+// 仅同父兄弟可交换；根节点（top === '0'）无父级，不可交换
+export function canSwapNodes(source, target) {
+  return !!source && !!target
+    && source.id !== target.id
+    && source.top != null
+    && source.top === target.top
+    && source.top !== '0';
+}
+
+// a、b 为 DB 最新行（含 id、sort）：交换二者 sort 后按 sort 稳定重排
+export function applySwapSorts(notes, a, b) {
+  if (!notes || !a || !b) return notes;
+  const aSort = Number(a.sort) || 0;
+  const bSort = Number(b.sort) || 0;
+  const next = notes.map(n => (
+    n.id === a.id ? { ...n, sort: bSort } : n.id === b.id ? { ...n, sort: aSort } : n
+  ));
+  next.sort((x, y) => (Number(x.sort) || 0) - (Number(y.sort) || 0));
+  return next;
+}

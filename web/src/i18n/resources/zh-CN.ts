@@ -53,6 +53,7 @@ const zhCN = {
     create: '创建节点',
     rename: '修改节点',
     move: '移动节点',
+    swap: '交换位置',
     delete: '删除节点',
     focus: '聚焦',
     focusMode: '聚焦模式',
@@ -96,6 +97,10 @@ const zhCN = {
       promoteChildren: '子节点将提升到上一级。',
       confirmSubtree: '删除当前节点“{{nodeName}}”及其子节点，是否确认？',
       confirmParentOnly: '删除当前节点“{{nodeName}}”，是否确认？',
+    },
+    swapNode: {
+      title: '确认交换位置',
+      message: '确定把「{{source}}」和「{{target}}」的位置对调吗？',
     },
     permission: {
       title: '权限不足',
