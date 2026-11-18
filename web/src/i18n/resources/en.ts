@@ -117,6 +117,7 @@ const en = {
     sections: {
       basic: 'Basic information',
       systemSettings: 'System settings',
+      editor: 'Editor settings',
       deleteSettings: 'Deletion settings',
       other: 'Other',
     },
@@ -176,6 +177,27 @@ const en = {
       compact: 'Compact',
       normal: 'Normal',
       loose: 'Loose',
+    },
+    editorWidthMode: {
+      label: 'Editor width',
+      hint: 'Constrained: fixed editor width; Expanded: editor width follows the full window',
+      constrained: 'Constrained',
+      expanded: 'Expanded',
+    },
+    backlinks: {
+      label: 'Backlink panel',
+      hint: 'Show: display a backlink panel at the bottom of notes; Hide: do not display',
+      show: 'Show',
+      hide: 'Hide',
+    },
+    license: {
+      sectionTitle: 'License',
+      status: 'Status',
+      trial: 'Trial',
+      permanent: 'Lifetime',
+      expired: 'Expired',
+      loading: 'Loading…',
+      purchase: 'Buy lifetime license',
     },
   },
   shortcuts: {

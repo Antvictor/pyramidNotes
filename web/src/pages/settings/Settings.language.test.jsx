@@ -28,4 +28,12 @@ describe('Settings language preference', () => {
 
     expect(window.api.saveSettings).toHaveBeenCalledWith({ language: 'en' })
   })
+
+  it('renders editor settings in English', async () => {
+    await renderWithLanguage(<Settings />, 'en')
+
+    expect(await screen.findByText('Editor settings')).toBeInTheDocument()
+    expect(screen.getByText('Editor width')).toBeInTheDocument()
+    expect(screen.getByText('Backlink panel')).toBeInTheDocument()
+  })
 })

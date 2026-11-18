@@ -151,13 +151,13 @@ const Settings = () => {
   const getLicenseLabel = () => {
     switch (licenseState) {
       case 'trial':
-        return '试用';
+        return t("settings.license.trial");
       case 'permanent':
-        return '永久用户';
+        return t("settings.license.permanent");
       case 'expired':
-        return '已到期';
+        return t("settings.license.expired");
       default:
-        return '加载中...';
+        return t("settings.license.loading");
     }
   };
 
@@ -401,13 +401,13 @@ const Settings = () => {
 
         {/* Editor Settings Section */}
         <div style={sectionStyle}>
-          <h3 style={{ marginBottom: 12 }}>编辑器设置</h3>
+          <h3 style={{ marginBottom: 12 }}>{t("settings.sections.editor")}</h3>
 
           <div style={rowStyle}>
             <div>
-              <span style={labelStyle}>编辑器边栏</span>
+              <span style={labelStyle}>{t("settings.editorWidthMode.label")}</span>
               <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 2 }}>
-                限制：编辑器宽度受限，窗口变大时宽度不变，窗口变小时跟随缩小；放开：编辑器宽度跟随窗口全宽
+                {t("settings.editorWidthMode.hint")}
               </div>
             </div>
             <div style={controlStyle}>
@@ -429,7 +429,9 @@ const Settings = () => {
                     fontSize: 13,
                   }}
                 >
-                  {mode === "constrained" ? "限制" : "放开"}
+                  {mode === "constrained"
+                    ? t("settings.editorWidthMode.constrained")
+                    : t("settings.editorWidthMode.expanded")}
                 </button>
               ))}
             </div>
@@ -437,15 +439,15 @@ const Settings = () => {
 
           <div style={{ ...rowStyle, borderBottom: "none" }}>
             <div>
-              <span style={labelStyle}>反链面板</span>
+              <span style={labelStyle}>{t("settings.backlinks.label")}</span>
               <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 2 }}>
-                显示：笔记底部显示引用当前笔记的反链面板；隐藏：不显示
+                {t("settings.backlinks.hint")}
               </div>
             </div>
             <div style={controlStyle}>
               {[
-                { label: "显示", value: true },
-                { label: "隐藏", value: false },
+                { label: t("settings.backlinks.show"), value: true },
+                { label: t("settings.backlinks.hide"), value: false },
               ].map(({ label, value }) => (
                 <button
                   key={label}
@@ -539,10 +541,10 @@ const Settings = () => {
 
         {/* License Section */}
         <div style={sectionStyle}>
-          <h3 style={{ marginBottom: 12 }}>授权</h3>
+          <h3 style={{ marginBottom: 12 }}>{t("settings.license.sectionTitle")}</h3>
 
           <div style={{ ...rowStyle, borderBottom: "none" }}>
-            <span style={labelStyle}>状态</span>
+            <span style={labelStyle}>{t("settings.license.status")}</span>
             <div style={{ ...controlStyle, flexDirection: "column", alignItems: "flex-end" }}>
               <span style={{
                 fontSize: 14,
@@ -570,7 +572,7 @@ const Settings = () => {
                   }}
                 >
                   <Crown size={16} />
-                  购买永久版
+                  {t("settings.license.purchase")}
                 </button>
               )}
             </div>

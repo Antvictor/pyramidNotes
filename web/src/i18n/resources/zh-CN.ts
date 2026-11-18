@@ -117,6 +117,7 @@ const zhCN = {
     sections: {
       basic: '基本信息',
       systemSettings: '系统设置',
+      editor: '编辑器设置',
       deleteSettings: '删除设置',
       other: '其他',
     },
@@ -176,6 +177,27 @@ const zhCN = {
       compact: '紧凑',
       normal: '正常',
       loose: '宽松',
+    },
+    editorWidthMode: {
+      label: '编辑器边栏',
+      hint: '限制：编辑器宽度受限，窗口变大时宽度不变，窗口变小时跟随缩小；放开：编辑器宽度跟随窗口全宽',
+      constrained: '限制',
+      expanded: '放开',
+    },
+    backlinks: {
+      label: '反链面板',
+      hint: '显示：笔记底部显示引用当前笔记的反链面板；隐藏：不显示',
+      show: '显示',
+      hide: '隐藏',
+    },
+    license: {
+      sectionTitle: '授权',
+      status: '状态',
+      trial: '试用',
+      permanent: '永久用户',
+      expired: '已到期',
+      loading: '加载中…',
+      purchase: '购买永久版',
     },
   },
   shortcuts: {
