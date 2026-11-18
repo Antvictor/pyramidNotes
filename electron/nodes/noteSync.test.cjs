@@ -5,7 +5,8 @@ const os = require('os');
 const path = require('path');
 const matter = require('gray-matter');
 const {
-  ROOT_ID, normalizeFields, isProtectedRoot, scanNoteFiles, planReconcile, writeNoteTop,
+  ROOT_ID, normalizeFields, isProtectedRoot, scanNoteFiles, scanTrashFiles,
+  planReconcile, writeNoteTop,
 } = require('./noteSync.cjs');
 
 const tmpDir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'pn-sync-'));
@@ -276,4 +277,28 @@ test('planReconcile 透传 skipped', () => {
   const skipped = [{ file: 'bad.md', reason: 'frontmatter 缺少 id' }];
   const plan = planReconcile({ notes: [rootNote()], skipped, rows: [rootRow()] });
   assert.deepEqual(plan.skipped, skipped);
+});
+
+test('scanTrashFiles 读取 .delete 下的回收站文件', () => {
+  const dir = tmpDir();
+  const trashDir = path.join(dir, '.delete');
+  fs.mkdirSync(trashDir, { recursive: true });
+  write(trashDir, 'n1-a.md', '---\nid: "n1"\ntitle: "A"\ntop: "1"\nsort: 3\n---\nhello\n');
+  write(trashDir, 'note.txt', 'ignored');
+  write(trashDir, 'bad.md', 'no frontmatter id');
+
+  const notes = scanTrashFiles(dir);
+  assert.equal(notes.length, 1);
+  assert.equal(notes[0].id, 'n1');
+  assert.equal(notes[0].name, 'A');
+  assert.equal(notes[0].top, '1');
+  assert.equal(notes[0].sort, 3);
+  assert.equal(notes[0].file, 'n1-a.md');
+  assert.equal(notes[0].content.trim(), 'hello');
+  assert.match(notes[0].lastUpTime, /^\d{4}-\d{2}-\d{2}T/);
+});
+
+test('scanTrashFiles 在 .delete 不存在时返回空数组', () => {
+  const dir = tmpDir();
+  assert.deepEqual(scanTrashFiles(dir), []);
 });

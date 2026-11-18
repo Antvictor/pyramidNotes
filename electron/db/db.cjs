@@ -1,4 +1,3 @@
-const Database = require('better-sqlite3');
 const { app, ipcMain } = require('electron');
 const fs = require('fs');
 const path = require('path');
@@ -6,6 +5,7 @@ const { execSync } = require('child_process');
 const { getBasePath } = require('../window/window.cjs');
 const { search, reset } = require('./search.cjs');
 const { migrateNotes } = require('./schema.cjs');
+const { openDatabaseWithRecovery } = require('./recovery.cjs');
 
 let db = null;
 let isInitialized = false;
@@ -49,10 +49,83 @@ function initializeDatabase(storagePath) {
         fs.mkdirSync(dbDir, { recursive: true });
     }
 
-    db = new Database(dbPath);
+    const setupDatabase = (conn) => {
+        // 加载插件（WAL + libsimple 扩展）：扩展需在健康检查前就位，
+        // 否则 quick_check 触碰 FTS 表时会因缺少 simple 分词器报错
+        loadPlugins(conn);
+
+        // 健康检查：损坏页在这里显式抛出，不依赖后续某条 SQL 恰好命中
+        const check = conn.pragma('quick_check', { simple: true });
+        if (String(check).toLowerCase() !== 'ok') {
+            const error = new Error(`database quick_check failed: ${check}`);
+            error.code = 'SQLITE_CORRUPT';
+            throw error;
+        }
+
+        conn.exec(`
+            create table if not exists notes(
+                id TEXT primary key not null,
+                name TEXT,
+                content TEXT,
+                alias TEXT,
+                top TEXT,
+                left TEXT,
+                sort INTEGER DEFAULT 0
+            );
+        `);
+
+        // 迁移：新增 delete / last_up_time 列，清理历史软删除表
+        migrateNotes(conn);
+
+        // 创建 FTS5 全文搜索虚拟表（使用 simple_tokenizer 支持中文分词）
+        // id 列使用 UNINDEXED 表示不参与搜索，只存储用于关联
+        conn.exec(`
+            CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
+                id UNINDEXED,
+                content,
+                tokenize='simple'
+            );
+        `);
+
+        // 创建触发器：插入时同步到 FTS 表
+        conn.exec(`
+            CREATE TRIGGER IF NOT EXISTS notes_ai AFTER INSERT ON notes BEGIN
+                INSERT INTO notes_fts(rowid, id, content) VALUES (NEW.rowid, NEW.id, COALESCE(NEW.content, ''));
+            END;
+        `);
+
+        // 创建触发器：更新时同步到 FTS 表（只更新 content，id 不变）
+        conn.exec(`
+            CREATE TRIGGER IF NOT EXISTS notes_au AFTER UPDATE ON notes BEGIN
+                UPDATE notes_fts SET content = COALESCE(NEW.content, '') WHERE id = NEW.id;
+            END;
+        `);
+
+        // 创建触发器：删除时同步到 FTS 表
+        conn.exec(`
+            CREATE TRIGGER IF NOT EXISTS notes_ad AFTER DELETE ON notes BEGIN
+                DELETE FROM notes_fts WHERE rowid = OLD.rowid;
+            END;
+        `);
+
+        // 为现有数据建立 FTS 索引（先清空再重建，避免 rowid 冲突）
+        conn.exec(`
+            DELETE FROM notes_fts;
+            INSERT INTO notes_fts(rowid, id, content)
+            SELECT rowid, id, COALESCE(content, '') FROM notes;
+        `);
+    };
+
+    // 损坏库自动隔离重建：setup 抛 SQLITE_CORRUPT/NOTADB 时备份原文件并重来
+    const { db: connection, recovered, backupPaths } = openDatabaseWithRecovery(dbPath, setupDatabase);
+    db = connection;
 
     // Mark as initialized
     isInitialized = true;
+
+    if (recovered) {
+        console.warn('[db] 数据库损坏，已隔离并重建:', backupPaths);
+    }
 
     // Set hidden attribute on Windows
     if (process.platform === 'win32') {
@@ -64,62 +137,6 @@ function initializeDatabase(storagePath) {
             console.log('Could not set hidden attribute:', e);
         }
     }
-
-    // 加载插件
-    loadPlugins(db);
-
-    db.exec(`
-        create table if not exists notes(
-            id TEXT primary key not null,
-            name TEXT,
-            content TEXT,
-            alias TEXT,
-            top TEXT,
-            left TEXT,
-            sort INTEGER DEFAULT 0
-        );
-    `);
-
-    // 迁移：新增 delete / last_up_time 列，清理历史软删除表
-    migrateNotes(db);
-
-    // 创建 FTS5 全文搜索虚拟表（使用 simple_tokenizer 支持中文分词）
-    // id 列使用 UNINDEXED 表示不参与搜索，只存储用于关联
-    db.exec(`
-        CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
-            id UNINDEXED,
-            content,
-            tokenize='simple'
-        );
-    `);
-
-    // 创建触发器：插入时同步到 FTS 表
-    db.exec(`
-        CREATE TRIGGER IF NOT EXISTS notes_ai AFTER INSERT ON notes BEGIN
-            INSERT INTO notes_fts(rowid, id, content) VALUES (NEW.rowid, NEW.id, COALESCE(NEW.content, ''));
-        END;
-    `);
-
-    // 创建触发器：更新时同步到 FTS 表（只更新 content，id 不变）
-    db.exec(`
-        CREATE TRIGGER IF NOT EXISTS notes_au AFTER UPDATE ON notes BEGIN
-            UPDATE notes_fts SET content = COALESCE(NEW.content, '') WHERE id = NEW.id;
-        END;
-    `);
-
-    // 创建触发器：删除时同步到 FTS 表
-    db.exec(`
-        CREATE TRIGGER IF NOT EXISTS notes_ad AFTER DELETE ON notes BEGIN
-            DELETE FROM notes_fts WHERE rowid = OLD.rowid;
-        END;
-    `);
-
-    // 为现有数据建立 FTS 索引（先清空再重建，避免 rowid 冲突）
-    db.exec(`
-        DELETE FROM notes_fts;
-        INSERT INTO notes_fts(rowid, id, content)
-        SELECT rowid, id, COALESCE(content, '') FROM notes;
-    `);
 
     // Register dbQuery handler only once
     if (!initializeDatabase.handlersRegistered) {
@@ -211,6 +228,8 @@ function initializeDatabase(storagePath) {
         `).all();
         console.log('libsimple functions:', JSON.stringify(functions, null, 2));
     }
+
+    return { recovered, backupPaths };
 }
 
 module.exports = { initializeDatabase, getDb, closeDatabase, isInitialized: () => isInitialized }

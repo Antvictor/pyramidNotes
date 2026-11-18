@@ -62,6 +62,40 @@ function scanNoteFiles(storagePath) {
   return { notes, skipped };
 }
 
+// 回收站文件仅存在于 .delete/：DB 重建后需要据此补回 delete=1 行，
+// 否则回收站 UI 为空，且仅被回收站引用的附件会被当作孤儿清理。
+function scanTrashFiles(storagePath) {
+  const dir = path.join(storagePath, '.delete');
+  const notes = [];
+  let names;
+  try {
+    names = fs.readdirSync(dir);
+  } catch {
+    return notes;
+  }
+  // 与 scanNoteFiles 一致：文件名排序保证多份同 id 时结果确定
+  names.sort();
+  for (const file of names) {
+    if (path.extname(file) !== '.md') continue;
+    try {
+      const filePath = path.join(dir, file);
+      const parsed = matter(fs.readFileSync(filePath, 'utf-8'));
+      const fields = normalizeFields(parsed.data);
+      if (!fields.id) continue;
+      const stat = fs.statSync(filePath);
+      notes.push({
+        ...fields,
+        content: parsed.content,
+        file,
+        lastUpTime: stat.mtime.toISOString(),
+      });
+    } catch {
+      // 无法解析的回收站文件跳过，不影响启动
+    }
+  }
+  return notes;
+}
+
 // 根行保护：不看 top 单字段，因为历史 bug 已把根行 top 写成 NULL
 function isProtectedRoot(row) {
   return !!row && (String(row.id) === ROOT_ID || row.top === ROOT_TOP);
@@ -177,5 +211,6 @@ function planReconcile({ notes, skipped = [], rows }) {
 }
 
 module.exports = {
-  ROOT_ID, normalizeFields, isProtectedRoot, scanNoteFiles, planReconcile, writeNoteTop,
+  ROOT_ID, normalizeFields, isProtectedRoot, scanNoteFiles, scanTrashFiles,
+  planReconcile, writeNoteTop,
 };
