@@ -33,6 +33,7 @@ const en = {
     mathRenderError: 'Math rendering failed',
     mermaidRenderError: 'Diagram rendering failed',
     editSource: 'Double-click to edit source',
+    missingNodeCreateHint: 'Ctrl/⌘ + click to create this node',
   },
   backlinks: {
     title: 'Referenced by {{total}} note(s)',

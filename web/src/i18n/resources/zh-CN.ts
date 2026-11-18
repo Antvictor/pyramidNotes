@@ -33,6 +33,7 @@ const zhCN = {
     mathRenderError: '公式渲染失败',
     mermaidRenderError: '图表渲染失败',
     editSource: '双击编辑源码',
+    missingNodeCreateHint: 'Ctrl/⌘ + 点击创建节点',
   },
   backlinks: {
     title: '被 {{total}} 篇笔记引用',

@@ -43,6 +43,7 @@ interface Props {
   noteId?: string;
   onCreateChildFromSelection?: (nodeName: string, content: string) => Promise<NodeLookupItem>;
   onOpenNode?: (target: NodeLookupItem) => void;
+  onCreateMissingNode?: (reference: { id: string; name: string }) => Promise<NodeLookupItem | undefined>;
   noteFontSize?: number;
   editorWidthMode?: 'constrained' | 'expanded';
   focusRefId?: string;
@@ -623,6 +624,7 @@ export default function TipTapEditor({
   noteId,
   onCreateChildFromSelection,
   onOpenNode,
+  onCreateMissingNode,
   noteFontSize = 16,
   editorWidthMode = 'constrained',
   focusRefId,
@@ -680,8 +682,18 @@ export default function TipTapEditor({
     },
   }), []);
   const openNode = useMemo(() => onOpenNode || (() => {}), [onOpenNode]);
-  const internalNodeLink = useMemo(() => InternalNodeLink.configure({ nodes, onOpenNode: openNode }), [nodes, openNode]);
-  const internalNodeEmbed = useMemo(() => InternalNodeEmbed.configure({ nodes, onOpenNode: openNode }), [nodes, openNode]);
+  const createMissingNode = useMemo(
+    () => onCreateMissingNode || (async () => undefined),
+    [onCreateMissingNode],
+  );
+  const internalNodeLink = useMemo(
+    () => InternalNodeLink.configure({ nodes, onOpenNode: openNode, onCreateMissingNode: createMissingNode }),
+    [nodes, openNode, createMissingNode],
+  );
+  const internalNodeEmbed = useMemo(
+    () => InternalNodeEmbed.configure({ nodes, onOpenNode: openNode, onCreateMissingNode: createMissingNode }),
+    [nodes, openNode, createMissingNode],
+  );
   const tiptapImage = useMemo(() => Image.configure({ allowBase64: false, inline: false }), []);
   const internalImageEmbed = useMemo(() => InternalImageEmbed.configure({ noteName: safeNoteName }), [safeNoteName]);
   const link = useMemo(() => LinkExtension.configure({

@@ -135,6 +135,14 @@ const Note = ({ shortcuts }) => {
     return newNode;
   };
 
+  // 缺失引用（[[不存在]]）创建：以引用显示名在当前笔记下建子节点
+  const createChildFromReference = async (reference) => {
+    const nodeName = reference?.name || reference?.id || "";
+    if (!nodeName) return undefined;
+    const newNode = await createChildFromSelection(nodeName, "");
+    return { id: newNode.id, name: newNode.name };
+  };
+
   const openNode = (target, focusRefId) => {
     navigate(
       `/note/${encodeURIComponent(target.id)}/${encodeURIComponent(target.name)}`,
@@ -240,6 +248,7 @@ const Note = ({ shortcuts }) => {
             editorWidthMode={editorWidthMode}
             onCreateChildFromSelection={createChildFromSelection}
             onOpenNode={openNode}
+            onCreateMissingNode={createChildFromReference}
             focusRefId={location.state?.focusRef}
           />
         </div>

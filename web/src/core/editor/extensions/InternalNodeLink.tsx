@@ -1,8 +1,10 @@
 import { Node, mergeAttributes } from "@tiptap/core";
-import { EditorContent, ReactNodeViewRenderer, NodeViewWrapper, useEditor } from "@tiptap/react";
+import { EditorContent, ReactNodeViewRenderer, NodeViewWrapper, useEditor, type ReactNodeViewProps } from "@tiptap/react";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type { MarkdownSerializerState } from "prosemirror-markdown";
 import type { MouseEvent } from "react";
+import { useRef } from "react";
+import { useTranslation } from "react-i18next";
 import StarterKit from "@tiptap/starter-kit";
 import { Code } from "@tiptap/extension-code";
 import { Markdown } from "tiptap-markdown";
@@ -10,6 +12,10 @@ import {
   parseInternalNodeReference,
   resolveInternalNodeTarget,
   serializeInternalNodeReference,
+  referenceCreateName,
+  isReferenceCreateModifier,
+  buildCreatedReference,
+  type InternalNodeReference,
   type NodeReferenceTarget,
 } from "./internalNodeReference";
 import { isImageReference } from "./attachmentUtils";
@@ -23,6 +29,7 @@ type NodeLookupItem = NodeReferenceTarget;
 type InternalNodeOptions = {
   nodes: NodeLookupItem[];
   onOpenNode: (target: NodeLookupItem) => void;
+  onCreateMissingNode?: (reference: InternalNodeReference) => Promise<NodeLookupItem | undefined>;
   embedPath: string[];
 };
 
@@ -82,6 +89,119 @@ function openNodeFromReference(event: MouseEvent, target: NodeLookupItem | undef
   event.preventDefault();
   event.stopPropagation();
   onOpenNode(target);
+}
+
+// 缺失引用创建成功后：更新节点属性（引用写入新 id），再进入新节点页
+async function createMissingReference(
+  event: MouseEvent,
+  options: InternalNodeOptions,
+  reference: InternalNodeReference,
+  updateAttributes: (attrs: Record<string, unknown>) => void,
+) {
+  if (!isReferenceCreateModifier(event) || !options.onCreateMissingNode) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  const fallbackName = referenceCreateName(reference);
+  const created = await options.onCreateMissingNode({ id: reference.id, name: fallbackName });
+  if (!created) return;
+  updateAttributes(buildCreatedReference(created, fallbackName));
+  options.onOpenNode(created);
+}
+
+function InternalNodeLinkView({ node, extension, updateAttributes }: ReactNodeViewProps) {
+  const { t } = useTranslation();
+  const creatingRef = useRef(false);
+  const id = String(node.attrs.id || "");
+  const name = String(node.attrs.name || "");
+  const options = extension.options as InternalNodeOptions;
+  const target = resolveInternalNodeTarget(options.nodes, { id, name });
+  const displayName = target?.name || name || id;
+
+  const handleClick = async (event: MouseEvent) => {
+    if (target) {
+      openNodeFromReference(event, target, options.onOpenNode);
+      return;
+    }
+    if (creatingRef.current) return;
+    creatingRef.current = true;
+    try {
+      await createMissingReference(event, options, { id, name }, updateAttributes);
+    } finally {
+      creatingRef.current = false;
+    }
+  };
+
+  return (
+    <NodeViewWrapper
+      as="span"
+      className={target ? "internal-node-link" : "internal-node-link internal-node-link-missing"}
+      contentEditable={false}
+      title={target ? undefined : t("editor.missingNodeCreateHint")}
+      onClick={handleClick}
+    >
+      {displayName}
+    </NodeViewWrapper>
+  );
+}
+
+function InternalNodeEmbedView({ node, extension, updateAttributes }: ReactNodeViewProps) {
+  const { t } = useTranslation();
+  const creatingRef = useRef(false);
+  const id = String(node.attrs.id || "");
+  const name = String(node.attrs.name || "");
+  const options = extension.options as InternalNodeOptions;
+  const target = resolveInternalNodeTarget(options.nodes, { id, name });
+  const displayName = target?.name || name || id;
+
+  const handleMissingClick = async (event: MouseEvent) => {
+    if (creatingRef.current) return;
+    creatingRef.current = true;
+    try {
+      await createMissingReference(event, options, { id, name }, updateAttributes);
+    } finally {
+      creatingRef.current = false;
+    }
+  };
+
+  if (!target) {
+    return (
+      <NodeViewWrapper
+        className="internal-node-embed internal-node-embed-missing"
+        contentEditable={false}
+        title={t("editor.missingNodeCreateHint")}
+        onClick={handleMissingClick}
+      >
+        <div className="internal-node-embed-title">{displayName}</div>
+        <div className="internal-node-embed-placeholder">未找到该节点</div>
+      </NodeViewWrapper>
+    );
+  }
+
+  if (options.embedPath.includes(target.id)) {
+    return (
+      <NodeViewWrapper className="internal-node-embed internal-node-embed-cycle" contentEditable={false}>
+        <div className="internal-node-embed-title">{displayName}</div>
+        <div className="internal-node-embed-placeholder">检测到循环嵌入</div>
+      </NodeViewWrapper>
+    );
+  }
+
+  return (
+    <NodeViewWrapper
+      className="internal-node-embed"
+      contentEditable={false}
+      onDoubleClick={(event: MouseEvent) => openNodeFromReference(event, target, options.onOpenNode)}
+    >
+      <div className="internal-node-embed-title">{displayName}</div>
+      <ReadOnlyMarkdownPreview
+        content={target.content || ""}
+        nodes={options.nodes}
+        onOpenNode={options.onOpenNode}
+        embedPath={[...options.embedPath, target.id]}
+      />
+    </NodeViewWrapper>
+  );
 }
 
 const markdownPreviewExtension = Markdown.configure({
@@ -195,6 +315,7 @@ export const InternalNodeLink = Node.create({
     return {
       nodes: [] as NodeLookupItem[],
       onOpenNode: () => {},
+      onCreateMissingNode: undefined as InternalNodeOptions["onCreateMissingNode"],
       embedPath: [] as string[],
     };
   },
@@ -223,23 +344,7 @@ export const InternalNodeLink = Node.create({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(({ node, extension }) => {
-      const id = node.attrs.id || "";
-      const name = node.attrs.name || "";
-      const options = extension.options as InternalNodeOptions;
-      const target = resolveInternalNodeTarget(options.nodes, { id, name });
-      const displayName = target?.name || name || id;
-      return (
-        <NodeViewWrapper
-          as="span"
-          className={target ? "internal-node-link" : "internal-node-link internal-node-link-missing"}
-          contentEditable={false}
-          onClick={(event: MouseEvent) => openNodeFromReference(event, target, options.onOpenNode)}
-        >
-          {displayName}
-        </NodeViewWrapper>
-      );
-    });
+    return ReactNodeViewRenderer(InternalNodeLinkView);
   },
 
   addStorage() {
@@ -271,6 +376,7 @@ export const InternalNodeEmbed = Node.create({
     return {
       nodes: [] as NodeLookupItem[],
       onOpenNode: () => {},
+      onCreateMissingNode: undefined as InternalNodeOptions["onCreateMissingNode"],
       embedPath: [] as string[],
     };
   },
@@ -299,47 +405,7 @@ export const InternalNodeEmbed = Node.create({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(({ node, extension }) => {
-      const id = node.attrs.id || "";
-      const name = node.attrs.name || "";
-      const options = extension.options as InternalNodeOptions;
-      const target = resolveInternalNodeTarget(options.nodes, { id, name });
-      const displayName = target?.name || name || id;
-
-      if (!target) {
-        return (
-          <NodeViewWrapper className="internal-node-embed internal-node-embed-missing" contentEditable={false}>
-            <div className="internal-node-embed-title">{displayName}</div>
-            <div className="internal-node-embed-placeholder">未找到该节点</div>
-          </NodeViewWrapper>
-        );
-      }
-
-      if (options.embedPath.includes(target.id)) {
-        return (
-          <NodeViewWrapper className="internal-node-embed internal-node-embed-cycle" contentEditable={false}>
-            <div className="internal-node-embed-title">{displayName}</div>
-            <div className="internal-node-embed-placeholder">检测到循环嵌入</div>
-          </NodeViewWrapper>
-        );
-      }
-
-      return (
-        <NodeViewWrapper
-          className="internal-node-embed"
-          contentEditable={false}
-          onDoubleClick={(event: MouseEvent) => openNodeFromReference(event, target, options.onOpenNode)}
-        >
-          <div className="internal-node-embed-title">{displayName}</div>
-          <ReadOnlyMarkdownPreview
-            content={target.content || ""}
-            nodes={options.nodes}
-            onOpenNode={options.onOpenNode}
-            embedPath={[...options.embedPath, target.id]}
-          />
-        </NodeViewWrapper>
-      );
-    });
+    return ReactNodeViewRenderer(InternalNodeEmbedView);
   },
 
   addStorage() {

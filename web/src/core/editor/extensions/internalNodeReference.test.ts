@@ -4,6 +4,9 @@ import {
   parseInternalNodeReference,
   resolveInternalNodeTarget,
   serializeInternalNodeReference,
+  referenceCreateName,
+  isReferenceCreateModifier,
+  buildCreatedReference,
 } from "./internalNodeReference";
 
 const duplicateNodes = [
@@ -60,5 +63,36 @@ describe("internal node references", () => {
       id: "deleted-id",
       name: "Same name",
     })).toBeUndefined();
+  });
+});
+
+describe("missing reference creation helpers", () => {
+  it("prefers the alias and falls back to the id", () => {
+    expect(referenceCreateName({ id: "abc", name: "Alias" })).toBe("Alias");
+    expect(referenceCreateName({ id: "abc", name: "" })).toBe("abc");
+    expect(referenceCreateName({ id: "abc", name: "   " })).toBe("abc");
+    expect(referenceCreateName({ id: "", name: "" })).toBe("");
+  });
+
+  it("detects ctrl or meta modifiers", () => {
+    expect(isReferenceCreateModifier({ ctrlKey: true })).toBe(true);
+    expect(isReferenceCreateModifier({ metaKey: true })).toBe(true);
+    expect(isReferenceCreateModifier({ ctrlKey: false, metaKey: false })).toBe(false);
+    expect(isReferenceCreateModifier(null)).toBe(false);
+  });
+
+  it("builds reference attributes from the created node", () => {
+    expect(buildCreatedReference({ id: "new-id", name: "New name" }, "old")).toEqual({
+      id: "new-id",
+      name: "New name",
+    });
+    expect(buildCreatedReference({ id: "new-id" }, "old")).toEqual({
+      id: "new-id",
+      name: "old",
+    });
+    expect(buildCreatedReference(undefined, "old")).toEqual({
+      id: "",
+      name: "old",
+    });
   });
 });
