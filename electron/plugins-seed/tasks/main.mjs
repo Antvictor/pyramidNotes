@@ -176,10 +176,11 @@ function findSelectionTarget(targets, from) {
 }
 
 export default function activate(ctx) {
-  const { Extension, Plugin, TextSelection, Fragment } = ctx.tiptap;
-  const { TaskList, TaskItem } = ctx.tiptap.extensions;
+  const { defineExtension, extensions, advanced } = ctx.pyramid;
+  const { TaskList, TaskItem } = extensions;
+  const { Plugin, TextSelection, Fragment } = advanced;
 
-  const TaskListTight = Extension.create({
+  const TaskListTight = defineExtension({
     name: 'taskListTight',
     addGlobalAttributes() {
       return [
@@ -217,7 +218,7 @@ export default function activate(ctx) {
     },
   });
 
-  const TaskListConversion = Extension.create({
+  const TaskListConversion = defineExtension({
     name: 'taskListConversion',
     addProseMirrorPlugins() {
       return [

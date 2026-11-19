@@ -15,25 +15,15 @@ import {
   type ExternalPluginManifest,
   type PluginContext,
   type PluginDescriptor,
+  type PluginLog,
   type PluginModule,
   type PluginReadResult,
   type PluginRuntimeStatus,
   type PluginStyle,
   type PluginToggles,
+  type PyramidApi,
+  type PyramidPermission,
 } from "./types";
-
-const TIPTAP = {
-  Extension,
-  Node,
-  Mark,
-  InputRule,
-  mergeAttributes,
-  Plugin,
-  PluginKey,
-  TextSelection,
-  Fragment,
-  extensions: { TaskList, TaskItem },
-};
 
 export interface PluginRuntimeSnapshot {
   descriptors: PluginDescriptor[];
@@ -104,36 +94,74 @@ export function createPluginRuntime(deps: RuntimeDeps) {
     }
   }
 
+  function injectInlineStyle(id: string, css: string) {
+    const doc = getDoc();
+    if (!doc) return;
+    const selector = `style[data-plugin-id="${id}"][data-inline="true"]`;
+    let element = doc.querySelector<HTMLStyleElement>(selector);
+    if (!element) {
+      element = doc.createElement("style");
+      element.setAttribute("data-plugin-id", id);
+      element.setAttribute("data-inline", "true");
+      doc.head.appendChild(element);
+    }
+    element.textContent = css;
+  }
+
   function buildContext(
     manifest: ExternalPluginManifest,
     collected: AnyExtension[],
   ): PluginContext {
-    return {
-      id: manifest.id,
+    const permissions = manifest.permissions ?? ["editor"];
+    const has = (permission: PyramidPermission) => permissions.includes(permission);
+
+    const log: PluginLog = {
+      info: (...args) => console.info(`[plugin:${manifest.id}]`, ...args),
+      warn: (...args) => console.warn(`[plugin:${manifest.id}]`, ...args),
+      error: (...args) => console.error(`[plugin:${manifest.id}]`, ...args),
+    };
+
+    const pyramid: PyramidApi = {
+      defineExtension: (spec) => Extension.create(spec),
+      defineNode: (spec) => Node.create(spec),
+      defineMark: (spec) => Mark.create(spec),
+      defineInputRule: (config) => new InputRule(config),
+      ...(has("editor") ? { extensions: { TaskList, TaskItem } } : {}),
+      ...(has("advanced")
+        ? {
+            advanced: {
+              defineProseMirrorPlugin: (config) => new Plugin(config),
+              Plugin,
+              PluginKey,
+              TextSelection,
+              Fragment,
+              mergeAttributes,
+            },
+          }
+        : {}),
+    };
+
+    const context: PluginContext = {
       apiVersion: PLUGIN_API_VERSION,
       manifest,
-      tiptap: TIPTAP,
-      editor: {
+      log,
+      pyramid,
+    };
+
+    if (has("editor")) {
+      context.editor = {
         registerExtensions: (extensions) => {
           collected.push(...extensions);
         },
-      },
-      ui: {
-        injectStyle: (css) => {
-          const doc = getDoc();
-          if (!doc) return;
-          const selector = `style[data-plugin-id="${manifest.id}"][data-inline="true"]`;
-          let element = doc.querySelector<HTMLStyleElement>(selector);
-          if (!element) {
-            element = doc.createElement("style");
-            element.setAttribute("data-plugin-id", manifest.id);
-            element.setAttribute("data-inline", "true");
-            doc.head.appendChild(element);
-          }
-          element.textContent = css;
-        },
-      },
-    };
+      };
+    }
+    if (has("styles")) {
+      context.ui = {
+        injectStyle: (css) => injectInlineStyle(manifest.id, css),
+      };
+    }
+
+    return context;
   }
 
   async function run(
@@ -203,7 +231,10 @@ export function createPluginRuntime(deps: RuntimeDeps) {
           activate(buildContext(read.manifest, collected));
           if (current !== generation) return snapshot ?? emptySnapshot();
           extensions.push(...collected);
-          applyStyles(id, read.styles ?? []);
+          const permissions = read.manifest.permissions ?? ["editor"];
+          if (permissions.includes("styles")) {
+            applyStyles(id, read.styles ?? []);
+          }
           states[id] = { status: "active" };
         } finally {
           revokeUrl(url);

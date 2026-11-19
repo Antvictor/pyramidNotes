@@ -13,7 +13,7 @@ const base = {
   version: '1.0.0',
   apiVersion: PLUGIN_API_VERSION,
   main: 'main.mjs',
-  styles: ['styles.css'],
+  styles: [],
   defaultEnabled: true,
 };
 
@@ -25,8 +25,52 @@ test('accepts a valid manifest and normalizes fields', () => {
   assert.equal(result.ok, true);
   assert.equal(result.manifest.id, 'tasks');
   assert.equal(result.manifest.main, 'main.mjs');
-  assert.deepEqual(result.manifest.styles, ['styles.css']);
+  assert.deepEqual(result.manifest.styles, []);
+  assert.deepEqual(result.manifest.permissions, ['editor']);
   assert.equal(result.manifest.nameKey, 'settings.plugins.tasks.name');
+});
+
+test('accepts styles when the styles permission is declared', () => {
+  const result = validate({ styles: ['styles.css'], permissions: ['editor', 'styles'] });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.manifest.permissions, ['editor', 'styles']);
+  assert.deepEqual(result.manifest.styles, ['styles.css']);
+});
+
+test('defaults permissions to editor when omitted', () => {
+  const result = validate({ permissions: undefined });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.manifest.permissions, ['editor']);
+});
+
+test('dedupes explicit permissions and keeps order', () => {
+  const result = validate({ permissions: ['styles', 'editor', 'editor'] });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.manifest.permissions, ['styles', 'editor']);
+});
+
+test('allows an empty permissions array', () => {
+  const result = validate({ permissions: [] });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.manifest.permissions, []);
+});
+
+test('rejects unknown or malformed permissions', () => {
+  assert.equal(validate({ permissions: ['editor', 'network'] }).ok, false);
+  assert.equal(validate({ permissions: 'editor' }).ok, false);
+  assert.equal(validate({ permissions: ['editor', 1] }).ok, false);
+  assert.equal(validate({ permissions: ['editor', 'styles', 'advanced', 'editor'] }).ok, false);
+});
+
+test('rejects advanced without editor', () => {
+  assert.equal(validate({ permissions: ['advanced'] }).ok, false);
+  assert.equal(validate({ permissions: ['styles', 'advanced'] }).ok, false);
+});
+
+test('rejects styles files without the styles permission', () => {
+  assert.equal(validate({ styles: ['styles.css'], permissions: ['editor'] }).ok, false);
+  assert.equal(validate({ styles: ['styles.css'], permissions: [] }).ok, false);
+  assert.equal(validate({ styles: ['styles.css'], permissions: undefined }).ok, false);
 });
 
 test('allows missing optional fields and extra keys', () => {

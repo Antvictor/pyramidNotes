@@ -12,6 +12,9 @@ import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
 
 export const PLUGIN_API_VERSION = 1;
 
+export const PYRAMID_PERMISSIONS = ["editor", "styles", "advanced"] as const;
+export type PyramidPermission = (typeof PYRAMID_PERMISSIONS)[number];
+
 export type PluginOrigin = "official" | "user";
 export type PluginListStatus = "ok" | "incompatible";
 export type PluginRuntimeStatus = "active" | "disabled" | "error" | "incompatible";
@@ -27,6 +30,7 @@ export interface ExternalPluginManifest {
   main: string;
   styles: string[];
   defaultEnabled: boolean;
+  permissions?: PyramidPermission[];
 }
 
 export interface PluginDescriptor {
@@ -53,31 +57,49 @@ export interface PluginReadResult {
   warnings?: string[];
 }
 
+export type ExtensionSpec = Parameters<typeof Extension.create>[0];
+export type NodeSpec = Parameters<typeof Node.create>[0];
+export type MarkSpec = Parameters<typeof Mark.create>[0];
+export type InputRuleConfig = ConstructorParameters<typeof InputRule>[0];
+
+export interface PluginLog {
+  info: (...args: unknown[]) => void;
+  warn: (...args: unknown[]) => void;
+  error: (...args: unknown[]) => void;
+}
+
+export interface PyramidAdvanced {
+  defineProseMirrorPlugin: (config: ConstructorParameters<typeof Plugin>[0]) => Plugin;
+  Plugin: typeof Plugin;
+  PluginKey: typeof PluginKey;
+  TextSelection: typeof TextSelection;
+  Fragment: typeof Fragment;
+  mergeAttributes: typeof mergeAttributes;
+}
+
+export interface PyramidApi {
+  defineExtension: (spec: ExtensionSpec) => AnyExtension;
+  defineNode: (spec: NodeSpec) => AnyExtension;
+  defineMark: (spec: MarkSpec) => AnyExtension;
+  defineInputRule: (config: InputRuleConfig) => InputRule;
+  extensions?: {
+    TaskList: typeof TaskList;
+    TaskItem: typeof TaskItem;
+  };
+  advanced?: PyramidAdvanced;
+}
+
 export interface PluginContext {
-  id: string;
   apiVersion: number;
   manifest: ExternalPluginManifest;
-  tiptap: {
-    Extension: typeof Extension;
-    Node: typeof Node;
-    Mark: typeof Mark;
-    InputRule: typeof InputRule;
-    mergeAttributes: typeof mergeAttributes;
-    Plugin: typeof Plugin;
-    PluginKey: typeof PluginKey;
-    TextSelection: typeof TextSelection;
-    Fragment: typeof Fragment;
-    extensions: {
-      TaskList: typeof TaskList;
-      TaskItem: typeof TaskItem;
-    };
-  };
-  editor: {
+  log: PluginLog;
+  editor?: {
     registerExtensions: (extensions: AnyExtension[]) => void;
   };
-  ui: {
+  ui?: {
     injectStyle: (css: string) => void;
   };
+  pyramid: PyramidApi;
 }
 
 export interface PluginModule {

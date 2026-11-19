@@ -1,0 +1,11 @@
+{
+  "id": "calendar-date",
+  "name": "Calendar date",
+  "description": "Insert a clickable date picker into notes",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "main": "main.mjs",
+  "styles": ["styles.css"],
+  "defaultEnabled": false,
+  "permissions": ["editor", "styles"]
+}

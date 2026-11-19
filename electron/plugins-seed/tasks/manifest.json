@@ -4,9 +4,10 @@
   "description": "Typing \"- [ ]\" turns the item into a clickable checkbox",
   "nameKey": "settings.plugins.tasks.name",
   "descriptionKey": "settings.plugins.tasks.description",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "apiVersion": 1,
   "main": "main.mjs",
   "styles": ["styles.css"],
-  "defaultEnabled": true
+  "defaultEnabled": true,
+  "permissions": ["editor", "styles", "advanced"]
 }

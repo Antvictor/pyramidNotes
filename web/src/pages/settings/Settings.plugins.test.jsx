@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Extension } from "@tiptap/core";
 import Settings from "./Settings";
 import { PluginProvider } from "@/core/plugins/PluginProvider";
 import { createPluginRuntime } from "@/core/plugins/runtime";
@@ -41,7 +40,9 @@ function makeRuntime(plugins) {
     }),
     importModule: async (url) => ({
       default: (ctx) => {
-        ctx.editor.registerExtensions([Extension.create({ name: `ext-${url}` })]);
+        ctx.editor.registerExtensions([
+          ctx.pyramid.defineExtension({ name: `ext-${url}` }),
+        ]);
       },
     }),
     makeUrl: (code) => `blob:${code}`,

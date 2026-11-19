@@ -2,6 +2,9 @@ const PLUGIN_API_VERSION = 1;
 const PLUGIN_ID_RE = /^[a-z0-9-]+$/;
 const PLUGIN_MAIN_RE = /^[\w.-]+\.mjs$/;
 const PLUGIN_STYLE_RE = /^[\w.-]+\.css$/;
+const PYRAMID_PERMISSIONS = ['editor', 'styles', 'advanced'];
+const PYRAMID_PERMISSION_SET = new Set(PYRAMID_PERMISSIONS);
+const DEFAULT_PERMISSIONS = ['editor'];
 
 const MAX_NAME = 128;
 const MAX_DESCRIPTION = 512;
@@ -17,6 +20,31 @@ function optionalString(value, max, field, allowEmpty = false) {
   if (value === undefined || value === null) return { ok: true, value: undefined };
   if (typeof value !== 'string' || (!allowEmpty && value.length === 0) || value.length > max) {
     return { ok: false, reason: `invalid ${field}` };
+  }
+  return { ok: true, value };
+}
+
+function normalizePermissions(raw, styles) {
+  let value;
+  if (raw === undefined) {
+    value = [...DEFAULT_PERMISSIONS];
+  } else {
+    if (!Array.isArray(raw) || raw.length > PYRAMID_PERMISSIONS.length) {
+      return fail('invalid permissions');
+    }
+    value = [];
+    for (const permission of raw) {
+      if (typeof permission !== 'string' || !PYRAMID_PERMISSION_SET.has(permission)) {
+        return fail('invalid permission entry');
+      }
+      if (!value.includes(permission)) value.push(permission);
+    }
+  }
+  if (value.includes('advanced') && !value.includes('editor')) {
+    return fail('advanced permission requires editor');
+  }
+  if (styles.length > 0 && !value.includes('styles')) {
+    return fail('styles require the styles permission');
   }
   return { ok: true, value };
 }
@@ -50,6 +78,9 @@ function validateManifest(raw, dirName) {
     }
   }
 
+  const permissions = normalizePermissions(raw.permissions, styles);
+  if (!permissions.ok) return permissions;
+
   if (typeof raw.defaultEnabled !== 'boolean') return fail('invalid defaultEnabled');
 
   const name = optionalString(raw.name, MAX_NAME, 'name');
@@ -74,6 +105,7 @@ function validateManifest(raw, dirName) {
       main: raw.main,
       styles: [...styles],
       defaultEnabled: raw.defaultEnabled,
+      permissions: permissions.value,
     },
   };
 }
@@ -96,6 +128,8 @@ module.exports = {
   PLUGIN_ID_RE,
   PLUGIN_MAIN_RE,
   PLUGIN_STYLE_RE,
+  PYRAMID_PERMISSIONS,
+  normalizePermissions,
   validateManifest,
   compareVersions,
 };

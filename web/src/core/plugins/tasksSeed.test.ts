@@ -3,49 +3,58 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 import StarterKit from "@tiptap/starter-kit";
-import { Editor, Extension, type AnyExtension } from "@tiptap/core";
+import {
+  Editor,
+  Extension,
+  InputRule,
+  Mark,
+  Node,
+  mergeAttributes,
+  type AnyExtension,
+} from "@tiptap/core";
 import { Markdown } from "tiptap-markdown";
 import { Fragment } from "@tiptap/pm/model";
 import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
 import { TaskItem, TaskList } from "@tiptap/extension-list";
+import type { PluginContext } from "./types";
 
 const seedDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../../../electron/plugins-seed/tasks",
 );
 
-interface PluginContext {
-  id: string;
-  apiVersion: number;
-  manifest: unknown;
-  tiptap: Record<string, unknown>;
-  editor: { registerExtensions: (extensions: AnyExtension[]) => void };
-  ui: { injectStyle: (css: string) => void };
-}
-
 let seedExtensions: AnyExtension[] = [];
+let seedManifest: PluginContext["manifest"];
 
 beforeAll(async () => {
   const code = readFileSync(path.join(seedDir, "main.mjs"), "utf8");
   const dataUrl = `data:text/javascript;base64,${Buffer.from(code).toString("base64")}`;
   const module = await import(/* @vite-ignore */ dataUrl);
+  seedManifest = JSON.parse(readFileSync(path.join(seedDir, "manifest.json"), "utf8"));
   const extensions: AnyExtension[] = [];
   const ctx: PluginContext = {
-    id: "tasks",
     apiVersion: 1,
-    manifest: JSON.parse(readFileSync(path.join(seedDir, "manifest.json"), "utf8")),
-    tiptap: {
-      Extension,
-      Plugin,
-      PluginKey,
-      TextSelection,
-      Fragment,
-      extensions: { TaskList, TaskItem },
-    },
+    manifest: seedManifest,
+    log: { info: () => {}, warn: () => {}, error: () => {} },
     editor: {
       registerExtensions: (list) => extensions.push(...list),
     },
     ui: { injectStyle: () => {} },
+    pyramid: {
+      defineExtension: (spec) => Extension.create(spec),
+      defineNode: (spec) => Node.create(spec),
+      defineMark: (spec) => Mark.create(spec),
+      defineInputRule: (config) => new InputRule(config),
+      extensions: { TaskList, TaskItem },
+      advanced: {
+        defineProseMirrorPlugin: (config) => new Plugin(config),
+        Plugin,
+        PluginKey,
+        TextSelection,
+        Fragment,
+        mergeAttributes,
+      },
+    },
   };
   await module.default(ctx);
   seedExtensions = extensions;
@@ -87,6 +96,8 @@ describe("tasks seed plugin", () => {
       "taskListTight",
       "taskListConversion",
     ]);
+    expect(seedManifest.version).toBe("1.1.0");
+    expect(seedManifest.permissions).toEqual(["editor", "styles", "advanced"]);
   });
 
   it("converts - [ ] typed inside a list item and keeps the cursor in the text", () => {

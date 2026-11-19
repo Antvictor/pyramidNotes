@@ -1,17 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { Extension } from "@tiptap/core";
 import { createPluginRuntime, type PluginRuntimeSnapshot } from "./runtime";
-import type { PluginContext, PluginDescriptor, PluginReadResult } from "./types";
+import type {
+  PluginContext,
+  PluginDescriptor,
+  PluginReadResult,
+  PyramidPermission,
+} from "./types";
 
-function manifest(id: string, defaultEnabled = true) {
+function manifest(
+  id: string,
+  defaultEnabled = true,
+  permissions: PyramidPermission[] = ["editor"],
+) {
   return {
     id,
     name: id,
     version: "1.0.0",
     apiVersion: 1,
     main: "main.mjs",
-    styles: ["styles.css"],
+    styles: permissions.includes("styles") ? ["styles.css"] : [],
     defaultEnabled,
+    permissions,
   };
 }
 
@@ -19,8 +28,9 @@ function descriptor(
   id: string,
   origin: "official" | "user" = "official",
   defaultEnabled = true,
+  permissions: PyramidPermission[] = ["editor"],
 ): PluginDescriptor {
-  return { id, origin, manifest: manifest(id, defaultEnabled), status: "ok" };
+  return { id, origin, manifest: manifest(id, defaultEnabled, permissions), status: "ok" };
 }
 
 interface SetupOptions {
@@ -31,20 +41,24 @@ interface SetupOptions {
 }
 
 function setup(options: SetupOptions = {}) {
+  const plugins = options.plugins ?? [descriptor("alpha"), descriptor("beta", "user")];
   const listPlugins = vi.fn(async () => ({
-    plugins: options.plugins ?? [descriptor("alpha"), descriptor("beta", "user")],
+    plugins,
     warnings: options.warnings ?? [],
   }));
 
   const readPlugin =
     options.readPlugin ??
-    vi.fn(async (id: string): Promise<PluginReadResult> => ({
-      id,
-      origin: "official",
-      manifest: manifest(id),
-      code: id,
-      styles: [{ fileName: "styles.css", css: `.${id} { color: red; }` }],
-    }));
+    vi.fn(async (id: string): Promise<PluginReadResult> => {
+      const found = plugins.find((plugin) => plugin.id === id);
+      return {
+        id,
+        origin: found?.origin ?? "official",
+        manifest: found?.manifest ?? manifest(id),
+        code: id,
+        styles: [{ fileName: "styles.css", css: `.${id} { color: red; }` }],
+      };
+    });
 
   const importModule =
     options.importModule ??
@@ -52,7 +66,8 @@ function setup(options: SetupOptions = {}) {
       const id = url.replace("blob:", "");
       return {
         default: (ctx: PluginContext) => {
-          ctx.editor.registerExtensions([Extension.create({ name: `ext-${id}` })]);
+          const extension = ctx.pyramid.defineExtension({ name: `ext-${id}` });
+          ctx.editor?.registerExtensions([extension]);
         },
       };
     });
@@ -125,7 +140,7 @@ describe("createPluginRuntime", () => {
       }
       return {
         default: (ctx: PluginContext) => {
-          ctx.editor.registerExtensions([Extension.create({ name: `ext-${id}` })]);
+          ctx.editor?.registerExtensions([ctx.pyramid.defineExtension({ name: `ext-${id}` })]);
         },
       };
     });
@@ -161,12 +176,89 @@ describe("createPluginRuntime", () => {
     expect(captured?.manifest.name).toBe("from-read");
   });
 
-  it("injects styles once per active plugin and replaces them on reload", async () => {
-    const { runtime, revokeUrl } = setup();
+  it("defaults to editor permission and hides undeclared capabilities", async () => {
+    let captured: PluginContext | null = null;
+    const { runtime } = setup({
+      plugins: [descriptor("alpha", "official", true, ["editor"])],
+      importModule: vi.fn(async () => ({
+        default: (ctx: PluginContext) => {
+          captured = ctx;
+        },
+      })),
+    });
 
     await runtime.load({ storagePath: "a" });
-    expect(document.querySelectorAll("style[data-plugin-id]").length).toBe(1);
+    expect(captured?.editor).toBeDefined();
+    expect(captured?.ui).toBeUndefined();
+    expect(captured?.pyramid.advanced).toBeUndefined();
+    expect(captured?.pyramid.extensions).toBeDefined();
+    expect(captured?.log).toBeDefined();
+    expect(captured?.pyramid.defineExtension).toBeTypeOf("function");
+  });
+
+  it("injects advanced capabilities only when the advanced permission is declared", async () => {
+    const contexts: PluginContext[] = [];
+    const { runtime } = setup({
+      plugins: [
+        descriptor("plain", "official", true, ["editor"]),
+        descriptor("advanced", "official", true, ["editor", "advanced"]),
+      ],
+      importModule: vi.fn(async () => ({
+        default: (ctx: PluginContext) => {
+          contexts.push(ctx);
+        },
+      })),
+    });
+
+    await runtime.load({ storagePath: "a" });
+    const plain = contexts.find((ctx) => ctx.manifest.id === "plain");
+    const advanced = contexts.find((ctx) => ctx.manifest.id === "advanced");
+    expect(plain?.pyramid.advanced).toBeUndefined();
+    expect(advanced?.pyramid.advanced).toBeDefined();
+    expect(advanced?.pyramid.advanced?.Plugin).toBeTypeOf("function");
+    expect(advanced?.pyramid.advanced?.defineProseMirrorPlugin).toBeTypeOf("function");
+  });
+
+  it("prefixes log output with the plugin id", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    const { runtime } = setup({
+      plugins: [descriptor("alpha")],
+      importModule: vi.fn(async () => ({
+        default: (ctx: PluginContext) => {
+          ctx.log.info("hello");
+        },
+      })),
+    });
+
+    await runtime.load({ storagePath: "a" });
+    expect(info).toHaveBeenCalledWith("[plugin:alpha]", "hello");
+    info.mockRestore();
+  });
+
+  it("only injects manifest styles when the styles permission is declared", async () => {
+    const { runtime } = setup({
+      plugins: [
+        descriptor("plain", "official", true, ["editor"]),
+        descriptor("styled", "official", true, ["editor", "styles"]),
+      ],
+    });
+
+    await runtime.load({ storagePath: "a" });
+    expect(document.querySelector('style[data-plugin-id="plain"]')).toBeNull();
+    expect(document.querySelector('style[data-plugin-id="styled"]')).not.toBeNull();
+  });
+
+  it("injects styles once per active plugin and replaces them on reload", async () => {
+    const { runtime, revokeUrl } = setup({
+      plugins: [
+        descriptor("alpha", "official", true, ["editor", "styles"]),
+        descriptor("beta", "user", true, ["editor", "styles"]),
+      ],
+    });
+
+    await runtime.load({ storagePath: "a" });
     expect(document.querySelector('style[data-plugin-id="alpha"]')).not.toBeNull();
+    expect(document.querySelector('style[data-plugin-id="beta"]')).toBeNull();
     expect(revokeUrl).toHaveBeenCalledTimes(1);
 
     await runtime.load({ storagePath: "a", plugins: { alpha: false, beta: true } });
@@ -199,8 +291,8 @@ describe("createPluginRuntime", () => {
       })),
       importModule: vi.fn(async (url: string) => ({
         default: (ctx: PluginContext) => {
-          ctx.editor.registerExtensions([
-            Extension.create({ name: `ext-${url.replace("blob:", "")}` }),
+          ctx.editor?.registerExtensions([
+            ctx.pyramid.defineExtension({ name: `ext-${url.replace("blob:", "")}` }),
           ]);
         },
       })),

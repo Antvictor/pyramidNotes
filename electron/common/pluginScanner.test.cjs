@@ -20,6 +20,7 @@ function writePlugin(root, id, overrides = {}, options = {}) {
     apiVersion: 1,
     main: 'main.mjs',
     styles: options.styles ? ['styles.css'] : [],
+    ...(options.styles ? { permissions: ['editor', 'styles'] } : {}),
     defaultEnabled: true,
     ...overrides,
   };
