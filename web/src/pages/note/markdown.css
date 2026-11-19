@@ -304,9 +304,8 @@
   font-style: italic;
 }
 
-/* Task Lists (if supported) */
-.cm-md-inline input[type="checkbox"],
-.prose input[type="checkbox"] {
+/* Task checkbox styles for the markdown preview; the editor task list is styled by the tasks plugin (tasks.css) */
+.cm-md-inline input[type="checkbox"] {
   margin-right: 0.5em;
   accent-color: var(--primary);
 }

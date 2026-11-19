@@ -1,0 +1,48 @@
+/* Tasks 插件样式：任务列表布局与完成态 */
+.prose ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.prose ul[data-type="taskList"] > li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5em;
+}
+
+/* 复选框与首行文字垂直居中：label 高度对齐 prose-sm 行高，内容首段去掉顶部外边距 */
+.prose ul[data-type="taskList"] > li > label {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 1.7142857em;
+  margin: 0;
+  user-select: none;
+}
+
+.prose ul[data-type="taskList"] > li > label > span {
+  display: none;
+}
+
+.prose ul[data-type="taskList"] > li input[type="checkbox"] {
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.prose ul[data-type="taskList"] > li > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.prose ul[data-type="taskList"] > li > div > p:first-child {
+  margin-top: 0;
+}
+
+.prose ul[data-type="taskList"] > li > div > p:last-child {
+  margin-bottom: 0;
+}
+
+.prose ul[data-type="taskList"] > li[data-checked="true"] > div {
+  opacity: 0.6;
+  text-decoration: line-through;
+}

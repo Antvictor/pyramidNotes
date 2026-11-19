@@ -118,6 +118,7 @@ const zhCN = {
       basic: '基本信息',
       systemSettings: '系统设置',
       editor: '编辑器设置',
+      plugins: '插件',
       deleteSettings: '删除设置',
       other: '其他',
     },
@@ -189,6 +190,14 @@ const zhCN = {
       hint: '显示：笔记底部显示引用当前笔记的反链面板；隐藏：不显示',
       show: '显示',
       hide: '隐藏',
+    },
+    plugins: {
+      enabled: '启用',
+      disabled: '停用',
+      tasks: {
+        name: '任务清单',
+        description: '输入 "- [ ]" 自动转为可勾选任务',
+      },
     },
     license: {
       sectionTitle: '授权',

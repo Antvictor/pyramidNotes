@@ -6,6 +6,8 @@ import Paywall from "../paywall/Paywall";
 import { useLicense } from "../../contexts/LicenseContext";
 import { useTranslation } from "react-i18next";
 import NumberField from "../../components/ui/number-field";
+import { bundledPlugins } from "@/core/plugins/bundled";
+import { isPluginEnabled } from "@/core/plugins/types";
 
 const Settings = () => {
   const { t } = useTranslation();
@@ -114,6 +116,12 @@ const Settings = () => {
   const handleShowBacklinksChange = async (value) => {
     setSettings((prev) => ({ ...prev, showBacklinks: value }));
     await window.api.saveSettings({ showBacklinks: value });
+  };
+
+  const handlePluginToggle = async (id, enabled) => {
+    const nextPlugins = { ...(settings.plugins || {}), [id]: enabled };
+    setSettings((prev) => ({ ...prev, plugins: nextPlugins }));
+    await window.api.saveSettings({ plugins: nextPlugins });
   };
 
   const handleDeleteModeChange = async (value) => {
@@ -471,6 +479,52 @@ const Settings = () => {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Plugin Settings Section */}
+        <div style={sectionStyle}>
+          <h3 style={{ marginBottom: 12 }}>{t("settings.sections.plugins")}</h3>
+          {bundledPlugins.map((plugin, index) => {
+            const enabled = isPluginEnabled(plugin, settings.plugins);
+            return (
+              <div
+                key={plugin.id}
+                style={{
+                  ...rowStyle,
+                  borderBottom: index === bundledPlugins.length - 1 ? "none" : rowStyle.borderBottom,
+                }}
+              >
+                <div>
+                  <span style={labelStyle}>{t(plugin.nameKey)}</span>
+                  <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 2 }}>
+                    {t(plugin.descriptionKey)}
+                  </div>
+                </div>
+                <div style={controlStyle}>
+                  {[
+                    { label: t("settings.plugins.enabled"), value: true },
+                    { label: t("settings.plugins.disabled"), value: false },
+                  ].map(({ label, value }) => (
+                    <button
+                      key={label}
+                      onClick={() => handlePluginToggle(plugin.id, value)}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 6,
+                        border: "1px solid var(--border)",
+                        background: enabled === value ? "var(--link-color)" : "var(--bg-primary)",
+                        color: enabled === value ? "white" : "var(--text-primary)",
+                        cursor: "pointer",
+                        fontSize: 13,
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Delete Settings Section */}

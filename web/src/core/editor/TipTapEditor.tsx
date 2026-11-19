@@ -31,6 +31,8 @@ import {
   serializeInternalNodeReference,
   type NodeReferenceTarget,
 } from "./extensions/internalNodeReference";
+import { collectEnabledExtensions, type PluginToggles } from "@/core/plugins/types";
+import { bundledPlugins } from "@/core/plugins/bundled";
 
 type NodeLookupItem = NodeReferenceTarget;
 
@@ -47,6 +49,7 @@ interface Props {
   noteFontSize?: number;
   editorWidthMode?: 'constrained' | 'expanded';
   focusRefId?: string;
+  pluginToggles?: PluginToggles;
 }
 
 type SuggestionState = {
@@ -628,6 +631,7 @@ export default function TipTapEditor({
   noteFontSize = 16,
   editorWidthMode = 'constrained',
   focusRefId,
+  pluginToggles,
 }: Props) {
   const { t } = useTranslation();
   const editorRef = useRef<Editor | null>(null);
@@ -703,9 +707,14 @@ export default function TipTapEditor({
     HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" },
   }), []);
 
+  const pluginExtensions = useMemo(
+    () => collectEnabledExtensions(bundledPlugins, pluginToggles),
+    [pluginToggles],
+  );
+
   const extensions = useMemo(
-    () => [starterKit, ...tableExtensions, TabIndentation, Code, InlineCodePreview, EnhancedCodeBlock, MathInline, MathBlock, EmptyParagraphPreserver, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, InternalNodeTokenNormalizer, markdownExtension, findAndReplace],
-    [starterKit, tableExtensions, EmptyParagraphPreserver, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, markdownExtension, findAndReplace],
+    () => [starterKit, ...tableExtensions, ...pluginExtensions, TabIndentation, Code, InlineCodePreview, EnhancedCodeBlock, MathInline, MathBlock, EmptyParagraphPreserver, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, InternalNodeTokenNormalizer, markdownExtension, findAndReplace],
+    [starterKit, tableExtensions, pluginExtensions, EmptyParagraphPreserver, link, internalNodeLink, internalNodeEmbed, internalImageEmbed, tiptapImage, completionExtension, markdownExtension, findAndReplace],
   );
 
   const handleUpdate = useCallback(({ editor }: { editor: Editor }) => {

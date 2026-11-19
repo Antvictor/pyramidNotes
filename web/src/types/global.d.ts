@@ -11,6 +11,7 @@ interface PyramidSettings {
   noteFontSize?: number;
   nodeSpacing?: 'compact' | 'normal' | 'loose';
   editorWidthMode?: 'constrained' | 'expanded';
+  plugins?: Record<string, boolean>;
 }
 
 interface PyramidApi {

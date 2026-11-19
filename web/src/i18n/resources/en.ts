@@ -118,6 +118,7 @@ const en = {
       basic: 'Basic information',
       systemSettings: 'System settings',
       editor: 'Editor settings',
+      plugins: 'Plugins',
       deleteSettings: 'Deletion settings',
       other: 'Other',
     },
@@ -189,6 +190,14 @@ const en = {
       hint: 'Show: display a backlink panel at the bottom of notes; Hide: do not display',
       show: 'Show',
       hide: 'Hide',
+    },
+    plugins: {
+      enabled: 'Enabled',
+      disabled: 'Disabled',
+      tasks: {
+        name: 'Task list',
+        description: 'Typing "- [ ]" turns the item into a clickable checkbox',
+      },
     },
     license: {
       sectionTitle: 'License',

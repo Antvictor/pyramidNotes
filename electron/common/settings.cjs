@@ -33,6 +33,7 @@ const DEFAULT_SETTINGS = {
   },
   editorWidthMode: 'constrained',
   showBacklinks: true,
+  plugins: { tasks: true },
   deleteMode: 'trash',        // 'trash' | 'systemTrash' | 'permanent'
   trashRetentionDays: 30,
 };
