@@ -8,6 +8,7 @@ import Paywall from "./pages/paywall/Paywall";
 import Trash from "./pages/trash/Trash";
 import { SelectedNodeProvider } from "./contexts/SelectedNodeContext";
 import { LicenseProvider, useLicense } from "./contexts/LicenseContext";
+import { PluginProvider } from "./core/plugins/PluginProvider";
 import TutorialController from "./components/tutorial/TutorialController";
 import { initializeI18n } from "./i18n";
 import { isOverlayEscClaimed } from "./components/ui/overlayEsc";
@@ -147,7 +148,9 @@ function App() {
   return (
     <Router>
       <LicenseProvider>
-        <AppContent />
+        <PluginProvider>
+          <AppContent />
+        </PluginProvider>
       </LicenseProvider>
     </Router>
   );

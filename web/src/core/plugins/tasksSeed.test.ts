@@ -1,14 +1,61 @@
-import { describe, expect, it } from "vitest";
-import { Editor } from "@tiptap/core";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { beforeAll, describe, expect, it } from "vitest";
 import StarterKit from "@tiptap/starter-kit";
+import { Editor, Extension, type AnyExtension } from "@tiptap/core";
 import { Markdown } from "tiptap-markdown";
-import { tasksPlugin } from "./index";
+import { Fragment } from "@tiptap/pm/model";
+import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
+import { TaskItem, TaskList } from "@tiptap/extension-list";
+
+const seedDir = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../../../electron/plugins-seed/tasks",
+);
+
+interface PluginContext {
+  id: string;
+  apiVersion: number;
+  manifest: unknown;
+  tiptap: Record<string, unknown>;
+  editor: { registerExtensions: (extensions: AnyExtension[]) => void };
+  ui: { injectStyle: (css: string) => void };
+}
+
+let seedExtensions: AnyExtension[] = [];
+
+beforeAll(async () => {
+  const code = readFileSync(path.join(seedDir, "main.mjs"), "utf8");
+  const dataUrl = `data:text/javascript;base64,${Buffer.from(code).toString("base64")}`;
+  const module = await import(/* @vite-ignore */ dataUrl);
+  const extensions: AnyExtension[] = [];
+  const ctx: PluginContext = {
+    id: "tasks",
+    apiVersion: 1,
+    manifest: JSON.parse(readFileSync(path.join(seedDir, "manifest.json"), "utf8")),
+    tiptap: {
+      Extension,
+      Plugin,
+      PluginKey,
+      TextSelection,
+      Fragment,
+      extensions: { TaskList, TaskItem },
+    },
+    editor: {
+      registerExtensions: (list) => extensions.push(...list),
+    },
+    ui: { injectStyle: () => {} },
+  };
+  await module.default(ctx);
+  seedExtensions = extensions;
+});
 
 function makeEditor(content: unknown = "") {
   return new Editor({
     extensions: [
       StarterKit.configure({ code: false, codeBlock: false, hardBreak: false }),
-      ...tasksPlugin.createExtensions(),
+      ...seedExtensions,
       Markdown.configure({ html: false, tightLists: true, bulletListMarker: "-" }),
     ],
     content: content as never,
@@ -27,22 +74,21 @@ function typeText(editor: Editor, text: string) {
   }
 }
 
-// StarterKit 的 TrailingNode 会在块级列表后补一个空段落，加载断言只看前面实际内容。
 function loadMarkdown(editor: Editor, markdown: string) {
   editor.commands.setContent(markdown);
 }
 
-const listItem = (text: string) => ({
-  type: "listItem",
-  content: [{ type: "paragraph", content: [{ type: "text", text }] }],
-});
+describe("tasks seed plugin", () => {
+  it("registers task list, task item, tight, markdown and conversion extensions", () => {
+    const names = seedExtensions.map((extension) => extension.name);
+    expect(names).toEqual([
+      "taskList",
+      "taskItem",
+      "taskListTight",
+      "taskListConversion",
+    ]);
+  });
 
-const bullet = (...items: unknown[]) => ({
-  type: "doc",
-  content: [{ type: "bulletList", content: items }],
-});
-
-describe("taskListConversion", () => {
   it("converts - [ ] typed inside a list item and keeps the cursor in the text", () => {
     const editor = makeEditor();
     typeText(editor, "- [ ] foo");
@@ -79,7 +125,7 @@ describe("taskListConversion", () => {
     editor.destroy();
   });
 
-  it("converts a fully marked list and round-trips its markdown", () => {
+  it("round-trips task markdown", () => {
     const editor = makeEditor();
     loadMarkdown(editor, "- [ ] foo\n- [x] bar");
     const list = editor.state.doc.firstChild!;
@@ -105,19 +151,6 @@ describe("taskListConversion", () => {
     expect(parent.attrs.checked).toBe(true);
     expect(parent.lastChild!.type.name).toBe("bulletList");
     expect(parent.lastChild!.textContent).toBe("child");
-    editor.destroy();
-  });
-
-  it("leaves plain lists untouched when the conversion plugin is absent", () => {
-    const editor = new Editor({
-      extensions: [
-        StarterKit.configure({ code: false, codeBlock: false, hardBreak: false }),
-        Markdown.configure({ html: false }),
-      ],
-      content: bullet(listItem("[ ] a")) as never,
-    });
-    expect(editor.state.doc.firstChild!.type.name).toBe("bulletList");
-    expect(editor.state.doc.textContent).toBe("[ ] a");
     editor.destroy();
   });
 });

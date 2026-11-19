@@ -24,6 +24,10 @@
       {
         "from": "sqlite-plugins",
         "to": "sqlite-plugins"
+      },
+      {
+        "from": "plugins-seed",
+        "to": "plugins-seed"
       }
     ],
     "mac": {

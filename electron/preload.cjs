@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld('api', {
     purgeExpiredTrash: () => ipcRenderer.invoke('purgeExpiredTrash'),
     purgeTrashNodes: (nodeIds) => ipcRenderer.invoke('purgeTrashNodes', nodeIds),
     getPath: () => ipcRenderer.invoke('getPath'),
+    listPlugins: () => ipcRenderer.invoke('plugins:list'),
+    readPlugin: (id) => ipcRenderer.invoke('plugins:read', id),
     dbQuery: (sql, params) => ipcRenderer.invoke('dbQuery', sql, params),
     searchNotes: (keyword) => ipcRenderer.invoke('searchNotes', keyword),
     getSettings: () => ipcRenderer.invoke('getSettings'),

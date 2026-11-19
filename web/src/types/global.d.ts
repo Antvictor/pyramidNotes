@@ -17,6 +17,8 @@ interface PyramidSettings {
 interface PyramidApi {
   getSettings: () => Promise<PyramidSettings>;
   saveSettings: (settings: Partial<PyramidSettings>) => Promise<boolean>;
+  listPlugins?: () => Promise<unknown>;
+  readPlugin?: (id: string) => Promise<unknown>;
   capturePage: (options?: {
     x?: number;
     y?: number;

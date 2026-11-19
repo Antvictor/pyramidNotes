@@ -194,6 +194,16 @@ const en = {
     plugins: {
       enabled: 'Enabled',
       disabled: 'Disabled',
+      empty: 'No plugins found',
+      origin: {
+        official: 'Official',
+        user: 'User',
+      },
+      status: {
+        loading: 'Loading plugins…',
+        incompatible: 'Incompatible plugin version',
+        error: 'Plugin failed to load',
+      },
       tasks: {
         name: 'Task list',
         description: 'Typing "- [ ]" turns the item into a clickable checkbox',

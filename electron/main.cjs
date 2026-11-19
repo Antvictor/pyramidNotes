@@ -14,6 +14,8 @@ const { registerTrashIPC } = require('./ipc/trash.cjs')
 const { applyApplicationMenu } = require('./common/locale.cjs')
 const { buildRecoveryNotice } = require('./common/recoveryNotice.cjs')
 const { registerLicenseIPC } = require('./ipc/license.cjs')
+const { registerPluginsIPC } = require('./ipc/plugins.cjs')
+const { ensureOfficialPlugins, resolveSeedRoot } = require('./common/pluginSeed.cjs')
 
 // 数据库损坏后已自动从本地文件重建：窗口加载完成后提示一次（含备份位置与恢复数量）
 function showRecoveryNotice(win, language, recovery, summary) {
@@ -47,6 +49,23 @@ app.whenReady().then(async () => {
     // Load settings first so we have storagePath for DB initialization
     const settings = await loadSettings();
 
+    // Seed official plugins into userData before the window loads them
+    try {
+      const seedResult = ensureOfficialPlugins({
+        seedRoot: resolveSeedRoot({
+          isPackaged: app.isPackaged,
+          resourcesPath: process.resourcesPath,
+          appPath: app.getAppPath(),
+        }),
+        officialRoot: path.join(app.getPath('userData'), 'plugins'),
+      })
+      if (seedResult.copied.length || seedResult.updated.length || seedResult.errors.length) {
+        console.log('plugin seed:', seedResult)
+      }
+    } catch (error) {
+      console.error('plugin seed failed:', error)
+    }
+
     // Initialize DB at storagePath location (not userData)
     const recovery = await initializeDatabase(settings.storagePath);
 
@@ -66,6 +85,7 @@ app.whenReady().then(async () => {
     registerCaptureIPC();
     registerTrashIPC();
     registerLicenseIPC(mainWindow);
+    registerPluginsIPC();
 
     // Handler to reload database when storagePath changes
     ipcMain.handle('reloadDatabase', async (event, newStoragePath) => {

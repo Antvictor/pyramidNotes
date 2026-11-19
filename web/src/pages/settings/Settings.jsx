@@ -6,12 +6,13 @@ import Paywall from "../paywall/Paywall";
 import { useLicense } from "../../contexts/LicenseContext";
 import { useTranslation } from "react-i18next";
 import NumberField from "../../components/ui/number-field";
-import { bundledPlugins } from "@/core/plugins/bundled";
+import { usePlugins } from "@/core/plugins/PluginProvider";
 import { isPluginEnabled } from "@/core/plugins/types";
 
 const Settings = () => {
   const { t } = useTranslation();
   const { licenseState } = useLicense();
+  const { descriptors, runtimeState, ready: pluginsReady } = usePlugins();
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [settings, setSettings] = useState({
     theme: "system",
@@ -484,21 +485,60 @@ const Settings = () => {
         {/* Plugin Settings Section */}
         <div style={sectionStyle}>
           <h3 style={{ marginBottom: 12 }}>{t("settings.sections.plugins")}</h3>
-          {bundledPlugins.map((plugin, index) => {
+          {!pluginsReady ? (
+            <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>
+              {t("settings.plugins.status.loading")}
+            </div>
+          ) : descriptors.length === 0 ? (
+            <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>
+              {t("settings.plugins.empty")}
+            </div>
+          ) : descriptors.map((plugin, index) => {
             const enabled = isPluginEnabled(plugin, settings.plugins);
+            const state = runtimeState[plugin.id];
+            const name = plugin.manifest.nameKey
+              ? t(plugin.manifest.nameKey)
+              : (plugin.manifest.name || plugin.id);
+            const description = plugin.manifest.descriptionKey
+              ? t(plugin.manifest.descriptionKey)
+              : plugin.manifest.description;
+            const blocked = state?.status === "incompatible" || plugin.status === "incompatible";
             return (
               <div
                 key={plugin.id}
                 style={{
                   ...rowStyle,
-                  borderBottom: index === bundledPlugins.length - 1 ? "none" : rowStyle.borderBottom,
+                  borderBottom: index === descriptors.length - 1 ? "none" : rowStyle.borderBottom,
                 }}
               >
                 <div>
-                  <span style={labelStyle}>{t(plugin.nameKey)}</span>
-                  <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 2 }}>
-                    {t(plugin.descriptionKey)}
-                  </div>
+                  <span style={labelStyle}>{name}</span>
+                  <span style={{
+                    marginLeft: 8,
+                    padding: "1px 6px",
+                    borderRadius: 4,
+                    fontSize: 11,
+                    border: "1px solid var(--border)",
+                    color: "var(--text-secondary)",
+                  }}>
+                    {t(`settings.plugins.origin.${plugin.origin}`)}
+                  </span>
+                  {description && (
+                    <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 2 }}>
+                      {description}
+                    </div>
+                  )}
+                  {state?.status === "error" && (
+                    <div style={{ color: "#e06c75", fontSize: 12, marginTop: 2 }}>
+                      {t("settings.plugins.status.error")}{state.error ? `: ${state.error}` : ""}
+                    </div>
+                  )}
+                  {blocked && (
+                    <div style={{ color: "#e06c75", fontSize: 12, marginTop: 2 }}>
+                      {t("settings.plugins.status.incompatible")}
+                      {plugin.reason ? `: ${plugin.reason}` : ""}
+                    </div>
+                  )}
                 </div>
                 <div style={controlStyle}>
                   {[
@@ -507,6 +547,7 @@ const Settings = () => {
                   ].map(({ label, value }) => (
                     <button
                       key={label}
+                      disabled={blocked}
                       onClick={() => handlePluginToggle(plugin.id, value)}
                       style={{
                         padding: "6px 12px",
@@ -514,7 +555,8 @@ const Settings = () => {
                         border: "1px solid var(--border)",
                         background: enabled === value ? "var(--link-color)" : "var(--bg-primary)",
                         color: enabled === value ? "white" : "var(--text-primary)",
-                        cursor: "pointer",
+                        cursor: blocked ? "not-allowed" : "pointer",
+                        opacity: blocked ? 0.5 : 1,
                         fontSize: 13,
                       }}
                     >

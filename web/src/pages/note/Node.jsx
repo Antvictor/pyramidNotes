@@ -12,6 +12,7 @@ import OpenPrompt from "../commons/OpenPrompt";
 import { matchShortcut } from "../../hooks/useShortcuts";
 import { computeAncestorChain } from "../treeUtils";
 import { useMindMapViewStore } from "@/stores/mindMapViewStore";
+import { usePlugins } from "@/core/plugins/PluginProvider";
 
 
 const Note = ({ shortcuts }) => {
@@ -26,7 +27,7 @@ const Note = ({ shortcuts }) => {
   const [noteFontSize, setNoteFontSize] = useState(16);
   const [editorWidthMode, setEditorWidthMode] = useState('constrained');
   const [showBacklinks, setShowBacklinks] = useState(true);
-  const [pluginToggles, setPluginToggles] = useState(undefined);
+  const { extensions: pluginExtensions, ready: pluginsReady } = usePlugins();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -68,9 +69,6 @@ const Note = ({ shortcuts }) => {
       if (s.showBacklinks !== undefined) {
         setShowBacklinks(s.showBacklinks);
       }
-      if (s.plugins) {
-        setPluginToggles(s.plugins);
-      }
       // 1. 获取 Electron userData 路径
       const fileName = `${id}-${name}.md`;
       setFileName(fileName);
@@ -102,9 +100,6 @@ const Note = ({ shortcuts }) => {
       }
       if (newSettings.showBacklinks !== undefined) {
         setShowBacklinks(newSettings.showBacklinks);
-      }
-      if (newSettings.plugins) {
-        setPluginToggles(newSettings.plugins);
       }
     });
   }, []);
@@ -229,7 +224,7 @@ const Note = ({ shortcuts }) => {
     //   </MilkdownProvider>
     // </StrictMode>
     // <Markdown content={value} onChange={saveFile} />
-    !ready ?
+    !ready || !pluginsReady ?
       <div>{t("editor.loading")}</div> :
       <div style={{
         display: "flex",
@@ -253,7 +248,7 @@ const Note = ({ shortcuts }) => {
             noteId={id}
             noteFontSize={noteFontSize}
             editorWidthMode={editorWidthMode}
-            pluginToggles={pluginToggles}
+            externalExtensions={pluginExtensions}
             onCreateChildFromSelection={createChildFromSelection}
             onOpenNode={openNode}
             onCreateMissingNode={createChildFromReference}

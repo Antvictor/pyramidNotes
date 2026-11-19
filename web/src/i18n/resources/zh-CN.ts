@@ -194,6 +194,16 @@ const zhCN = {
     plugins: {
       enabled: '启用',
       disabled: '停用',
+      empty: '未发现插件',
+      origin: {
+        official: '官方',
+        user: '用户',
+      },
+      status: {
+        loading: '正在加载插件…',
+        incompatible: '插件版本不兼容',
+        error: '插件加载失败',
+      },
       tasks: {
         name: '任务清单',
         description: '输入 "- [ ]" 自动转为可勾选任务',

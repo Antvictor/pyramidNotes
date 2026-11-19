@@ -1,0 +1,9 @@
+{
+  "id": "hello",
+  "name": "Hello plugin",
+  "description": "Typing -- inserts an em dash",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "main": "main.mjs",
+  "defaultEnabled": false
+}

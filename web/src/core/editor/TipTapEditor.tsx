@@ -1,7 +1,7 @@
 // TipTapEditor.tsx
 import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, RefObject } from "react";
-import { Extension } from "@tiptap/core";
+import { Extension, type AnyExtension } from "@tiptap/core";
 import { EditorProvider, Editor, useCurrentEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Code } from "@tiptap/extension-code";
@@ -31,8 +31,8 @@ import {
   serializeInternalNodeReference,
   type NodeReferenceTarget,
 } from "./extensions/internalNodeReference";
-import { collectEnabledExtensions, type PluginToggles } from "@/core/plugins/types";
-import { bundledPlugins } from "@/core/plugins/bundled";
+
+const EMPTY_EXTENSIONS: AnyExtension[] = [];
 
 type NodeLookupItem = NodeReferenceTarget;
 
@@ -49,7 +49,7 @@ interface Props {
   noteFontSize?: number;
   editorWidthMode?: 'constrained' | 'expanded';
   focusRefId?: string;
-  pluginToggles?: PluginToggles;
+  externalExtensions?: AnyExtension[];
 }
 
 type SuggestionState = {
@@ -631,7 +631,7 @@ export default function TipTapEditor({
   noteFontSize = 16,
   editorWidthMode = 'constrained',
   focusRefId,
-  pluginToggles,
+  externalExtensions,
 }: Props) {
   const { t } = useTranslation();
   const editorRef = useRef<Editor | null>(null);
@@ -708,8 +708,8 @@ export default function TipTapEditor({
   }), []);
 
   const pluginExtensions = useMemo(
-    () => collectEnabledExtensions(bundledPlugins, pluginToggles),
-    [pluginToggles],
+    () => externalExtensions ?? EMPTY_EXTENSIONS,
+    [externalExtensions],
   );
 
   const extensions = useMemo(

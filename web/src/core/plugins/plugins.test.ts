@@ -1,46 +1,42 @@
 import { describe, expect, it } from "vitest";
-import { Extension } from "@tiptap/core";
-import {
-  PLUGIN_API_VERSION,
-  collectEnabledExtensions,
-  isPluginEnabled,
-  type PluginManifest,
-} from "./types";
+import { isPluginEnabled, type PluginDescriptor } from "./types";
 
-const ext = (name: string) => Extension.create({ name });
+function descriptor(
+  origin: "official" | "user",
+  defaultEnabled: boolean,
+): PluginDescriptor {
+  return {
+    id: "tasks",
+    origin,
+    manifest: {
+      id: "tasks",
+      version: "1.0.0",
+      apiVersion: 1,
+      main: "main.mjs",
+      styles: [],
+      defaultEnabled,
+    },
+    status: "ok",
+  };
+}
 
-const manifest = (id: string, defaultEnabled: boolean): PluginManifest => ({
-  id,
-  nameKey: `settings.plugins.${id}.name`,
-  descriptionKey: `settings.plugins.${id}.description`,
-  apiVersion: PLUGIN_API_VERSION,
-  defaultEnabled,
-  createExtensions: () => [ext(id)],
-});
-
-describe("plugin registry", () => {
-  it("uses defaultEnabled when the toggle is missing", () => {
-    expect(isPluginEnabled(manifest("tasks", true))).toBe(true);
-    expect(isPluginEnabled(manifest("tasks", false))).toBe(false);
-    expect(isPluginEnabled(manifest("tasks", true), {})).toBe(true);
+describe("isPluginEnabled", () => {
+  it("uses manifest defaultEnabled for official plugins when no toggle exists", () => {
+    expect(isPluginEnabled(descriptor("official", true))).toBe(true);
+    expect(isPluginEnabled(descriptor("official", false))).toBe(false);
+    expect(isPluginEnabled(descriptor("official", true), {})).toBe(true);
   });
 
-  it("lets an explicit toggle win", () => {
-    expect(isPluginEnabled(manifest("tasks", true), { tasks: false })).toBe(false);
-    expect(isPluginEnabled(manifest("tasks", false), { tasks: true })).toBe(true);
+  it("always disables user plugins unless explicitly enabled", () => {
+    expect(isPluginEnabled(descriptor("user", true))).toBe(false);
+    expect(isPluginEnabled(descriptor("user", true), {})).toBe(false);
+    expect(isPluginEnabled(descriptor("user", false))).toBe(false);
   });
 
-  it("collects only enabled manifests and ignores unknown ids", () => {
-    const plugins = [manifest("tasks", true), manifest("other", false)];
-    const names = collectEnabledExtensions(plugins, {
-      tasks: false,
-      other: true,
-      ghost: true,
-    }).map((extension) => extension.name);
-    expect(names).toEqual(["other"]);
-  });
-
-  it("returns an empty list when every plugin is disabled", () => {
-    expect(collectEnabledExtensions([manifest("tasks", true)], { tasks: false })).toEqual([]);
+  it("lets an explicit toggle win for both origins", () => {
+    expect(isPluginEnabled(descriptor("official", true), { tasks: false })).toBe(false);
+    expect(isPluginEnabled(descriptor("official", false), { tasks: true })).toBe(true);
+    expect(isPluginEnabled(descriptor("user", false), { tasks: true })).toBe(true);
+    expect(isPluginEnabled(descriptor("user", true), { tasks: false })).toBe(false);
   });
 });
