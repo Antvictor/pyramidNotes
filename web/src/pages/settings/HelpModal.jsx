@@ -57,8 +57,13 @@ export default function HelpModal({ open, onOpenChange }) {
   const { t } = useTranslation();
   const mindMapShortcuts = [
     ["Ctrl+N", t("help.shortcuts.actions.newChild")],
+    ["Enter", t("help.shortcuts.actions.newSibling")],
+    ["Ctrl+Enter", t("help.shortcuts.actions.openNode")],
     ["F2", t("help.shortcuts.actions.rename")],
     ["Delete", t("help.shortcuts.actions.delete")],
+    ["Ctrl+Shift+V", t("help.shortcuts.actions.moveNode")],
+    ["Ctrl+Shift+X", t("help.shortcuts.actions.swapNode")],
+    ["Ctrl+Space", t("help.shortcuts.actions.focusMode")],
     ["Ctrl+K", t("help.shortcuts.actions.search")],
     ["Escape", t("help.shortcuts.actions.clearOrClose")],
   ];

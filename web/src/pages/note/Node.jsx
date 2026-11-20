@@ -9,7 +9,7 @@ import { buildChildNodeRecord } from "./extractionUtils";
 import { NodeSearchDialog } from "@/components/node-search";
 import { isOverlayEscClaimed } from "@/components/ui/overlayEsc";
 import OpenPrompt from "../commons/OpenPrompt";
-import { matchShortcut } from "../../hooks/useShortcuts";
+import { matchShortcut, useShortcutActions } from "../../hooks/useShortcuts";
 import { computeAncestorChain } from "../treeUtils";
 import { useMindMapViewStore } from "@/stores/mindMapViewStore";
 import { usePlugins } from "@/core/plugins/PluginProvider";
@@ -189,26 +189,6 @@ const Note = ({ shortcuts }) => {
         }
         return;
       }
-      // Ctrl+K / Ctrl+Shift+K：未打开则按对应 tab 打开；已打开则切到该 tab。
-      // 必须在下面的守卫之前，否则"已打开→切 tab"不会触发
-      if (matchShortcut(e, shortcuts.global?.search)) {
-        e.preventDefault();
-        setSearchOpen(true);
-        setSearchTab("node");
-        return;
-      }
-      if (matchShortcut(e, shortcuts.global?.searchFullText)) {
-        e.preventDefault();
-        setSearchOpen(true);
-        setSearchTab("fulltext");
-        return;
-      }
-      if (searchOpen || newNodePromptVisible) return;
-      if (matchShortcut(e, shortcuts.node?.newNode)) {
-        e.preventDefault();
-        setNewNodePromptVisible(true);
-        return;
-      }
     };
     // 用捕获阶段注册：必须在弹窗（Radix）自己处理 Esc 并关闭**之前**观察到"确实有弹窗打开"。
     // 若用冒泡阶段，弹窗会先关闭并触发重渲染，这里读到的两个 state 都是 false →
@@ -216,6 +196,31 @@ const Note = ({ shortcuts }) => {
     window.addEventListener('keydown', handler, true);
     return () => window.removeEventListener('keydown', handler, true);
   }, [shortcuts, searchOpen, newNodePromptVisible, location.state, navigate]);
+
+  // 快捷键分发：分类即作用域。newNode 绑定在 node 分类，笔记页不激活——
+  // 编辑器内 Ctrl+N/Tab 不会再被截走（Tab 恢复缩进）。处理器保留注册，
+  // 将来把该绑定移到 global 分类发版后，笔记页会自动生效。
+  useShortcutActions({
+    shortcuts,
+    scope: "note",
+    blocked: Boolean(searchOpen || newNodePromptVisible),
+    handlers: {
+      search: (e) => {
+        e.preventDefault();
+        setSearchOpen(true);
+        setSearchTab("node");
+      },
+      searchFullText: (e) => {
+        e.preventDefault();
+        setSearchOpen(true);
+        setSearchTab("fulltext");
+      },
+      newNode: (e) => {
+        e.preventDefault();
+        setNewNodePromptVisible(true);
+      },
+    },
+  });
 
   return (
     // <StrictMode>

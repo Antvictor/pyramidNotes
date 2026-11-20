@@ -3,7 +3,7 @@ import React, { useLayoutEffect, useRef } from "react";
 import "./style.css";
 import { useTranslation } from "react-i18next";
 
-const ContextMenu = ({ menu, onClose, requestCreateNode, requestEditNode, requestDeleteNode, onRequestMoveNode, onRequestSwapNode }) => {
+const ContextMenu = ({ menu, onClose, requestCreateNode, requestCreateSibling, requestEditNode, requestDeleteNode, onRequestMoveNode, onRequestSwapNode }) => {
   const { t } = useTranslation();
   const menuRef = useRef(null);
 
@@ -42,6 +42,11 @@ const ContextMenu = ({ menu, onClose, requestCreateNode, requestEditNode, reques
             <div className="menu-item" data-menu-item="create" onClick={() => { requestCreateNode(menu.nodeId, menu.title); onClose(); }}>
               ➕ {t("nodeMenu.create")}
             </div>
+            {!menu.isRoot && (
+              <div className="menu-item" data-menu-item="create-sibling" onClick={() => { requestCreateSibling(menu.nodeId); onClose(); }}>
+                ➕ {t("nodeMenu.createSibling")}
+              </div>
+            )}
             <div className="menu-item" data-menu-item="edit" onClick={() => { requestEditNode(menu.nodeId, menu.title); onClose(); }}>
               ✏️ {t("nodeMenu.rename")}
             </div>

@@ -109,32 +109,32 @@ export default function ShortcutsModal({ open, onOpenChange }) {
     // Skip modifier-only key presses
     if (e.key === "Control" || e.key === "Meta" || e.key === "Alt" || e.key === "Shift") return;
 
-    if (e.key === "Enter") {
+    // Escape 取消录制（Esc 本身不作为可绑定键）；Enter 与其它键一样录入并结束编辑，
+    // 否则默认「新增同级节点」的 Enter 无法重新绑定。
+    if (e.key === "Escape") {
       setEditingKey(null);
-    } else if (e.key === "Escape") {
-      setEditingKey(null);
-    } else {
-      // Build shortcut string
-      const parts = [];
-      if (e.ctrlKey || e.metaKey) parts.push("Ctrl");
-      if (e.shiftKey) parts.push("Shift");
-      if (e.altKey) parts.push("Alt");
-
-      const keyName =
-        e.key === " " ? "Space" :
-        e.key === "Escape" ? "Escape" :
-        e.key === "Enter" ? "Enter" :
-        e.key === "Delete" ? "Delete" :
-        e.key === "Backspace" ? "Backspace" :
-        /^F\d+$/.test(e.key) ? e.key :
-        e.key.toUpperCase();
-
-      parts.push(keyName);
-      const shortcutStr = parts.join("+");
-
-      handleShortcutChange(category, key, shortcutStr);
-      setEditingKey(null);
+      return;
     }
+
+    // Build shortcut string
+    const parts = [];
+    if (e.ctrlKey || e.metaKey) parts.push("Ctrl");
+    if (e.shiftKey) parts.push("Shift");
+    if (e.altKey) parts.push("Alt");
+
+    const keyName =
+      e.key === " " ? "Space" :
+      e.key === "Enter" ? "Enter" :
+      e.key === "Delete" ? "Delete" :
+      e.key === "Backspace" ? "Backspace" :
+      /^F\d+$/.test(e.key) ? e.key :
+      e.key.toUpperCase();
+
+    parts.push(keyName);
+    const shortcutStr = parts.join("+");
+
+    handleShortcutChange(category, key, shortcutStr);
+    setEditingKey(null);
   };
 
   const renderShortcutValue = (category, key, value) => {
@@ -186,8 +186,13 @@ export default function ShortcutsModal({ open, onOpenChange }) {
 
   const nodeLabels = {
     newNode: t("shortcuts.actions.newNode"),
+    newSibling: t("shortcuts.actions.newSibling"),
     renameNode: t("shortcuts.actions.renameNode"),
     deleteNode: t("shortcuts.actions.deleteNode"),
+    moveNode: t("shortcuts.actions.moveNode"),
+    swapNode: t("shortcuts.actions.swapNode"),
+    openNode: t("shortcuts.actions.openNode"),
+    focusMode: t("shortcuts.actions.focusMode"),
   };
 
   const noteLabels = {

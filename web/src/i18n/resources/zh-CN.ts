@@ -52,6 +52,7 @@ const zhCN = {
   },
   nodeMenu: {
     create: '创建节点',
+    createSibling: '新增同级节点',
     rename: '修改节点',
     move: '移动节点',
     swap: '交换位置',
@@ -237,8 +238,13 @@ const zhCN = {
     save: '保存',
     actions: {
       newNode: '新建节点',
+      newSibling: '新增同级节点',
       renameNode: '修改节点',
       deleteNode: '删除节点',
+      moveNode: '移动节点',
+      swapNode: '交换位置',
+      openNode: '进入节点',
+      focusMode: '聚焦模式',
       bold: '加粗',
       italic: '斜体',
       heading1: '标题 1',
@@ -268,8 +274,13 @@ const zhCN = {
     shortcuts: {
       actions: {
         newChild: '新建子节点',
+        newSibling: '新增同级节点',
         rename: '重命名选中节点',
         delete: '删除选中节点',
+        moveNode: '移动选中节点',
+        swapNode: '与兄弟节点交换位置',
+        openNode: '进入选中节点',
+        focusMode: '聚焦选中节点',
         search: '打开搜索',
         clearOrClose: '取消选中 / 关闭搜索',
         bold: '加粗',

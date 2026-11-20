@@ -13,8 +13,13 @@ const DEFAULT_SETTINGS = {
   shortcuts: {
     node: {
       newNode: 'Ctrl+N',
+      newSibling: 'Enter',
       renameNode: 'F2',
       deleteNode: 'Delete',
+      moveNode: 'Ctrl+Shift+V',
+      swapNode: 'Ctrl+Shift+X',
+      openNode: 'Ctrl+Enter',
+      focusMode: 'Ctrl+Space',
     },
     note: {
       bold: 'Ctrl+B',

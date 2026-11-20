@@ -52,6 +52,7 @@ const en = {
   },
   nodeMenu: {
     create: 'Create node',
+    createSibling: 'Add sibling node',
     rename: 'Rename node',
     move: 'Move node',
     swap: 'Swap position',
@@ -237,8 +238,13 @@ const en = {
     save: 'Save',
     actions: {
       newNode: 'Create node',
+      newSibling: 'Add sibling node',
       renameNode: 'Rename node',
       deleteNode: 'Delete node',
+      moveNode: 'Move node',
+      swapNode: 'Swap position',
+      openNode: 'Open node',
+      focusMode: 'Focus Mode',
       bold: 'Bold',
       italic: 'Italic',
       heading1: 'Heading 1',
@@ -268,8 +274,13 @@ const en = {
     shortcuts: {
       actions: {
         newChild: 'Create child node',
+        newSibling: 'Add sibling node',
         rename: 'Rename selected node',
         delete: 'Delete selected node',
+        moveNode: 'Move selected node',
+        swapNode: 'Swap position with a sibling',
+        openNode: 'Open selected node',
+        focusMode: 'Focus on selected node',
         search: 'Open search',
         clearOrClose: 'Clear selection / close search',
         bold: 'Bold',

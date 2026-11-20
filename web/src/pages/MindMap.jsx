@@ -35,6 +35,7 @@ import { buildDeleteConfirmation, buildDeleteRequest } from "./deleteNodeRequest
 import { nanoid } from "nanoid";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useShortcutActions } from "@/hooks/useShortcuts";
 
 // 数据文件
 // import notesData from "../assets/data/data.json";
@@ -301,28 +302,6 @@ function LayoutOnMeasured({ nodeSpacing, displayedNotes, focusNodeId, setNodes }
   return null;
 }
 
-function matchKey(shortcutStr, e) {
-  if (!shortcutStr) return false;
-  const isMod = e.ctrlKey || e.metaKey;
-  const isShift = e.shiftKey;
-  const parts = shortcutStr.split('+');
-  const modifiers = parts.slice(0, -1);
-  const key = parts[parts.length - 1];
-  const needsCtrl = modifiers.includes('Ctrl');
-  const needsShift = modifiers.includes('Shift');
-  const modStateMatch =
-    (needsCtrl === isMod) &&
-    (needsShift === isShift);
-  const keyMatch =
-    key === 'Escape' ? e.key === 'Escape' :
-    key === 'Delete' ? e.key === 'Delete' :
-    key === 'Enter' ? e.key === 'Enter' :
-    key === 'Backspace' ? e.key === 'Backspace' :
-    /^F\d+$/.test(key) ? e.key === key :
-    e.key.toLowerCase() === key.toLowerCase();
-  return keyMatch && modStateMatch;
-}
-
 export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNode, shortcuts }) {
   const { t, i18n } = useTranslation();
   // 抽成变量：既用于写进节点 data，也作为重建 nodes 的依赖
@@ -355,6 +334,14 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const setInitializedFocusId = useMindMapViewStore((s) => s.setInitializedFocusId);
   const [pendingRevealNodeId, setPendingRevealNodeId] = useState(null);
   const navigate = useNavigate();
+  const [menu, setMenu] = useState({
+    show: false,
+    x: 0,
+    y: 0,
+    type: "",
+    nodeId: focusNodeId,
+    title: ""
+  });
 
   const allNotesNodeMap = useMemo(() => {
     if (!notesData) return null;
@@ -528,51 +515,6 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const lastClickRef = useRef(null);
   const creatingRootRef = useRef(false);
 
-  // 节点快捷键处理
-  useEffect(() => {
-    if (!shortcuts) return;
-    const handler = (e) => {
-      if (!shortcuts) return;
-      // Ctrl+K / Ctrl+Shift+K：未打开则按对应 tab 打开；已打开则切到该 tab。
-      // 必须放在下面的 searchOpen 守卫之前，否则"已打开→切 tab"永远不会触发
-      if (matchKey(shortcuts.global?.search, e)) {
-        e.preventDefault();
-        setSearchOpen(true);
-        setSearchTab("node");
-        return;
-      }
-      if (matchKey(shortcuts.global?.searchFullText, e)) {
-        e.preventDefault();
-        setSearchOpen(true);
-        setSearchTab("fulltext");
-        return;
-      }
-      if (visible || searchOpen || moveSource || swapSource || swapTarget) return;
-      // Ctrl+N - 新建节点 (no guard needed - works without selection)
-      if (matchKey(shortcuts.node?.newNode, e)) {
-        e.preventDefault();
-        requestCreateNode(selectedNode?.id || focusNodeId);
-        return;
-      }
-      // F2 - 修改节点 (requires selection)
-      if (!selectedNode) return;
-      if (matchKey(shortcuts.node?.renameNode, e)) {
-        e.preventDefault();
-        requestEditNode(selectedNode.id, selectedNode.name);
-        return;
-      }
-      // Delete - 删除节点 (requires selection)
-      if (!selectedNode) return;
-      if (matchKey(shortcuts.node?.deleteNode, e)) {
-        e.preventDefault();
-        requestDeleteNode(selectedNode.id, selectedNode.name);
-        return;
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [shortcuts, selectedNode, visible, searchOpen, moveSource, swapSource, swapTarget]);
-
   const addNote = (note) => {
     setNotesData((prevData) => [...prevData, note]);
   };
@@ -708,13 +650,26 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     _internalAddNode(parentId, prefillName);
   };
 
+  // 新增同级节点：与选中节点同父；根节点无同级；父级已失效时不创建
+  const requestCreateSibling = (nodeId) => {
+    const node = notesData?.find((n) => n.id === nodeId);
+    const parentId = node?.top;
+    if (!node || !parentId || parentId === '0') return;
+    if (!notesData.some((n) => n.id === parentId)) return;
+    requestCreateNode(parentId);
+  };
+
   // Request edit node - unified entry point
   const requestEditNode = (nodeId, nodeName) => {
     _internalUpdateNode(nodeId, nodeName);
   };
 
   // Request move node - opens search dialog
+  // 守卫只针对被移动的源节点：根（top === '0'）不能移动（菜单本就隐藏，移动根必然被 isDescendantOf 判环）。
+  // 目标侧不变：根仍可在搜索弹窗中作为目标父节点被选中。
   const requestMoveNode = (nodeId, nodeName) => {
+    const node = notesData?.find((n) => n.id === nodeId);
+    if (!node || !node.top || node.top === '0') return;
     setMoveSource({ id: nodeId, name: nodeName });
   };
 
@@ -1065,15 +1020,6 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     else run(opts);
   }, []);
 
-  const [menu, setMenu] = useState({
-    show: false,
-    x: 0,
-    y: 0,
-    type: "",
-    nodeId: focusNodeId,
-    title: ""
-  });
-
   // 右键空白区域
   const onPaneContextMenu = useCallback((e) => {
     e.preventDefault();
@@ -1105,6 +1051,64 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   }, [setSelectedNode]);
 
   const closeMenu = () => setMenu((m) => ({ ...m, show: false }));
+
+  // 快捷键分发：分类即作用域 —— shortcuts.node 只在脑图页激活，shortcuts.global 全页面激活。
+  // 绑定与 processor 的对应关系在这里声明，规则本身在 useShortcuts 里。
+  useShortcutActions({
+    shortcuts,
+    scope: "mindmap",
+    blocked: Boolean(
+      visible || searchOpen || moveSource || swapSource || swapTarget || menu.show
+      || deleteTarget || deleteConfirmation || permissionError
+    ),
+    handlers: {
+      search: (e) => {
+        e.preventDefault();
+        setSearchOpen(true);
+        setSearchTab("node");
+      },
+      searchFullText: (e) => {
+        e.preventDefault();
+        setSearchOpen(true);
+        setSearchTab("fulltext");
+      },
+      newNode: (e) => {
+        e.preventDefault();
+        requestCreateNode(selectedNode?.id || focusNodeId);
+      },
+      newSibling: (e) => {
+        e.preventDefault();
+        if (selectedNode) requestCreateSibling(selectedNode.id);
+      },
+      renameNode: (e) => {
+        e.preventDefault();
+        if (selectedNode) requestEditNode(selectedNode.id, selectedNode.name);
+      },
+      deleteNode: (e) => {
+        e.preventDefault();
+        if (selectedNode) requestDeleteNode(selectedNode.id, selectedNode.name);
+      },
+      moveNode: (e) => {
+        e.preventDefault();
+        if (selectedNode) requestMoveNode(selectedNode.id, selectedNode.name);
+      },
+      swapNode: (e) => {
+        e.preventDefault();
+        if (selectedNode) requestSwapNode(selectedNode.id);
+      },
+      openNode: (e) => {
+        e.preventDefault();
+        if (!selectedNode) return;
+        navigate(`/note/${selectedNode.id}/${selectedNode.name}`);
+      },
+      focusMode: (e) => {
+        e.preventDefault();
+        if (!selectedNode || selectedNode.id === focusNodeId) return;
+        setFocusNodeId(selectedNode.id);
+        centerWhenRendered();
+      },
+    },
+  });
 
   // 新增节点
   const _internalAddNode = (id) => {
@@ -1476,6 +1480,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           menu={menu}
           onClose={closeMenu}
           requestCreateNode={requestCreateNode}
+          requestCreateSibling={requestCreateSibling}
           requestEditNode={requestEditNode}
           requestDeleteNode={requestDeleteNode}
           onRequestMoveNode={requestMoveNode}
