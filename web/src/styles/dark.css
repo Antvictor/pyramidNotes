@@ -1,7 +1,30 @@
 html.dark {
+  color-scheme: dark;
+
+  /* App custom tokens */
+  --bg-primary: #111214;
+  --bg-markdown: #1B1D21;
+  --text-primary: #E4E4E7;
+  --text-secondary: #A1A1AA;
+  --link-color: #34D399;
+  --link-color-contrast: #0B0C0E;
+
+  /* 脑图视觉层次 */
+  --mm-canvas: #111214;
+  --mm-dot: #2A2D33;
+  --mm-card-bg: #1B1D21;
+  --mm-card-border: #2C2F36;
+  --mm-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --mm-footer-bg: #23262B;
+  --mm-node-text: #E4E4E7;
+  --mm-edge: #3A4048;
+  --mm-edge-active: #34D399;
+  --mm-selected: #34D399;
+  --mm-selected-shadow: 0 0 0 1px rgba(52, 211, 153, 0.45), 0 0 12px rgba(52, 211, 153, 0.22);
+
   /* Base colors */
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
+  --background: #111214;
+  --foreground: #E4E4E7;
 
   /* Card */
   --card: oklch(0.205 0 0);
@@ -21,7 +44,7 @@ html.dark {
 
   /* Muted */
   --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
+  --muted-foreground: #A1A1AA;
 
   /* Accent */
   --accent: oklch(0.269 0 0);
@@ -93,4 +116,13 @@ html.dark .ProseMirror {
 html.dark .ProseMirror ::selection {
   background: oklch(0.4 0.1 250);
   color: #fff;
+}
+
+/* ReactFlow 控件跟随应用主题（库只识别 .react-flow.dark） */
+html.dark .react-flow {
+  --xy-controls-button-background-color: #1B1D21;
+  --xy-controls-button-background-color-hover: #2C2F36;
+  --xy-controls-button-color: #E4E4E7;
+  --xy-controls-button-color-hover: #F4F4F5;
+  --xy-controls-button-border-color: #2C2F36;
 }

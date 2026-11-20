@@ -427,7 +427,7 @@ export default function TutorialController({ children }) {
                 padding: '8px 16px', borderRadius: 6,
                 border: 'none',
                 background: 'var(--link-color)',
-                color: 'white',
+                color: 'var(--link-color-contrast)',
                 cursor: 'pointer', fontSize: 14,
               }}
             >

@@ -155,12 +155,13 @@ const Paywall = ({ onClose, compact = false }) => {
         height: '80px',
         margin: '0 auto 24px',
         background: 'var(--primary)',
+        color: 'var(--primary-foreground)',
         borderRadius: '16px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        <Crown size={48} color="white" />
+        <Crown size={48} />
       </div>
 
       {/* Title */}
@@ -243,7 +244,7 @@ const Paywall = ({ onClose, compact = false }) => {
           padding: '14px 24px',
           fontSize: '16px',
           fontWeight: 'bold',
-          color: 'white',
+          color: 'var(--primary-foreground)',
           background: purchasing || !canMakePayments ? 'var(--disabled)' : 'var(--primary)',
           border: 'none',
           borderRadius: '8px',

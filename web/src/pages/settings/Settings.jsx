@@ -240,7 +240,7 @@ const Settings = () => {
                         ? "var(--link-color)"
                         : "var(--bg-primary)",
                     color:
-                      settings.theme === mode ? "white" : "var(--text-primary)",
+                      settings.theme === mode ? "var(--link-color-contrast)" : "var(--text-primary)",
                     cursor: "pointer",
                     fontSize: 13,
                     textTransform: "capitalize",
@@ -373,7 +373,7 @@ const Settings = () => {
                         ? "var(--link-color)"
                         : "var(--bg-primary)",
                     color:
-                      settings.nodeSpacing === mode ? "white" : "var(--text-primary)",
+                      settings.nodeSpacing === mode ? "var(--link-color-contrast)" : "var(--text-primary)",
                     cursor: "pointer",
                     fontSize: 13,
                   }}
@@ -433,7 +433,7 @@ const Settings = () => {
                         ? "var(--link-color)"
                         : "var(--bg-primary)",
                     color:
-                      settings.editorWidthMode === mode ? "white" : "var(--text-primary)",
+                      settings.editorWidthMode === mode ? "var(--link-color-contrast)" : "var(--text-primary)",
                     cursor: "pointer",
                     fontSize: 13,
                   }}
@@ -470,7 +470,7 @@ const Settings = () => {
                         ? "var(--link-color)"
                         : "var(--bg-primary)",
                     color:
-                      settings.showBacklinks === value ? "white" : "var(--text-primary)",
+                      settings.showBacklinks === value ? "var(--link-color-contrast)" : "var(--text-primary)",
                     cursor: "pointer",
                     fontSize: 13,
                   }}
@@ -554,7 +554,7 @@ const Settings = () => {
                         borderRadius: 6,
                         border: "1px solid var(--border)",
                         background: enabled === value ? "var(--link-color)" : "var(--bg-primary)",
-                        color: enabled === value ? "white" : "var(--text-primary)",
+                        color: enabled === value ? "var(--link-color-contrast)" : "var(--text-primary)",
                         cursor: blocked ? "not-allowed" : "pointer",
                         opacity: blocked ? 0.5 : 1,
                         fontSize: 13,
@@ -593,7 +593,7 @@ const Settings = () => {
                         ? "var(--link-color)"
                         : "var(--bg-primary)",
                     color:
-                      settings.deleteMode === value ? "white" : "var(--text-primary)",
+                      settings.deleteMode === value ? "var(--link-color-contrast)" : "var(--text-primary)",
                     cursor: "pointer",
                     fontSize: 13,
                   }}
@@ -661,7 +661,7 @@ const Settings = () => {
                     borderRadius: 6,
                     border: "1px solid var(--border)",
                     background: "var(--primary)",
-                    color: "white",
+                    color: "var(--primary-foreground)",
                     cursor: "pointer",
                     fontSize: 14,
                     fontWeight: 500,
@@ -817,7 +817,7 @@ const Settings = () => {
                             : "transparent",
                         color:
                           settings.language === lang.value
-                            ? "white"
+                            ? "var(--link-color-contrast)"
                             : "var(--text-primary)",
                         cursor: "pointer",
                         fontSize: 13,

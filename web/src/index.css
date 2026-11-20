@@ -9,8 +9,8 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgb(163, 161, 152);
+  color-scheme: light;
+  color: var(--text-primary);
   background-color: rgb(248, 246, 242);
 
   font-synthesis: none;
@@ -22,8 +22,23 @@
   /* 统一颜色变量 */
   --bg-primary: rgb(248, 246, 242);
   --bg-markdown: rgb(242, 239, 233);
-  --text-primary: rgb(163, 161, 152);
+  --text-primary: #3F3F46;
+  --text-secondary: #71717A;
   --link-color: rgb(44, 121, 90);
+  --link-color-contrast: #FFFFFF;
+
+  /* 脑图视觉层次 */
+  --mm-canvas: #F7F6F3;
+  --mm-dot: #D8D8DC;
+  --mm-card-bg: #FFFFFF;
+  --mm-card-border: #E4E4E7;
+  --mm-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.06);
+  --mm-footer-bg: #F8F8FA;
+  --mm-node-text: #18181B;
+  --mm-edge: #CBD5E1;
+  --mm-edge-active: #15803D;
+  --mm-selected: #15803D;
+  --mm-selected-shadow: 0 0 0 1px rgba(21, 128, 61, 0.35), 0 0 10px rgba(21, 128, 61, 0.18);
 
   /* 现有 shadcn 变量 - 更新为使用统一颜色 */
   --background: var(--bg-primary);
@@ -37,7 +52,7 @@
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: var(--bg-markdown);
-  --muted-foreground: var(--text-primary);
+  --muted-foreground: var(--text-secondary);
   --accent: var(--bg-markdown);
   --accent-foreground: var(--text-primary);
   --destructive: oklch(0.577 0.245 27.325);
@@ -438,4 +453,9 @@ button:focus-visible {
 /* 拖拽中禁用过渡，避免节点跟手延迟 */
 .react-flow__node.dragging {
   transition: none;
+}
+
+/* 连线颜色随选中路径平滑过渡 */
+.react-flow__edge-path {
+  transition: stroke 160ms ease;
 }

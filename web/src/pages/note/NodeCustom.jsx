@@ -18,15 +18,16 @@ function NodeCustom({ data }) {
   return (
     <div
       style={{
-        background: 'var(--bg-primary)',
-        border: isSelected ? '2px solid var(--link-color)' : '1px solid var(--border)',
-        borderRadius: 4,
+        background: 'var(--mm-card-bg)',
+        border: `1px solid ${isSelected ? 'var(--mm-selected)' : 'var(--mm-card-border)'}`,
+        borderRadius: 6,
+        boxShadow: isSelected ? 'var(--mm-selected-shadow)' : 'var(--mm-card-shadow)',
         cursor: 'pointer',
         minWidth: 40,
         maxWidth: 140,
         textAlign: 'center',
-        color: 'var(--text-primary)',
-        transition: 'border-color 0.2s, border-width 0.2s',
+        color: 'var(--mm-node-text)',
+        transition: 'border-color 0.2s, box-shadow 0.2s',
         overflow: 'hidden',
       }}
     >
@@ -34,8 +35,8 @@ function NodeCustom({ data }) {
       {showButtons && (
         <div style={{
           display: 'flex', alignItems: 'center',
-          borderTop: '1px solid var(--border)',
-          background: 'var(--bg-markdown)',
+          borderTop: '1px solid var(--mm-card-border)',
+          background: 'var(--mm-footer-bg)',
         }}>
           {isExpanded ? (
             <button
@@ -55,7 +56,7 @@ function NodeCustom({ data }) {
                 onClick={(e) => { e.stopPropagation(); onExpandOneLevel?.(data.id); }}
                 style={{
                   flex: 1, padding: '2px 4px', fontSize: 9,
-                  border: 'none', borderRight: '1px solid var(--border)',
+                  border: 'none', borderRight: '1px solid var(--mm-card-border)',
                   background: 'transparent',
                   color: 'var(--text-secondary)', cursor: 'pointer',
                   lineHeight: '16px',
@@ -80,7 +81,7 @@ function NodeCustom({ data }) {
           <span style={{
             fontSize: 9, color: 'var(--text-secondary)',
             opacity: 0.45, padding: '0 4px',
-            borderLeft: '1px solid var(--border)',
+            borderLeft: '1px solid var(--mm-card-border)',
             lineHeight: '16px',
             minWidth: 16, textAlign: 'center',
           }}>

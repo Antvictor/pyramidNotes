@@ -26,6 +26,7 @@ import NodeCustom from "./note/NodeCustom";
 import db from "./db/db"
 import { computeAncestorChain, collectExpandedChildren, needsSortBump, canSwapNodes, applySwapSorts, filterSiblingsByName } from "./treeUtils";
 import { getNavigationTargets } from "./nodeNavigation";
+import { getActiveEdgeIds } from "./mindMapEdges";
 import { useMindMapViewStore } from "@/stores/mindMapViewStore";
 import ContextMenu from "./note/ContextMenu/ContextMenu";
 import OpenPrompt from "./commons/OpenPrompt";
@@ -954,6 +955,15 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     });
 
     const displayedIdsEdge = new Set(displayedNotes.map(n => n.id));
+    const activeEdgeIds = getActiveEdgeIds({
+      selectedId: selectedNodeId,
+      nodeMap: allNotesNodeMap,
+    });
+    const edgeStyle = (id) => (
+      activeEdgeIds.has(id)
+        ? { stroke: 'var(--mm-edge-active)', strokeWidth: 2 }
+        : { stroke: 'var(--mm-edge)', strokeWidth: 1.5 }
+    );
     const initEdges = [];
     (displayedNotes || []).forEach((e) => {
       if (e.top && e.top !== "0" && displayedIdsEdge.has(e.top)) {
@@ -963,7 +973,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           sourceHandle: "bottom",
           target: e.id,
           targetHandle: "top",
-          style: { stroke: 'var(--link-color)', strokeWidth: 2 },
+          style: edgeStyle(`e${e.top}-${e.id}`),
         });
       };
       if (e.left && displayedIdsEdge.has(e.left)) {
@@ -973,11 +983,14 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           sourceHandle: "right",
           target: e.id,
           targetHandle: "left",
-          style: { stroke: 'var(--link-color)', strokeWidth: 2 },
+          style: edgeStyle(`e${e.left}-${e.id}`),
         });
       }
     });
-
+    // 活跃边排在末尾，最后绘制：共享路径段的非活跃灰线不会盖住高亮主干
+    initEdges.sort((a, b) => (
+      Number(activeEdgeIds.has(a.id)) - Number(activeEdgeIds.has(b.id))
+    ));
     // 未变化的节点复用旧对象（NodeCustom 带 memo），这样新建/移动/选中
     // 只重渲染真正变化的节点，而不是整图 30+ 个节点一起刷新。
     setNodes(prev => {
@@ -1001,7 +1014,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       });
       return changed ? next : prev;
     });
-    // 选中变化不重建边：边只随图结构变化，复用旧数组避免每步重渲染
+    // 选中变化只更新边样式与绘制顺序；结构与样式都未变时复用旧数组
     setEdges(prev => {
       if (
         prev.length === initEdges.length
@@ -1009,7 +1022,9 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           && e.source === initEdges[i].source
           && e.target === initEdges[i].target
           && e.sourceHandle === initEdges[i].sourceHandle
-          && e.targetHandle === initEdges[i].targetHandle)
+          && e.targetHandle === initEdges[i].targetHandle
+          && e.style?.stroke === initEdges[i].style.stroke
+          && e.style?.strokeWidth === initEdges[i].style.strokeWidth)
       ) return prev;
       return initEdges;
     });
@@ -1389,7 +1404,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       style={{
         width: "90vw",
         height: "94vh",
-        background: "var(--background)",
+        background: "var(--mm-canvas)",
       }}
     >
       <ReactFlowProvider>
@@ -1460,7 +1475,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
               padding: '6px 12px',
               borderRadius: 6,
               border: '1px solid var(--border)',
-              background: 'var(--bg-primary)',
+              background: 'var(--mm-card-bg)',
               color: (!selectedNode || selectedNode.id === focusNodeId) ? 'var(--text-secondary)' : 'var(--text-primary)',
               cursor: (!selectedNode || selectedNode.id === focusNodeId) ? 'default' : 'pointer',
               fontSize: 12,
@@ -1481,7 +1496,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
               padding: '6px 12px',
               borderRadius: 6,
               border: '1px solid var(--border)',
-              background: 'var(--bg-primary)',
+              background: 'var(--mm-card-bg)',
               color: focusNodeId === "1" ? 'var(--text-secondary)' : 'var(--text-primary)',
               cursor: focusNodeId === "1" ? 'default' : 'pointer',
               fontSize: 12,
@@ -1500,7 +1515,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           onConnect={onConnect}
           nodeTypes={memoNodeTypes}
           nodesConnectable={false}
-          defaultEdgeOptions={{ type: 'smoothstep', selectable: false, style: { stroke: 'var(--link-color)', strokeWidth: 2 } }}
+          defaultEdgeOptions={{ type: 'smoothstep', selectable: false, style: { stroke: 'var(--mm-edge)', strokeWidth: 1.5 } }}
           defaultViewport={viewportCache || undefined}
           fitView={!viewportCache}
           onMoveEnd={(e, vp) => {
@@ -1552,7 +1567,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           }}
           proOptions={{ hideAttribution: true }}
         >
-          <Background />
+          <Background color="var(--mm-dot)" bgColor="var(--mm-canvas)" />
           <Controls />
         </ReactFlow>
         <NodeSearchDialog
