@@ -25,6 +25,7 @@ import "@xyflow/react/dist/style.css";
 import NodeCustom from "./note/NodeCustom";
 import db from "./db/db"
 import { computeAncestorChain, collectExpandedChildren, needsSortBump, canSwapNodes, applySwapSorts, filterSiblingsByName } from "./treeUtils";
+import { getNavigationTargets } from "./nodeNavigation";
 import { useMindMapViewStore } from "@/stores/mindMapViewStore";
 import ContextMenu from "./note/ContextMenu/ContextMenu";
 import OpenPrompt from "./commons/OpenPrompt";
@@ -50,6 +51,10 @@ const SPACING_PRESETS = {
 
 // 视角平滑移动的时长（居中/平移）。太短会像"闪一下"，太长会拖沓。
 const CENTER_ANIM_MS = 700;
+// 方向键长按的节流间隔：系统按键重复约 30ms/次，太密会一步跨到头且看不清
+const NAV_REPEAT_INTERVAL_MS = 150;
+// 方向键导航的视角动画：只做小幅补位，不需要返回脑图那种完整 700ms 平移
+const NAV_CENTER_ANIM_MS = 200;
 // 节点的位置过渡时长（对应 index.css 里 .react-flow__node 的 transition）
 const NODE_SLIDE_MS = 180;
 // 创建节点：先让节点滑到位，视角再跟过去
@@ -306,6 +311,10 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const { t, i18n } = useTranslation();
   // 抽成变量：既用于写进节点 data，也作为重建 nodes 的依赖
   const selectedNodeId = selectedNode?.id ?? null;
+  // 方向键导航：长按连发时 React 状态可能尚未提交，用 ref 保证逐次推进
+  const selectedIdRef = useRef(selectedNodeId);
+  selectedIdRef.current = selectedNodeId;
+  const lastNavAtRef = useRef(0);
   // const flowWrapperRef = useRef(null);
   // 查询sqlite中的节点数据
   const [notesData, setNotesData] = useState(null);
@@ -992,7 +1001,18 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       });
       return changed ? next : prev;
     });
-    setEdges(initEdges);
+    // 选中变化不重建边：边只随图结构变化，复用旧数组避免每步重渲染
+    setEdges(prev => {
+      if (
+        prev.length === initEdges.length
+        && prev.every((e, i) => e.id === initEdges[i].id
+          && e.source === initEdges[i].source
+          && e.target === initEdges[i].target
+          && e.sourceHandle === initEdges[i].sourceHandle
+          && e.targetHandle === initEdges[i].targetHandle)
+      ) return prev;
+      return initEdges;
+    });
   }, [displayedNotes, setEdges, setNodes, allNotesNodeMap, loadedNodeIds, expandedNodeIds, expandOneLevel, expandAll, collapseNode, selectedNodeId, i18n.language]);
 
   // 添加连接
@@ -1002,14 +1022,17 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   );
 
   const centerOnSelectedRef = useRef(null);
+  const isNodeVisibleRef = useRef(null);
   const requestCenter = useCallback((opts) => {
     if (centerOnSelectedRef.current) centerOnSelectedRef.current(opts);
   }, []);
 
   // 等所选节点真正进入 ReactFlow 后再居中，替代固定 300ms 延迟
+  // onlyIfOffscreen：目标已在视口内则不动视角（方向键导航用，避免每步都平移）
   const centerWhenRendered = useCallback((opts = {}, tries = 30) => {
     const run = (o) => {
       requestAnimationFrame(() => {
+        if (o.onlyIfOffscreen && o.nodeId && isNodeVisibleRef.current?.(o.nodeId)) return;
         const done = centerOnSelectedRef.current && centerOnSelectedRef.current(o);
         // 重试时不再重复延时，否则每帧都要重新等一遍
         if (!done && tries > 0) centerWhenRendered({ ...o, delayMs: 0 }, tries - 1);
@@ -1019,6 +1042,80 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     if (opts.delayMs) setTimeout(() => run(opts), opts.delayMs);
     else run(opts);
   }, []);
+
+  // 方向键"向下"选视觉中间孩子：用渲染坐标的水平中心比较
+  const getNodeCenterX = useCallback((id) => {
+    const node = nodes.find((n) => n.id === id);
+    if (!node?.position) return null;
+    const width = node.measured?.width ?? node.width ?? measuredSizesCache?.get(id)?.width;
+    if (typeof width !== 'number') return null;
+    return node.position.x + width / 2;
+  }, [nodes]);
+
+  // 方向键导航选中：展开祖先链使目标可见（不展开目标自身），保持缩放居中
+  const selectNavigationTarget = useCallback((targetId) => {
+    const map = allNotesNodeMapRef.current;
+    const node = map?.get(targetId);
+    if (!node) return;
+
+    const displayRootId = focusNodeId === '1'
+      ? notesData?.find((n) => n.top === '0')?.id
+      : focusNodeId;
+    if (displayRootId && map) {
+      const chain = computeAncestorChain(targetId, displayRootId, map);
+      setLoadedNodeIds((prev) => {
+        const next = new Set(prev);
+        for (const id of chain) next.add(id);
+        return next;
+      });
+      setExpandedNodeIds((prev) => {
+        const next = new Set(prev);
+        // 只展开祖先：展开目标本身会连带展开它的子树，导致布局跳动
+        for (const id of chain) {
+          if (id !== targetId) next.add(id);
+        }
+        return next;
+      });
+    }
+
+    setSelectedNode({ id: node.id, name: node.name });
+    // 已在视口内就不动视角；离开视口才用较短的动画补位
+    centerWhenRendered({
+      keepZoom: true,
+      nodeId: targetId,
+      onlyIfOffscreen: true,
+      durationMs: NAV_CENTER_ANIM_MS,
+    });
+  }, [focusNodeId, notesData, setLoadedNodeIds, setExpandedNodeIds, setSelectedNode, centerWhenRendered]);
+
+  const navigateSelection = useCallback((direction, event) => {
+    const map = allNotesNodeMapRef.current;
+    const currentId = selectedIdRef.current;
+    if (!map || !currentId) return;
+
+    // 长按连发节流：系统重复间隔约 30ms，按可感知的节奏推进
+    if (event?.repeat) {
+      const now = Date.now();
+      if (now - lastNavAtRef.current < NAV_REPEAT_INTERVAL_MS) return;
+    }
+
+    const displayRootId = focusNodeId === '1'
+      ? notesData?.find((n) => n.top === '0')?.id
+      : focusNodeId;
+    const targets = getNavigationTargets({
+      selectedId: currentId,
+      nodeMap: map,
+      displayRootId,
+      getCenterX: getNodeCenterX,
+    });
+    const targetId = targets[direction];
+    if (!targetId) return;
+
+    lastNavAtRef.current = Date.now();
+    // 长按连发：先同步 ref 再 setState，避免下一次事件读到旧选中
+    selectedIdRef.current = targetId;
+    selectNavigationTarget(targetId);
+  }, [focusNodeId, notesData, getNodeCenterX, selectNavigationTarget]);
 
   // 右键空白区域
   const onPaneContextMenu = useCallback((e) => {
@@ -1061,6 +1158,8 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       visible || searchOpen || moveSource || swapSource || swapTarget || menu.show
       || deleteTarget || deleteConfirmation || permissionError
     ),
+    // 方向键支持长按连续移动；其余动作仍忽略长按
+    repeatableActions: ["selectParent", "selectPrevSibling", "selectNextSibling", "selectChild"],
     handlers: {
       search: (e) => {
         e.preventDefault();
@@ -1106,6 +1205,22 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
         if (!selectedNode || selectedNode.id === focusNodeId) return;
         setFocusNodeId(selectedNode.id);
         centerWhenRendered();
+      },
+      selectParent: (e) => {
+        e.preventDefault();
+        navigateSelection("up", e);
+      },
+      selectPrevSibling: (e) => {
+        e.preventDefault();
+        navigateSelection("left", e);
+      },
+      selectNextSibling: (e) => {
+        e.preventDefault();
+        navigateSelection("right", e);
+      },
+      selectChild: (e) => {
+        e.preventDefault();
+        navigateSelection("down", e);
       },
     },
   });
@@ -1197,19 +1312,35 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     await window.api.openSystemSettings();
   };
 
-  // 居中辅助组件：通过 ref 暴露居中方法，供 requestCenter 显式调用
+  // 居中辅助组件：通过 ref 暴露居中/可见性方法，供 requestCenter 与方向键导航调用
   const CenterOnSelected = () => {
-    const { setCenter, getNodes, getZoom } = useReactFlow();
+    const { setCenter, getNodes, getZoom, getViewport } = useReactFlow();
 
     useEffect(() => {
+      // opts.nodeId：按指定节点居中（导航时选中状态可能尚未提交，不能依赖 selectedNode 闭包）
       centerOnSelectedRef.current = (opts = {}) => {
-        if (!selectedNode) return false;
-        const n = getNodes().find(nd => nd.id === selectedNode.id);
+        const id = opts.nodeId ?? selectedNode?.id;
+        if (!id) return false;
+        const n = getNodes().find(nd => nd.id === id);
         if (!n) return false;
         // keepZoom：返回脑图时保持当前缩放，只平滑平移把选中节点带到画面中心
         const zoom = opts.keepZoom ? getZoom() : 1;
         setCenter(n.position.x + 80, n.position.y + 20, { zoom, duration: opts.durationMs ?? CENTER_ANIM_MS });
         return true;
+      };
+
+      isNodeVisibleRef.current = (id, margin = 80) => {
+        const n = getNodes().find(nd => nd.id === id);
+        const container = document.querySelector('.react-flow');
+        if (!n || !container) return false;
+        const rect = container.getBoundingClientRect();
+        const { x, y, zoom } = getViewport();
+        const width = n.measured?.width ?? n.width ?? 0;
+        const height = n.measured?.height ?? n.height ?? 0;
+        const cx = (n.position.x + width / 2) * zoom + x;
+        const cy = (n.position.y + height / 2) * zoom + y;
+        return cx >= margin && cx <= rect.width - margin
+          && cy >= margin && cy <= rect.height - margin;
       };
     });
 

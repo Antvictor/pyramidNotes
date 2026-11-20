@@ -20,6 +20,10 @@ const DEFAULT_SETTINGS = {
       swapNode: 'Ctrl+Shift+X',
       openNode: 'Ctrl+Enter',
       focusMode: 'Ctrl+Space',
+      selectParent: 'ArrowUp',
+      selectPrevSibling: 'ArrowLeft',
+      selectNextSibling: 'ArrowRight',
+      selectChild: 'ArrowDown',
     },
     note: {
       bold: 'Ctrl+B',

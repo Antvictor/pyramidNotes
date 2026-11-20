@@ -58,6 +58,10 @@ export default function HelpModal({ open, onOpenChange }) {
   const mindMapShortcuts = [
     ["Ctrl+N", t("help.shortcuts.actions.newChild")],
     ["Enter", t("help.shortcuts.actions.newSibling")],
+    ["ArrowUp", t("help.shortcuts.actions.selectParent")],
+    ["ArrowLeft", t("help.shortcuts.actions.selectPrevSibling")],
+    ["ArrowRight", t("help.shortcuts.actions.selectNextSibling")],
+    ["ArrowDown", t("help.shortcuts.actions.selectChild")],
     ["Ctrl+Enter", t("help.shortcuts.actions.openNode")],
     ["F2", t("help.shortcuts.actions.rename")],
     ["Delete", t("help.shortcuts.actions.delete")],

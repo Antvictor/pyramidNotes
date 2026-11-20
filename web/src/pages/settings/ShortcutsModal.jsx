@@ -124,6 +124,7 @@ export default function ShortcutsModal({ open, onOpenChange }) {
 
     const keyName =
       e.key === " " ? "Space" :
+      /^Arrow(Up|Down|Left|Right)$/.test(e.key) ? e.key :
       e.key === "Enter" ? "Enter" :
       e.key === "Delete" ? "Delete" :
       e.key === "Backspace" ? "Backspace" :
@@ -193,6 +194,10 @@ export default function ShortcutsModal({ open, onOpenChange }) {
     swapNode: t("shortcuts.actions.swapNode"),
     openNode: t("shortcuts.actions.openNode"),
     focusMode: t("shortcuts.actions.focusMode"),
+    selectParent: t("shortcuts.actions.selectParent"),
+    selectPrevSibling: t("shortcuts.actions.selectPrevSibling"),
+    selectNextSibling: t("shortcuts.actions.selectNextSibling"),
+    selectChild: t("shortcuts.actions.selectChild"),
   };
 
   const noteLabels = {

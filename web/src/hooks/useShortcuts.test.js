@@ -167,6 +167,23 @@ describe("useShortcutActions", () => {
     expect(newNode).not.toHaveBeenCalled();
   });
 
+  it("allows repeated keydowns only for repeatable actions", () => {
+    const newNode = vi.fn();
+    const newSibling = vi.fn();
+    renderHook(() => useShortcutActions({
+      shortcuts,
+      scope: "mindmap",
+      handlers: { newNode, newSibling },
+      repeatableActions: ["newSibling"],
+    }));
+    window.dispatchEvent(keydown({ key: "n", ctrlKey: true, repeat: true }));
+    expect(newNode).not.toHaveBeenCalled();
+    window.dispatchEvent(keydown({ key: "Enter", repeat: true }));
+    expect(newSibling).toHaveBeenCalledTimes(1);
+    window.dispatchEvent(keydown({ key: "Enter", repeat: true }));
+    expect(newSibling).toHaveBeenCalledTimes(2);
+  });
+
   it("skips bindings without a registered handler", () => {
     renderHook(() => useShortcutActions({ shortcuts, scope: "mindmap", handlers: {} }));
     expect(() => window.dispatchEvent(keydown({ key: "Enter" }))).not.toThrow();

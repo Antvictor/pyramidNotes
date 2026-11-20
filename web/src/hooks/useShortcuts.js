@@ -52,18 +52,19 @@ function hasOpenDialog() {
 // blocked：页面自定义浮层（右键菜单、旧弹窗等）打开时为 true。
 // 非 global 分类在可编辑目标或弹窗打开时不触发；global 分类保持现有行为
 // （编辑器内仍可用 Ctrl+K 打开/切换搜索）。
-export function useShortcutActions({ shortcuts, scope, handlers, blocked = false }) {
+// repeatableActions：允许长按重复触发的动作（默认全部忽略重复事件）。
+export function useShortcutActions({ shortcuts, scope, handlers, blocked = false, repeatableActions = [] }) {
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
   const blockedRef = useRef(blocked);
   blockedRef.current = blocked;
+  const repeatableRef = useRef(repeatableActions);
+  repeatableRef.current = repeatableActions;
 
   useEffect(() => {
     if (!shortcuts) return undefined;
 
     const onKeyDown = (event) => {
-      if (event.repeat) return;
-
       const editable = isEditableTarget(event.target);
       const overlayOpen = blockedRef.current || hasOpenDialog();
 
@@ -75,6 +76,7 @@ export function useShortcutActions({ shortcuts, scope, handlers, blocked = false
         for (const [actionId, binding] of Object.entries(bindings || {})) {
           if (!binding) continue;
           if (!matchShortcut(event, binding)) continue;
+          if (event.repeat && !repeatableRef.current.includes(actionId)) return;
 
           const handler = handlersRef.current?.[actionId];
           if (!handler) continue;
