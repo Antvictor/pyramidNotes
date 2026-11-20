@@ -41,6 +41,7 @@
 2. **不要恢复 `body { display: flex; place-items: center; }`** —— 这是 Vite 脚手架残留（2026-09-07 已删除）。它使 `#root` 变成收缩包裹的 flex item，整个应用的 `width: 100%` 全部塌缩为内容宽，表现为"编辑器贴左、限制/放开两种模式看起来一样"。历史上被笔记页写死的 `90vw` 掩盖。
 3. **不要用 `editorProps.attributes.style` 动态注入宽度** —— editorProps 在 ProseMirror view 创建时捕获，设置切换后不会更新。模式切换只能走 className + CSS。
 4. **后代选择器会波及嵌套编辑器**：`.editor-width-constrained .ProseMirror` 也会命中嵌入节点（`@[[]]`）内的嵌套编辑器。目前无害（它们位于 794px 列内部，父容器更窄，规则是 no-op），但改选择器或给嵌入节点加宽度样式时要注意叠加效果。
+5. **路由过渡动画只能加在 Node wrapper 的第 6 层**：仅允许 `transform/opacity`（`route-anim-editor-in/out`）。不要给第 7 层滚动容器或 `.ProseMirror` 加动画/缩放样式，也不要在动画里改宽度——否则会重新引入"滚动条跑到中间 / 宽度塌缩"这类静默布局问题。
 
 ## 常见修改速查
 
@@ -79,6 +80,9 @@
 判读方法：从最外层往内，第一处 `width` 不等于其父级内容宽的地方就是塌缩点。若最外层（`#root`）就小于 `window.innerWidth`，问题在全局 CSS（body/#root），与编辑器无关。
 
 ## 修复历史
+
+- **2026-11-20**：脑图 ↔ 编辑器加入展开/收缩过渡。动画挂在 Node wrapper（第 6 层）的 `transform/opacity` 上，
+  不新增布局层、不改宽度链；编辑器滚动容器与 `.ProseMirror` 未动。
 
 - **2026-09-10**：新增反链面板底栏，第 6 层拆为纵向 flex：外层 column 继承 100%×100%，中间层用 `flex:1 + minHeight:0` 承接原 `flex + center` 样式并去掉 `height:'100%'`（避免与 flex:1 冲突溢出）。第 7 层滚动容器与第 9 层 `.ProseMirror` 未动。
 - **2026-09-07**：实现限制/放开两种宽度模式。第一次实现把 `maxWidth: 800` 放在滚动容器上导致滚动条在窗口中间；改为 className + `.ProseMirror` CSS 后仍异常，最终定位到 `body { display: flex }`（Vite 残留）导致全应用宽度塌缩。删除后修复。涉及：`TipTapEditor.tsx`、`markdown.css`、`index.css`。

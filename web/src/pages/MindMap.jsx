@@ -27,6 +27,11 @@ import db from "./db/db"
 import { computeAncestorChain, collectExpandedChildren, needsSortBump, canSwapNodes, applySwapSorts, filterSiblingsByName } from "./treeUtils";
 import { getNavigationTargets } from "./nodeNavigation";
 import { getActiveEdgeIds } from "./mindMapEdges";
+import {
+  MAP_EXIT_MS,
+  prefersReducedMotion,
+  resolveEntryCamera,
+} from "@/lib/routeTransition";
 import { useMindMapViewStore } from "@/stores/mindMapViewStore";
 import ContextMenu from "./note/ContextMenu/ContextMenu";
 import OpenPrompt from "./commons/OpenPrompt";
@@ -344,6 +349,18 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const setInitializedFocusId = useMindMapViewStore((s) => s.setInitializedFocusId);
   const [pendingRevealNodeId, setPendingRevealNodeId] = useState(null);
   const navigate = useNavigate();
+  // 路由过渡：进入编辑器前先淡出；返回时在定位完成前保持不可见
+  const [mapVisible, setMapVisible] = useState(!selectedNode);
+  const [mapAnim, setMapAnim] = useState("");
+  const [leaving, setLeaving] = useState(false);
+  const leavingRef = useRef(false);
+  const leaveTimerRef = useRef(null);
+  // 入口定位只在本次挂载执行一次；内联子组件会随父组件渲染重挂，避免后续选中变化被误判为"返回"
+  const entryDoneRef = useRef(false);
+  const handleMapReady = useCallback(() => {
+    entryDoneRef.current = true;
+    setMapVisible(true);
+  }, []);
   const [menu, setMenu] = useState({
     show: false,
     x: 0,
@@ -1038,9 +1055,6 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
 
   const centerOnSelectedRef = useRef(null);
   const isNodeVisibleRef = useRef(null);
-  const requestCenter = useCallback((opts) => {
-    if (centerOnSelectedRef.current) centerOnSelectedRef.current(opts);
-  }, []);
 
   // 等所选节点真正进入 ReactFlow 后再居中，替代固定 300ms 延迟
   // onlyIfOffscreen：目标已在视口内则不动视角（方向键导航用，避免每步都平移）
@@ -1057,6 +1071,23 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     if (opts.delayMs) setTimeout(() => run(opts), opts.delayMs);
     else run(opts);
   }, []);
+
+  // 打开笔记：脑图先淡出再切换路由；淡出期间冻结交互，避免选中被清空或重复导航
+  const openNodeWithTransition = useCallback((id, name) => {
+    if (leavingRef.current || !id) return;
+    leavingRef.current = true;
+    setLeaving(true);
+    setSelectedNode({ id, name });
+    const target = `/note/${id}/${name}`;
+    if (prefersReducedMotion()) {
+      navigate(target);
+      return;
+    }
+    setMapAnim("leave");
+    leaveTimerRef.current = setTimeout(() => navigate(target), MAP_EXIT_MS);
+  }, [navigate, setSelectedNode]);
+
+  useEffect(() => () => clearTimeout(leaveTimerRef.current), []);
 
   // 方向键"向下"选视觉中间孩子：用渲染坐标的水平中心比较
   const getNodeCenterX = useCallback((id) => {
@@ -1171,7 +1202,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     scope: "mindmap",
     blocked: Boolean(
       visible || searchOpen || moveSource || swapSource || swapTarget || menu.show
-      || deleteTarget || deleteConfirmation || permissionError
+      || deleteTarget || deleteConfirmation || permissionError || leaving
     ),
     // 方向键支持长按连续移动；其余动作仍忽略长按
     repeatableActions: ["selectParent", "selectPrevSibling", "selectNextSibling", "selectChild"],
@@ -1213,7 +1244,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       openNode: (e) => {
         e.preventDefault();
         if (!selectedNode) return;
-        navigate(`/note/${selectedNode.id}/${selectedNode.name}`);
+        openNodeWithTransition(selectedNode.id, selectedNode.name);
       },
       focusMode: (e) => {
         e.preventDefault();
@@ -1327,7 +1358,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     await window.api.openSystemSettings();
   };
 
-  // 居中辅助组件：通过 ref 暴露居中/可见性方法，供 requestCenter 与方向键导航调用
+  // 居中辅助组件：通过 ref 暴露居中/可见性方法，供方向键导航与入口定位调用
   const CenterOnSelected = () => {
     const { setCenter, getNodes, getZoom, getViewport } = useReactFlow();
 
@@ -1362,14 +1393,44 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     return null;
   };
 
-  // 返回脑图时：视口已恢复，但视角中心可能还停在旧节点上（例如在 A 的视图里
-  // 双击 B 进入笔记，退回来却仍盯着 A）。保持缩放不变，平滑平移把选中节点带到中心。
-  useEffect(() => {
-    if (selectedNode) {
-      const timer = setTimeout(() => requestCenter({ keepZoom: true }), 100);
-      return () => clearTimeout(timer);
-    }
-  }, []);
+  // 从编辑器返回：定位在脑图可见之前完成。节点已可见则保持视角；离屏则零时长居中。
+  const MapEntryCenter = ({ nodeId, onReady }) => {
+    useEffect(() => {
+      if (entryDoneRef.current) return undefined;
+      if (!nodeId) {
+        onReady();
+        return undefined;
+      }
+      let raf;
+      let tries = 0;
+      const tick = () => {
+        const refsReady = typeof centerOnSelectedRef.current === "function"
+          && typeof isNodeVisibleRef.current === "function";
+        if (refsReady) {
+          const camera = resolveEntryCamera({
+            hasSelection: true,
+            isVisible: isNodeVisibleRef.current(nodeId, 8),
+          });
+          if (camera === "none") {
+            onReady();
+            return;
+          }
+          if (centerOnSelectedRef.current({ nodeId, keepZoom: true, durationMs: 0 })) {
+            onReady();
+            return;
+          }
+        }
+        if (++tries < 30) {
+          raf = requestAnimationFrame(tick);
+          return;
+        }
+        onReady();
+      };
+      raf = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(raf);
+    }, [nodeId, onReady]);
+    return null;
+  };
 
   // 搜索选中后：等节点进入 ReactFlow 再 fitView 定位
   const RevealOnPending = () => {
@@ -1399,16 +1460,25 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     return segments;
   }, [focusNodeId, allNotesNodeMap, t]);
 
+  const mapClass = !mapVisible
+    ? undefined
+    : mapAnim === "leave"
+      ? "route-anim-map-out"
+      : undefined;
+
   return (
     <div
+      className={mapClass}
       style={{
         width: "90vw",
         height: "94vh",
         background: "var(--mm-canvas)",
+        visibility: mapVisible ? "visible" : "hidden",
       }}
     >
       <ReactFlowProvider>
         <CenterOnSelected />
+        <MapEntryCenter nodeId={selectedNode?.id} onReady={handleMapReady} />
         <RevealOnPending />
         <LayoutOnMeasured nodeSpacing={nodeSpacing} displayedNotes={displayedNotes} focusNodeId={focusNodeId} setNodes={setNodes} />
         <div style={{
@@ -1537,6 +1607,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           onEdgesDelete={() => { }}
           deleteKeyCode={null}
           onNodeClick={(e, node) => {
+            if (leavingRef.current) return;
             if (lastClickRef.current === node.id) {
               if (clickTimerRef.current) {
                 clearTimeout(clickTimerRef.current);
@@ -1545,8 +1616,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
               lastClickRef.current = null;
 
               // 双击进入编辑，设置 selectedNode 以便返回时居中
-              setSelectedNode({ id: node.id, name: node.data.name });
-              navigate(`/note/${node.id}/${node.data.name}`);
+              openNodeWithTransition(node.id, node.data.name);
               return;
             }
 
@@ -1563,6 +1633,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
             }, 250);
           }}
           onPaneClick={() => {
+            if (leavingRef.current) return;
             clearSelectedNode();
           }}
           proOptions={{ hideAttribution: true }}

@@ -459,3 +459,36 @@ button:focus-visible {
 .react-flow__edge-path {
   transition: stroke 160ms ease;
 }
+
+/* 脑图 ↔ 编辑器路由过渡。时长与 web/src/lib/routeTransition.js 常量一致。
+   只动 transform/opacity；脑图段不做缩放，避免影响 ReactFlow 的容器测量。 */
+@keyframes route-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes editor-expand-in {
+  from { opacity: 0; transform: scale(0.88); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes editor-collapse-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0.15; transform: scale(0.9); }
+}
+
+.route-anim-map-out {
+  animation: route-fade-out 160ms ease-in both;
+}
+.route-anim-editor-in {
+  animation: editor-expand-in 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.route-anim-editor-out {
+  animation: editor-collapse-out 180ms ease-in both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-anim-map-out,
+  .route-anim-editor-in,
+  .route-anim-editor-out {
+    animation-duration: 0.01ms;
+  }
+}

@@ -1,5 +1,5 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import TipTapEditor from "../../core/editor/TipTapEditor";
 import BacklinkPanel from "./BacklinkPanel";
 import { useTranslation } from "react-i18next";
@@ -13,6 +13,7 @@ import { matchShortcut, useShortcutActions } from "../../hooks/useShortcuts";
 import { computeAncestorChain } from "../treeUtils";
 import { useMindMapViewStore } from "@/stores/mindMapViewStore";
 import { usePlugins } from "@/core/plugins/PluginProvider";
+import { EDITOR_ENTER_MS, EDITOR_EXIT_MS, prefersReducedMotion } from "@/lib/routeTransition";
 
 
 const Note = ({ shortcuts }) => {
@@ -33,6 +34,31 @@ const Note = ({ shortcuts }) => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTab, setSearchTab] = useState("node");
   const [newNodePromptVisible, setNewNodePromptVisible] = useState(false);
+  // 路由过渡：内容就绪后展开；退出回脑图前先收缩
+  const [editorAnim, setEditorAnim] = useState("enter");
+  const leavingRef = useRef(false);
+  const leaveTimerRef = useRef(null);
+
+  // 进入编辑器立即展开（loading 也在同一容器内），不再等文件加载完成
+  useEffect(() => {
+    if (leavingRef.current) return undefined;
+    setEditorAnim("enter");
+    const timer = setTimeout(() => setEditorAnim(""), EDITOR_ENTER_MS);
+    return () => clearTimeout(timer);
+  }, [id]);
+
+  useEffect(() => () => clearTimeout(leaveTimerRef.current), []);
+
+  const startLeave = useCallback((go) => {
+    if (leavingRef.current) return;
+    leavingRef.current = true;
+    if (prefersReducedMotion()) {
+      go();
+      return;
+    }
+    setEditorAnim("leave");
+    leaveTimerRef.current = setTimeout(go, EDITOR_EXIT_MS);
+  }, []);
 
   // Build keyBindings from shortcuts
   const keyBindings = shortcuts?.note ? [
@@ -179,14 +205,21 @@ const Note = ({ shortcuts }) => {
         //    「已 defaultPrevented」的 Escape，导致通用弹窗关不掉。
         if (isOverlayEscClaimed()) return;
         e.preventDefault();
+        if (leavingRef.current) return;
         // 兜底：不带 role=dialog / 未认领 Esc 的旧弹窗，按各自 state 关闭
         if (searchOpen) { setSearchOpen(false); return; }
         if (newNodePromptVisible) { setNewNodePromptVisible(false); return; }
         if (location.state?.fromNote) {
+          leavingRef.current = true;
           navigate(-1);
-        } else {
-          navigate('/');
+          return;
         }
+        if (!ready || !pluginsReady) {
+          leavingRef.current = true;
+          navigate('/');
+          return;
+        }
+        startLeave(() => navigate('/'));
         return;
       }
     };
@@ -195,7 +228,7 @@ const Note = ({ shortcuts }) => {
     // 误判为"没有弹窗"从而直接回退到上一层（实测日志证实）。
     window.addEventListener('keydown', handler, true);
     return () => window.removeEventListener('keydown', handler, true);
-  }, [shortcuts, searchOpen, newNodePromptVisible, location.state, navigate]);
+  }, [shortcuts, searchOpen, newNodePromptVisible, location.state, navigate, ready, pluginsReady, startLeave]);
 
   // 快捷键分发：分类即作用域。newNode 绑定在 node 分类，笔记页不激活——
   // 编辑器内 Ctrl+N/Tab 不会再被截走（Tab 恢复缩进）。处理器保留注册，
@@ -223,62 +256,76 @@ const Note = ({ shortcuts }) => {
   });
 
   return (
-    // <StrictMode>
-    //   <MilkdownProvider>
-    //     <MilkdownEditor content={value} onChange={saveFile} />
-    //   </MilkdownProvider>
-    // </StrictMode>
-    // <Markdown content={value} onChange={saveFile} />
-    !ready || !pluginsReady ?
-      <div>{t("editor.loading")}</div> :
-      <div style={{
+    <div
+      key={id}
+      className={
+        editorAnim === "leave"
+          ? "route-anim-editor-out"
+          : editorAnim === "enter"
+            ? "route-anim-editor-in"
+            : undefined
+      }
+      style={{
         display: "flex",
         flexDirection: "column",
         width: "100%",
         height: "100%",
         overflow: "hidden" }}>
+      {!ready || !pluginsReady ? (
         <div style={{
           flex: 1,
-          minHeight: 0,
-          width: "100%",
           display: "flex",
+          alignItems: "center",
           justifyContent: "center",
-          overflow: "hidden" }}>
-          <TipTapEditor
-            content={value}
-            onChange={saveFile}
-            keyBindings={keyBindings}
-            nodes={allNodes}
-            noteName={name}
-            noteId={id}
-            noteFontSize={noteFontSize}
-            editorWidthMode={editorWidthMode}
-            externalExtensions={pluginExtensions}
-            onCreateChildFromSelection={createChildFromSelection}
-            onOpenNode={openNode}
-            onCreateMissingNode={createChildFromReference}
-            focusRefId={location.state?.focusRef}
-          />
+          color: "var(--text-secondary)",
+        }}>
+          {t("editor.loading")}
         </div>
-        {showBacklinks && (
-          <BacklinkPanel backlinks={backlinks} onOpenNode={(note) => openNode(note, id)} />
-        )}
-        <NodeSearchDialog
-          open={searchOpen}
-          onOpenChange={setSearchOpen}
-          activeTab={searchTab}
-          onActiveTabChange={setSearchTab}
-          onSelectNode={handleSelectSearchResult}
-        />
-        <OpenPrompt
-          visible={newNodePromptVisible}
-          id={id}
-          title=""
-          onOk={(parentId, nodeName) => handleNewChild(nodeName)}
-          onCancel={() => setNewNodePromptVisible(false)}
-        />
-      </div>
-
+      ) : (
+        <>
+          <div style={{
+            flex: 1,
+            minHeight: 0,
+            width: "100%",
+            display: "flex",
+            justifyContent: "center",
+            overflow: "hidden" }}>
+            <TipTapEditor
+              content={value}
+              onChange={saveFile}
+              keyBindings={keyBindings}
+              nodes={allNodes}
+              noteName={name}
+              noteId={id}
+              noteFontSize={noteFontSize}
+              editorWidthMode={editorWidthMode}
+              externalExtensions={pluginExtensions}
+              onCreateChildFromSelection={createChildFromSelection}
+              onOpenNode={openNode}
+              onCreateMissingNode={createChildFromReference}
+              focusRefId={location.state?.focusRef}
+            />
+          </div>
+          {showBacklinks && (
+            <BacklinkPanel backlinks={backlinks} onOpenNode={(note) => openNode(note, id)} />
+          )}
+          <NodeSearchDialog
+            open={searchOpen}
+            onOpenChange={setSearchOpen}
+            activeTab={searchTab}
+            onActiveTabChange={setSearchTab}
+            onSelectNode={handleSelectSearchResult}
+          />
+          <OpenPrompt
+            visible={newNodePromptVisible}
+            id={id}
+            title=""
+            onOk={(parentId, nodeName) => handleNewChild(nodeName)}
+            onCancel={() => setNewNodePromptVisible(false)}
+          />
+        </>
+      )}
+    </div>
   );
 };
 

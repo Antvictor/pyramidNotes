@@ -43,8 +43,18 @@
 |---|---|
 | `centerWhenRendered()` | 逐帧等节点**真正进入** ReactFlow 后 `setCenter`，替代固定 `setTimeout`；创建/移动/聚焦后调用 |
 | `viewportCache` | `onMoveEnd` 记录 `{x,y,zoom}`；挂载时经 `defaultViewport` 恢复，并 `fitView={!viewportCache}` |
-| 返回时不自动居中 | 已恢复视口时跳过 `requestCenter`，避免返回时又平移一下 |
+| 返回时相机 | 从编辑器返回时：节点已完整可见（`margin=8`）→ **完全不动**；离屏 → 在脑图可见前 `duration:0` 居中（保持缩放）。脑图 `visibility:hidden` 直到定位完成，随后直接显示 |
+| 非编辑器来源 | 首次启动/设置/回收站返回：恢复 `viewportCache` 或 `fitView`，不强制居中 |
 | 聚焦切换 | 聚焦会把树以该节点为**重根**重排到布局原点 (50,50) → **必须** `centerWhenRendered()`，否则节点移出屏幕 |
+
+## 路由过渡（脑图 ↔ 编辑器）
+
+- 打开（双击 / Ctrl+Enter）：脑图淡出 `MAP_EXIT_MS` → 导航 → 编辑器容器挂载即展开 `EDITOR_ENTER_MS`（loading 也在容器内）。
+- 退出（Esc）：编辑器收缩 `EDITOR_EXIT_MS` → 导航 → 脑图在定位完成后直接显示。
+- 只有 `transform/opacity` 参与动画；**脑图段不做缩放**，避免缩放中的 transform 进入 ReactFlow 的容器测量。
+- 返回定位由 `MapEntryCenter` 在 `visibility:hidden` 期间完成（见上表）；`resolveEntryCamera()` 是纯函数，规则为 `restore | none | center`。
+- 淡出期间 `leavingRef` 冻结节点/空白点击与快捷键，防止选中被清空。
+- 动画时长常量在 `web/src/lib/routeTransition.js`，CSS 注释标注对应关系；`prefers-reduced-motion` 下直接导航。
 
 ## 跨卸载缓存（返回脑图不重载）
 
@@ -85,11 +95,15 @@ MindMap 在切到 `/note/...` 时会**卸载**。`MindMap.jsx` 顶部的模块�
 | 改可见性规则 | `web/src/pages/treeUtils.js` 的纯函数（有单测）+ `MindMap.jsx` 的不变量 effect |
 | 改展开/折叠行为 | `MindMap.jsx` 的 `expandOneLevel` / `expandAll` / `collapseNode`（记得同步 `expandedNodeIds`） |
 | 改布局算法 | `layoutTree()`（`MindMap.jsx` 顶部纯函数） |
-| 改过渡时长 | `web/src/index.css` 的 `.react-flow__node` transition |
-| 改"返回脑图"行为 | `MindMap.jsx` 顶部三个模块级缓存 + 挂载 effect + `ReactFlow` 的 `defaultViewport` / `fitView` |
+| 改过渡时长 | 节点位置：`web/src/index.css` 的 `.react-flow__node` transition；路由切换：`web/src/lib/routeTransition.js` + `index.css` 的 `route-anim-*` |
+| 改"返回脑图"行为 | `MindMap.jsx` 顶部三个模块级缓存 + `MapEntryCenter` + `ReactFlow` 的 `defaultViewport` / `fitView` |
 | 改聚焦行为 | 聚焦/全局按钮的 `setFocusNodeId(...)` + 必须配 `centerWhenRendered()` |
 
 ## 修复历史
+
+- **2026-11-20**：脑图 ↔ 编辑器加入展开/收缩过渡。打开时脑图淡出、编辑器展开；Esc 退出时编辑器收缩、脑图在定位完成后直接显示。
+  返回相机改为「节点可见则不动，离屏则在脑图隐藏时零时长居中」，移除旧的 `100ms + 700ms 平移` 挂载 effect，
+  消除"退出后镜头再动"的割裂感。新增 `lib/routeTransition.js`、`MapEntryCenter`、`prefers-reduced-motion` 降级。
 
 - **2026-09-16**：建立不变量「已展开 ⇒ 子节点已加载」；`createChildFromSelection` 补揭示父链；
   聚焦 / 回到全局补 `centerWhenRendered()`。
