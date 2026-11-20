@@ -55,3 +55,39 @@ export function filterSiblingsByName(siblings, keyword) {
   if (!kw) return siblings;
   return siblings.filter((s) => String(s.name || "").toLowerCase().includes(kw));
 }
+
+// 从 rootId 出发、最多 maxDepth 层的可见 id 集合（含 root）。
+// 首帧渲染与初始化 effect 共用，保证「首帧可见集合 == 初始化后集合」；
+// 不可达节点（父不存在或不在传入集合内）不计入。
+export function collectVisibleIdsToDepth(nodes, rootId, maxDepth = 2) {
+  const ids = new Set();
+  if (!Array.isArray(nodes) || !rootId) return ids;
+
+  const known = new Set();
+  const childrenByParent = new Map();
+  for (const node of nodes) {
+    if (!node) continue;
+    known.add(node.id);
+    if (node.top && node.top !== '0') {
+      const list = childrenByParent.get(node.top);
+      if (list) list.push(node.id);
+      else childrenByParent.set(node.top, [node.id]);
+    }
+  }
+  if (!known.has(rootId)) return ids;
+
+  ids.add(rootId);
+  let frontier = [rootId];
+  for (let depth = 0; depth < maxDepth && frontier.length; depth += 1) {
+    const next = [];
+    for (const id of frontier) {
+      for (const childId of childrenByParent.get(id) || []) {
+        if (ids.has(childId)) continue;
+        ids.add(childId);
+        next.push(childId);
+      }
+    }
+    frontier = next;
+  }
+  return ids;
+}

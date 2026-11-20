@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import db, { escapeLike } from "./db.js";
+import db, { escapeLike, NOTE_LIST_COLUMNS } from "./db.js";
 
 describe("escapeLike", () => {
   it("escapes LIKE wildcards and backslash", () => {
@@ -21,6 +21,14 @@ describe("db.notes.select", () => {
     await db.notes.select();
     expect(window.api.dbQuery).toHaveBeenCalledWith(
       'SELECT * FROM notes WHERE "delete" = 0 ORDER BY "sort" ASC, rowid ASC',
+      [],
+    );
+  });
+
+  it("projects only the requested columns (no content)", async () => {
+    await db.notes.select("", "", "", { columns: NOTE_LIST_COLUMNS });
+    expect(window.api.dbQuery).toHaveBeenCalledWith(
+      'SELECT id, name, alias, top, "left", sort FROM notes WHERE "delete" = 0 ORDER BY "sort" ASC, rowid ASC',
       [],
     );
   });

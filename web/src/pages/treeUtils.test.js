@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeAncestorChain, collectExpandedChildren, needsSortBump, canSwapNodes, applySwapSorts, filterSiblingsByName } from "./treeUtils.js";
+import { computeAncestorChain, collectExpandedChildren, needsSortBump, canSwapNodes, applySwapSorts, filterSiblingsByName, collectVisibleIdsToDepth } from "./treeUtils.js";
 
 function map(nodes) {
   const m = new Map();
@@ -153,5 +153,47 @@ describe("filterSiblingsByName", () => {
 
   it("returns an empty array when nothing matches", () => {
     expect(filterSiblingsByName(list, "zzz")).toEqual([]);
+  });
+});
+
+describe("collectVisibleIdsToDepth", () => {
+  const nodes = [
+    { id: "r", top: "0" },
+    { id: "a", top: "r" },
+    { id: "b", top: "r" },
+    { id: "a1", top: "a" },
+    { id: "a2", top: "a" },
+    { id: "a11", top: "a1" },
+    { id: "orphan", top: "missing" },
+  ];
+
+  it("includes root and two levels of descendants by default", () => {
+    expect([...collectVisibleIdsToDepth(nodes, "r")].sort()).toEqual(
+      ["a", "a1", "a2", "b", "r"],
+    );
+  });
+
+  it("respects an explicit maxDepth", () => {
+    expect([...collectVisibleIdsToDepth(nodes, "r", 0)]).toEqual(["r"]);
+    expect([...collectVisibleIdsToDepth(nodes, "r", 1)].sort()).toEqual(["a", "b", "r"]);
+  });
+
+  it("works for a focused subtree", () => {
+    expect([...collectVisibleIdsToDepth(nodes, "a", 1)].sort()).toEqual(["a", "a1", "a2"]);
+  });
+
+  it("excludes unreachable nodes when the root is missing", () => {
+    expect(collectVisibleIdsToDepth(nodes, "nope").size).toBe(0);
+  });
+
+  it("does not include nodes whose parent is absent from the input", () => {
+    expect(collectVisibleIdsToDepth(nodes, "r").has("orphan")).toBe(false);
+  });
+
+  it("handles empty inputs and cycles", () => {
+    expect(collectVisibleIdsToDepth([], "r").size).toBe(0);
+    expect(collectVisibleIdsToDepth(null, "r").size).toBe(0);
+    expect(collectVisibleIdsToDepth([{ id: "x", top: "y" }, { id: "y", top: "x" }], "x", 5))
+      .toEqual(new Set(["x", "y"]));
   });
 });

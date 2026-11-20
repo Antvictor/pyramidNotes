@@ -1,6 +1,5 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useCallback, useRef, useState } from "react";
-import TipTapEditor from "../../core/editor/TipTapEditor";
+import { lazy, Suspense, useEffect, useCallback, useRef, useState } from "react";
 import BacklinkPanel from "./BacklinkPanel";
 import { useTranslation } from "react-i18next";
 import { nanoid } from "nanoid";
@@ -14,6 +13,10 @@ import { computeAncestorChain } from "../treeUtils";
 import { useMindMapViewStore } from "@/stores/mindMapViewStore";
 import { usePlugins } from "@/core/plugins/PluginProvider";
 import { EDITOR_ENTER_MS, EDITOR_EXIT_MS, prefersReducedMotion } from "@/lib/routeTransition";
+
+// 编辑器栈（tiptap/katex/highlight）按需加载：不进入启动包。
+// 脑图挂载后空闲时会预取同一模块，正常首次打开命中缓存。
+const TipTapEditor = lazy(() => import("../../core/editor/TipTapEditor"));
 
 
 const Note = ({ shortcuts }) => {
@@ -82,8 +85,12 @@ const Note = ({ shortcuts }) => {
   useEffect(() => {
     if (!id) return;
 
+    let cancelled = false;
+
     const loadFile = async () => {
       setReady(false);
+      // 切换笔记时先清空，避免上一篇的反链残留
+      setBacklinks([]);
       // Load settings for font config
       const s = await window.api.getSettings();
       if (s.noteFontSize) {
@@ -101,17 +108,24 @@ const Note = ({ shortcuts }) => {
 
       // 2. 打开文件
       const { data: yamlData, content: markdownContent } = await window.api.openFile(fileName);
+      if (cancelled) return;
       // const { data, content: markdownContent } = matter(content);
       setValue(markdownContent);
       setYamlValue(yamlData);
+      // 这里必须带 content：编辑器里 ![[节点]] 的嵌入预览直接渲染 target.content
       const nodes = await db.notes.select();
+      if (cancelled) return;
       setAllNodes(nodes || []);
-      const backlinkRows = await db.notes.findBacklinks(id);
-      setBacklinks(backlinkRows || []);
       setReady(true);
+
+      // 反链是正文全表 LIKE 扫描，放到正文可交互之后再算，不阻塞打开
+      db.notes.findBacklinks(id)
+        .then((rows) => { if (!cancelled) setBacklinks(rows || []); })
+        .catch(() => {});
     }
 
     loadFile();
+    return () => { cancelled = true; };
   }, [id, name]);
 
   // Listen for settings changes (e.g., note font size)
@@ -255,6 +269,18 @@ const Note = ({ shortcuts }) => {
     },
   });
 
+  const loadingPane = (
+    <div style={{
+      flex: 1,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      color: "var(--text-secondary)",
+    }}>
+      {t("editor.loading")}
+    </div>
+  );
+
   return (
     <div
       key={id}
@@ -271,17 +297,7 @@ const Note = ({ shortcuts }) => {
         width: "100%",
         height: "100%",
         overflow: "hidden" }}>
-      {!ready || !pluginsReady ? (
-        <div style={{
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "var(--text-secondary)",
-        }}>
-          {t("editor.loading")}
-        </div>
-      ) : (
+      {!ready || !pluginsReady ? loadingPane : (
         <>
           <div style={{
             flex: 1,
@@ -290,21 +306,23 @@ const Note = ({ shortcuts }) => {
             display: "flex",
             justifyContent: "center",
             overflow: "hidden" }}>
-            <TipTapEditor
-              content={value}
-              onChange={saveFile}
-              keyBindings={keyBindings}
-              nodes={allNodes}
-              noteName={name}
-              noteId={id}
-              noteFontSize={noteFontSize}
-              editorWidthMode={editorWidthMode}
-              externalExtensions={pluginExtensions}
-              onCreateChildFromSelection={createChildFromSelection}
-              onOpenNode={openNode}
-              onCreateMissingNode={createChildFromReference}
-              focusRefId={location.state?.focusRef}
-            />
+            <Suspense fallback={loadingPane}>
+              <TipTapEditor
+                content={value}
+                onChange={saveFile}
+                keyBindings={keyBindings}
+                nodes={allNodes}
+                noteName={name}
+                noteId={id}
+                noteFontSize={noteFontSize}
+                editorWidthMode={editorWidthMode}
+                externalExtensions={pluginExtensions}
+                onCreateChildFromSelection={createChildFromSelection}
+                onOpenNode={openNode}
+                onCreateMissingNode={createChildFromReference}
+                focusRefId={location.state?.focusRef}
+              />
+            </Suspense>
           </div>
           {showBacklinks && (
             <BacklinkPanel backlinks={backlinks} onOpenNode={(note) => openNode(note, id)} />

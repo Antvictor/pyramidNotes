@@ -23,8 +23,8 @@ import "@xyflow/react/dist/style.css";
 
 // 自定义节点组件
 import NodeCustom from "./note/NodeCustom";
-import db from "./db/db"
-import { computeAncestorChain, collectExpandedChildren, needsSortBump, canSwapNodes, applySwapSorts, filterSiblingsByName } from "./treeUtils";
+import db, { NOTE_LIST_COLUMNS } from "./db/db"
+import { computeAncestorChain, collectExpandedChildren, needsSortBump, canSwapNodes, applySwapSorts, filterSiblingsByName, collectVisibleIdsToDepth } from "./treeUtils";
 import { getNavigationTargets } from "./nodeNavigation";
 import { getActiveEdgeIds } from "./mindMapEdges";
 import {
@@ -72,6 +72,9 @@ const MOVE_ANIM_MS = 1300;
 let notesDataCache = null;       // 上次的节点行
 let measuredSizesCache = null;   // 各节点实测尺寸 Map
 let viewportCache = null;        // ReactFlow 视口 { x, y, zoom }
+// 启动对账完成前，渲染端不得建根：库为空而目录有文件时（如损坏恢复），
+// 抢建 1-root.md 会与对账导入的既有根冲突，形成双根。模块级存在，跨卸载保留。
+let reconcileDone = typeof window === "undefined" || !window.api?.onNotesReconciled;
 
 // 只有会改变脑图布局的字段变化才算“图变了”；
 // content / last_up_time 变化（例如在编辑器里改正文）不应触发重排
@@ -222,19 +225,6 @@ function getDescendantIdsSync(nodeId, nodeMap) {
     result.push(...getDescendantIdsSync(child.id, nodeMap));
   }
   return result;
-}
-
-function computeDepths(rootId, nodeMap) {
-  const depths = new Map();
-  function dfs(nodeId, depth) {
-    depths.set(nodeId, depth);
-    const node = nodeMap.get(nodeId);
-    if (node?.children) {
-      for (const child of node.children) dfs(child.id, depth + 1);
-    }
-  }
-  if (nodeMap.has(rootId)) dfs(rootId, 0);
-  return depths;
 }
 
 function countDescendants(nodeId, nodeMap) {
@@ -518,20 +508,8 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       pool = notesData.filter(n => subtreeIds.has(n.id));
     }
 
-    const poolMap = new Map();
-    pool.forEach(n => poolMap.set(n.id, { ...n, children: [] }));
-    pool.forEach(n => {
-      if (n.top && n.top !== '0') {
-        const parent = poolMap.get(n.top);
-        if (parent) parent.children.push(poolMap.get(n.id));
-      }
-    });
-
-    const depthMap = computeDepths(effectiveRootId, poolMap);
-    const ids = new Set();
-    for (const [id, depth] of depthMap) {
-      if (depth <= 2) ids.add(id);
-    }
+    // 与 displayedNotes 首帧分支同源，保证初始化前后可见集合完全一致
+    const ids = collectVisibleIdsToDepth(pool, effectiveRootId, 2);
 
     setInitializedFocusId(focusNodeId);
     setLoadedNodeIds(ids);
@@ -804,9 +782,11 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     // 首帧：若有缓存先立即渲染，避免返回脑图时的空白闪屏
     if (notesDataCache) setNotesData(notesDataCache);
 
-    db.notes.select().then((res) => {
+    const applyRows = (res) => {
       // 调用electron api，扫描数据目录下的markdown，并根据yaml头构建节点数据，然后存入sqlite; 最后从sqlite读取节点数据进行展示
       if (!res || res.length === 0) {
+        // 启动对账完成前不建根：空库可能只是「文件尚未导入」，抢建会与对账的根冲突
+        if (!reconcileDone) return;
         // 新建根节点
         const rootNode = {
           id: "1",
@@ -825,8 +805,54 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
         // 结构有变化（如编辑页新增/删除了节点）才更新，避免无谓重排
         setNotesData(res);
       }
-    })
+    };
 
+    let disposed = false;
+    // 先订阅、再读库：订阅前完成的对账由下面「拉取状态」或 select 覆盖；订阅后完成的由事件触发重读
+    const unsubscribe = window.api?.onNotesReconciled?.(() => {
+      reconcileDone = true;
+      if (!disposed) db.notes.select("", "", "", { columns: NOTE_LIST_COLUMNS }).then(applyRows);
+    });
+
+    const loadRows = () => {
+      if (disposed) return;
+      db.notes.select("", "", "", { columns: NOTE_LIST_COLUMNS }).then(applyRows);
+    };
+    // 对账可能比 React 订阅更快（事件已错过）：主动拉一次完成状态再读库
+    const stateRequest = window.api?.getReconcileState?.();
+    if (stateRequest) {
+      stateRequest
+        .then((state) => { if (state?.done) reconcileDone = true; loadRows(); })
+        .catch(loadRows);
+    } else {
+      loadRows();
+    }
+
+    return () => {
+      disposed = true;
+      unsubscribe?.();
+    };
+  }, []);
+
+  // 空闲时预取编辑器 chunk（与 Node 的懒加载同一模块），首次打开笔记不再等加载
+  useEffect(() => {
+    let cancelled = false;
+    const prefetch = () => {
+      if (cancelled) return;
+      import("../core/editor/TipTapEditor").catch(() => {});
+    };
+    if (typeof requestIdleCallback === "function") {
+      const idleId = requestIdleCallback(prefetch, { timeout: 2000 });
+      return () => {
+        cancelled = true;
+        if (typeof cancelIdleCallback === "function") cancelIdleCallback(idleId);
+      };
+    }
+    const timer = setTimeout(prefetch, 1000);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, []);
 
   // notesData 变更时同步缓存，供下次挂载首帧使用
@@ -843,7 +869,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       }
       if (newSettings.storagePath) {
         console.log("Settings changed, reloading notes for storagePath:", newSettings.storagePath);
-        db.notes.select().then((res) => {
+        db.notes.select("", "", "", { columns: NOTE_LIST_COLUMNS }).then((res) => {
           console.log("Reloaded notes:", res);
           if (res && res.length > 0) {
             setNotesData(res);
@@ -876,8 +902,16 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       pool = notesData.filter(n => subtreeIds.has(n.id));
     }
 
-    // loadedNodeIds 为空时（初始加载中），先跳过过滤，等 useEffect 填充
-    if (loadedNodeIds.size === 0) return pool;
+    // loadedNodeIds 为空 = 首次加载（初始化 effect 还没跑）。
+    // 直接按「聚焦根 + 前三层」过滤，避免先把全图布局挂载一遍再收缩；
+    // 找不到根时保留旧兜底（下方 effect 会建根并收编孤儿）。
+    if (loadedNodeIds.size === 0) {
+      const rootId = focusNodeId === '1'
+        ? notesData.find(n => n.top === '0')?.id
+        : focusNodeId;
+      const initial = collectVisibleIdsToDepth(pool, rootId, 2);
+      return initial.size > 0 ? pool.filter(n => initial.has(n.id)) : pool;
+    }
 
     return pool.filter(n => loadedNodeIds.has(n.id));
   }, [notesData, focusNodeId, loadedNodeIds, allNotesNodeMap]);
@@ -895,6 +929,8 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
 
     // 没有 root 节点时的处理（仅全局模式，且数据库中确实无root）
     if (!rootNode && !creatingRootRef.current && focusNodeId === "1") {
+      // 启动对账未完成：空库可能只是文件还没导入，等 notes:reconciled 后再判定
+      if (!reconcileDone) return;
       const dbHasRoot = notesData?.some(n => n.top === "0");
       if (dbHasRoot) return;
       creatingRootRef.current = true;

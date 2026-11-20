@@ -6,6 +6,8 @@ const { getBasePath } = require('../window/window.cjs');
 const { search, reset } = require('./search.cjs');
 const { migrateNotes } = require('./schema.cjs');
 const { openDatabaseWithRecovery } = require('./recovery.cjs');
+const { shouldRebuildFts } = require('./ftsSync.cjs');
+const { waitForWriteGate } = require('./writeGate.cjs');
 
 let db = null;
 let isInitialized = false;
@@ -79,6 +81,9 @@ function initializeDatabase(storagePath) {
 
         // 创建 FTS5 全文搜索虚拟表（使用 simple_tokenizer 支持中文分词）
         // id 列使用 UNINDEXED 表示不参与搜索，只存储用于关联
+        const hadFts = Boolean(conn.prepare(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'notes_fts'",
+        ).get());
         conn.exec(`
             CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
                 id UNINDEXED,
@@ -108,12 +113,17 @@ function initializeDatabase(storagePath) {
             END;
         `);
 
-        // 为现有数据建立 FTS 索引（先清空再重建，避免 rowid 冲突）
-        conn.exec(`
-            DELETE FROM notes_fts;
-            INSERT INTO notes_fts(rowid, id, content)
-            SELECT rowid, id, COALESCE(content, '') FROM notes;
-        `);
+        // 仅在索引新建或与 notes 行数不一致时全量回填；日常同步由上方触发器完成。
+        // 无条件重建会让每次启动都付出 O(正文总量) 的索引成本。
+        const notesCount = conn.prepare('SELECT COUNT(*) AS c FROM notes').get().c;
+        const ftsCount = conn.prepare('SELECT COUNT(*) AS c FROM notes_fts').get().c;
+        if (shouldRebuildFts({ hadFts, notesCount, ftsCount })) {
+            conn.exec(`
+                DELETE FROM notes_fts;
+                INSERT INTO notes_fts(rowid, id, content)
+                SELECT rowid, id, COALESCE(content, '') FROM notes;
+            `);
+        }
     };
 
     // 损坏库自动隔离重建：setup 抛 SQLITE_CORRUPT/NOTADB 时备份原文件并重来
@@ -140,10 +150,13 @@ function initializeDatabase(storagePath) {
 
     // Register dbQuery handler only once
     if (!initializeDatabase.handlersRegistered) {
-        ipcMain.handle('dbQuery', (event, sql, params = []) => {
+        ipcMain.handle('dbQuery', async (event, sql, params = []) => {
             try {
+                const isSelect = sql.trim().toUpperCase().startsWith('SELECT');
+                // 对账期间挂起写入：避免「先写库、后写文件」的新节点被对账当作孤儿删除
+                if (!isSelect) await waitForWriteGate();
                 const stmt = db.prepare(sql);
-                if (sql.trim().toUpperCase().startsWith('SELECT')) {
+                if (isSelect) {
                     return stmt.all(...params);
                 } else {
                     return stmt.run(...params);

@@ -2,6 +2,10 @@ export function escapeLike(keyword) {
     return keyword.replace(/[\\%_]/g, (c) => '\\' + c);
 }
 
+// 脑图列表只需要结构字段，不传输正文（正文按笔记单独读取）。
+// 内部常量，禁止把外部输入拼进 SELECT 列表。
+export const NOTE_LIST_COLUMNS = 'id, name, alias, top, "left", sort';
+
 class Table {
     constructor(tableName) {
         this.tableName = tableName;
@@ -18,7 +22,7 @@ class Table {
     }
 
     async select(whereClause = "", orderBy = "", limit = "", options = {}) {
-        const { includeDeleted = false } = options;
+        const { includeDeleted = false, columns = "*" } = options;
         const values = [];
         const conditions = [];
         if (whereClause) {
@@ -28,7 +32,7 @@ class Table {
             }
         }
         if (!includeDeleted) conditions.push(`"delete" = 0`);
-        let sql = `SELECT * FROM ${this.tableName}`;
+        let sql = `SELECT ${columns} FROM ${this.tableName}`;
         if (conditions.length) sql += ` WHERE ${conditions.join(" AND ")}`;
         const order = orderBy || '"sort" ASC, rowid ASC';
         if (order) sql += ` ORDER BY ${order}`;

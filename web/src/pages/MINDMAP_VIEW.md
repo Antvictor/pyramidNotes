@@ -56,6 +56,18 @@
 - 淡出期间 `leavingRef` 冻结节点/空白点击与快捷键，防止选中被清空。
 - 动画时长常量在 `web/src/lib/routeTransition.js`，CSS 注释标注对应关系；`prefers-reduced-motion` 下直接导航。
 
+## 启动与首帧
+
+- **首帧可见集合**：`loadedNodeIds` 为空时，`displayedNotes` 直接用 `collectVisibleIdsToDepth(pool, rootId, 2)`
+  过滤（`treeUtils.js` 纯函数，有单测）；初始化 effect 复用同一函数写入 `loadedNodeIds`，保证「首帧 == 初始化后」。
+- **对账后置**：主进程在窗口出现后才执行 `initNode()`，完成后发送 `notes:reconciled`；
+  脑图**先订阅再 select**，收到事件后重读并用 `sameGraph` 去重。
+- **建根守卫**：模块级 `reconcileDone`（跨卸载保留）为假时禁止建根，
+  防止「库为空但目录有文件」时抢建 `1-root.md` 与对账导入的既有根冲突（双根）。
+- **列表查询**：脑图两处列表查询只取 `NOTE_LIST_COLUMNS`（不含 `content`）；
+  笔记页 `allNodes` **必须保留正文**——编辑器 `![[节点]]` 嵌入预览直接渲染 `target.content`。
+- **编辑器按需加载**：`TipTapEditor` 为懒加载 chunk，脑图空闲时预取；动画仍由 `Node` 容器负责。
+
 ## 跨卸载缓存（返回脑图不重载）
 
 MindMap 在切到 `/note/...` 时会**卸载**。`MindMap.jsx` 顶部的模块级缓存让返回时首帧即恢复：
@@ -78,6 +90,8 @@ MindMap 在切到 `/note/...` 时会**卸载**。`MindMap.jsx` 顶部的模块�
    `notesDataCache` 等在模块作用域（只在挂载时读一次）。放错地方会导致多余渲染或状态丢失。
 4. **纯视觉行为无测试覆盖**：`vite build` 通过 ≠ 交互正确。可见性不变量有单测（`treeUtils.test.js`），
    布局与视口**没有**。
+5. **首帧可见集合必须与初始化同源**：两处若各写一套深度过滤，会重新出现"先全图再收缩"的二次布局，
+   **不报错**，只在笔记多时表现为首屏明显变慢。
 
 ## 禁忌
 
@@ -87,12 +101,16 @@ MindMap 在切到 `/note/...` 时会**卸载**。`MindMap.jsx` 顶部的模块�
 4. **不要手工往 `loadedNodeIds` 塞节点来"显示"它**：应把它的祖先加入 `expandedNodeIds`，让不变量补齐
    （手工塞会重新引入不同步）。
 5. **不要在 `sameGraph` 里比较 `content` / `last_up_time`**：编辑正文会导致返回脑图时无谓重排。
+6. **不要退回「`loadedNodeIds` 为空 ⇒ 渲染全部节点」**：会先全图布局挂载再收缩，笔记多时首屏明显变慢。
+7. **不要给笔记页的 `allNodes` 查询加列投影**：`![[节点]]` 嵌入预览依赖每行的 `content`。
 
 ## 常见修改速查
 
 | 需求 | 改动点 |
 |---|---|
 | 改可见性规则 | `web/src/pages/treeUtils.js` 的纯函数（有单测）+ `MindMap.jsx` 的不变量 effect |
+| 改首帧可见层数 | `treeUtils.collectVisibleIdsToDepth` + `MindMap.jsx` 的 `displayedNotes` 初始分支与初始化 effect（两处必须同源） |
+| 改启动/对账时序 | `electron/main.cjs` 的 `runReconcile` + `MindMap.jsx` 的 `notes:reconciled` 订阅与 `reconcileDone` 建根守卫 |
 | 改展开/折叠行为 | `MindMap.jsx` 的 `expandOneLevel` / `expandAll` / `collapseNode`（记得同步 `expandedNodeIds`） |
 | 改布局算法 | `layoutTree()`（`MindMap.jsx` 顶部纯函数） |
 | 改过渡时长 | 节点位置：`web/src/index.css` 的 `.react-flow__node` transition；路由切换：`web/src/lib/routeTransition.js` + `index.css` 的 `route-anim-*` |
@@ -100,6 +118,11 @@ MindMap 在切到 `/note/...` 时会**卸载**。`MindMap.jsx` 顶部的模块�
 | 改聚焦行为 | 聚焦/全局按钮的 `setFocusNodeId(...)` + 必须配 `centerWhenRendered()` |
 
 ## 修复历史
+
+- **2026-11-20**：启动性能优化。FTS 由「每次启动全量重建」改为按需回填（触发器负责日常同步）；
+  窗口先于全盘对账出现，完成后以 `notes:reconciled` 刷新；首帧只渲染聚焦根前三层（与初始化同源）；
+  脑图列表不再传输正文；编辑器改为按需加载；打开笔记的反链改为正文显示后异步计算。
+  实测 105 篇：主进程初始化约 250ms → 约 40ms，启动包 1.9MB → 约 983KB。
 
 - **2026-11-20**：脑图 ↔ 编辑器加入展开/收缩过渡。打开时脑图淡出、编辑器展开；Esc 退出时编辑器收缩、脑图在定位完成后直接显示。
   返回相机改为「节点可见则不动，离屏则在脑图隐藏时零时长居中」，移除旧的 `100ms + 700ms 平移` 挂载 effect，
