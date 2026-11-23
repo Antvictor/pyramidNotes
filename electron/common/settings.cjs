@@ -44,6 +44,7 @@ const DEFAULT_SETTINGS = {
   showBacklinks: true,
   nodeDisplayMode: 'simple',      // 'simple' | 'rich'
   nodeNameTruncate: false,
+  nodeWidth: 140,                 // 节点卡片固定宽度（px），同时驱动换行估算与省略截断
   plugins: { tasks: true },
   deleteMode: 'trash',        // 'trash' | 'systemTrash' | 'permanent'
   trashRetentionDays: 30,

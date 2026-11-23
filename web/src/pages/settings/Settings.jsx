@@ -24,6 +24,7 @@ const Settings = () => {
     nodeSpacing: "normal",
     nodeDisplayMode: "simple",
     nodeNameTruncate: false,
+    nodeWidth: 140,
     deleteMode: "trash",
     trashRetentionDays: 30,
   });
@@ -117,6 +118,10 @@ const Settings = () => {
   const handleNodeNameTruncateChange = async (value) => {
     setSettings((prev) => ({ ...prev, nodeNameTruncate: value }));
     await window.api.saveSettings({ nodeNameTruncate: value });
+  };
+  const handleNodeWidthChange = async (num) => {
+    setSettings((prev) => ({ ...prev, nodeWidth: num }));
+    await window.api.saveSettings({ nodeWidth: num });
   };
 
   const handleEditorWidthModeChange = async (value) => {
@@ -394,6 +399,35 @@ const Settings = () => {
                   {t(`settings.nodeDisplayMode.${mode}`)}
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div style={rowStyle}>
+            <div>
+              <span style={labelStyle}>{t("settings.nodeWidth.label")}</span>
+              <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 2 }}>
+                {t("settings.nodeWidth.hint")}
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <NumberField
+                min={100}
+                max={240}
+                fallback={140}
+                value={settings.nodeWidth ?? 140}
+                onCommit={handleNodeWidthChange}
+                style={{
+                  width: 56,
+                  padding: "4px 8px",
+                  borderRadius: 6,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-primary)",
+                  color: "var(--text-primary)",
+                  fontSize: 14,
+                  textAlign: "center",
+                }}
+              />
+              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>px</span>
             </div>
           </div>
 

@@ -117,7 +117,7 @@ MindMap 在切到 `/note/...` 时会**卸载**。`MindMap.jsx` 顶部的模块�
 | 改过渡时长 | 节点位置：`web/src/index.css` 的 `.react-flow__node` transition；路由切换：`web/src/lib/routeTransition.js` + `index.css` 的 `route-anim-*` |
 | 改"返回脑图"行为 | `MindMap.jsx` 顶部三个模块级缓存 + `MapEntryCenter` + `ReactFlow` 的 `defaultViewport` / `fitView` |
 | 改聚焦行为 | 聚焦/全局按钮的 `setFocusNodeId(...)` + 必须配 `centerWhenRendered()` |
-| 改节点显示模式 / 固定宽度 / 颜色 | `NodeCustom.jsx`（模式分支、三角图标、色点、预览、名称截断）+ `layoutTree` 的 `opts{nameTruncate,displayMode}`（**估算须与 DOM 同源**）+ `ColorPalette.jsx`（色值单一事实源）+ `MindMap.jsx` 的 `setNodeCategory`/`fetchPreview`/`openColorPicker` |
+| 改节点显示模式 / 固定宽度 / 颜色 / 节点宽度 | `NodeCustom.jsx`（模式分支、三角图标、色点、预览、名称截断、卡片 `maxWidth` 取 `data.nodeWidth`）+ `layoutTree` 的 `opts{nameTruncate,displayMode,nodeWidth}`（`getNodeSize` 的 `nodeMaxWidth` 必须与 DOM 同源）+ `ColorPalette.jsx`（色值单一事实源）+ `MindMap.jsx` 的 `setNodeCategory`/`fetchPreview`/`openColorPicker` 与 `nodeWidth` 设置透传 |
 | 改颜色持久化 | 文件 YAML `category` → `noteSync.normalizeFields/differs` → `initNode.js` 四处列清单 → `notes` 表 `category` 列 → `db.js` 的 `NOTE_LIST_COLUMNS`；改色走 `db.notes.update` + `updateYaml({category})`（合并写） |
 
 ## 修复历史

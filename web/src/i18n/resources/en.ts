@@ -205,6 +205,10 @@ const en = {
       on: 'On',
       off: 'Off',
     },
+    nodeWidth: {
+      label: 'Node width',
+      hint: 'Fixed width of node cards; affects name wrapping and ellipsis truncation (px)',
+    },
     editorWidthMode: {
       label: 'Editor width',
       hint: 'Constrained: fixed editor width; Expanded: editor width follows the full window',

@@ -147,7 +147,7 @@ function NodeCustom({ data }) {
         boxShadow: isSelected ? 'var(--mm-selected-shadow)' : 'var(--mm-card-shadow)',
         cursor: 'pointer',
         minWidth: 40,
-        maxWidth: 140,
+        maxWidth: data.nodeWidth ?? 140,
         textAlign: 'center',
         color: 'var(--mm-node-text)',
         transition: 'border-color 0.2s, box-shadow 0.2s',
@@ -196,7 +196,7 @@ function NodeCustom({ data }) {
         style={{
           padding: '6px 8px',
           ...(truncate
-            ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 120, margin: '0 auto' }
+            ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: (data.nodeWidth ?? 140) - 20, margin: '0 auto' }
             : null),
         }}
         onMouseEnter={onNameEnter}

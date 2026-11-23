@@ -123,7 +123,7 @@ function layoutTree(nodes, rootId, startX, startY, nodeSizes, spacingPreset, opt
       if (m?.width && m?.height) return m;
     }
     const text = `${node?.name ?? ""}`;
-    const nodeMaxWidth = 140, padX = 16, padY = 16;
+    const nodeMaxWidth = opts.nodeWidth || 140, padX = 16, padY = 16;
     const width = Math.min(nodeMaxWidth, Math.max(30, 30 + text.length * 8));
     // 丰富模式顶部多一行（色点/预览图标）
     const richPad = opts.displayMode === 'rich' ? 18 : 0;
@@ -340,6 +340,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const [deleteMode, setDeleteMode] = useState('trash');
   const [nodeDisplayMode, setNodeDisplayMode] = useState('simple');
   const [nodeNameTruncate, setNodeNameTruncate] = useState(false);
+  const [nodeWidth, setNodeWidth] = useState(140);
   const [colorPicker, setColorPicker] = useState({ show: false, x: 0, y: 0, nodeId: null });
   const focusNodeId = useMindMapViewStore((s) => s.focusNodeId);
   const setFocusNodeId = useMindMapViewStore((s) => s.setFocusNodeId);
@@ -815,6 +816,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
         if (s?.deleteMode) setDeleteMode(s.deleteMode);
         if (s?.nodeDisplayMode) setNodeDisplayMode(s.nodeDisplayMode);
         if (s?.nodeNameTruncate !== undefined) setNodeNameTruncate(s.nodeNameTruncate);
+        if (s?.nodeWidth) setNodeWidth(s.nodeWidth);
       });
     }
     // 首帧：若有缓存先立即渲染，避免返回脑图时的空白闪屏
@@ -910,6 +912,9 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       }
       if (newSettings.nodeNameTruncate !== undefined) {
         setNodeNameTruncate(newSettings.nodeNameTruncate);
+      }
+      if (newSettings.nodeWidth) {
+        setNodeWidth(newSettings.nodeWidth);
       }
       if (newSettings.storagePath) {
         console.log("Settings changed, reloading notes for storagePath:", newSettings.storagePath);
@@ -1011,7 +1016,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     const preset = SPACING_PRESETS[nodeSpacing] || SPACING_PRESETS.normal;
     // 复用上一轮实测尺寸，使本布局与 LayoutOnMeasured 的结果一致，
     // 避免“估算布局 → 实测再重排”造成的二次跳动
-    const posMap = layoutTree(displayedNotes, rootId, 50, 50, measuredSizesCache, preset, { nameTruncate: nodeNameTruncate, displayMode: nodeDisplayMode });
+    const posMap = layoutTree(displayedNotes, rootId, 50, 50, measuredSizesCache, preset, { nameTruncate: nodeNameTruncate, displayMode: nodeDisplayMode, nodeWidth });
 
     const displayedIds = new Set(displayedNotes.map(n => n.id));
     const descCountMap = new Map();
@@ -1045,6 +1050,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           lang: i18n.language,
           displayMode: nodeDisplayMode,
           nameTruncate: nodeNameTruncate,
+          nodeWidth,
           onSetCategory: setNodeCategory,
           onOpenColor: openColorPicker,
           fetchPreview,
@@ -1111,6 +1117,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           p.data.category === n.data.category &&
           p.data.displayMode === n.data.displayMode &&
           p.data.nameTruncate === n.data.nameTruncate &&
+          p.data.nodeWidth === n.data.nodeWidth &&
           p.position.x === n.position.x &&
           p.position.y === n.position.y
         ) return p;
@@ -1133,7 +1140,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       ) return prev;
       return initEdges;
     });
-  }, [displayedNotes, setEdges, setNodes, allNotesNodeMap, loadedNodeIds, expandedNodeIds, expandOneLevel, expandAll, collapseNode, selectedNodeId, i18n.language, nodeDisplayMode, nodeNameTruncate, setNodeCategory, openColorPicker, fetchPreview]);
+  }, [displayedNotes, setEdges, setNodes, allNotesNodeMap, loadedNodeIds, expandedNodeIds, expandOneLevel, expandAll, collapseNode, selectedNodeId, i18n.language, nodeDisplayMode, nodeNameTruncate, nodeWidth, setNodeCategory, openColorPicker, fetchPreview]);
 
   // 添加连接
   const onConnect = useCallback(
