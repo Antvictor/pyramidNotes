@@ -34,6 +34,7 @@ import {
 } from "@/lib/routeTransition";
 import { useMindMapViewStore } from "@/stores/mindMapViewStore";
 import ContextMenu from "./note/ContextMenu/ContextMenu";
+import ColorPalette from "./note/ColorPalette";
 import OpenPrompt from "./commons/OpenPrompt";
 import { PermissionDialog } from "@/components/ui/permission-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -85,6 +86,7 @@ function sameGraph(a, b) {
   for (const n of b) {
     const p = byId.get(n.id);
     if (!p || p.top !== n.top || p.left !== n.left || p.name !== n.name
+      || (p.category ?? null) !== (n.category ?? null)
       || (Number(n.sort) || 0) !== (Number(p.sort) || 0)) return false;
   }
   return true;
@@ -104,7 +106,7 @@ function sameGraph(a, b) {
  * @param {Map} nodeSizes - ReactFlow 测量的节点尺寸 Map<id, {width, height}>
  * @param {Object} spacingPreset - 间距预设 { gapBase, hGap }
  */
-function layoutTree(nodes, rootId, startX, startY, nodeSizes, spacingPreset) {
+function layoutTree(nodes, rootId, startX, startY, nodeSizes, spacingPreset, opts = {}) {
   const { gapBase, hGap: H_GAP } = spacingPreset || SPACING_PRESETS.normal;
 
   const nodeMap = new Map();
@@ -122,11 +124,18 @@ function layoutTree(nodes, rootId, startX, startY, nodeSizes, spacingPreset) {
     }
     const text = `${node?.name ?? ""}`;
     const nodeMaxWidth = 140, padX = 16, padY = 16;
+    const width = Math.min(nodeMaxWidth, Math.max(30, 30 + text.length * 8));
+    // 丰富模式顶部多一行（色点/预览图标）
+    const richPad = opts.displayMode === 'rich' ? 18 : 0;
+    // 固定宽度开启：与 DOM 的 nowrap 一致，强制单行
+    if (opts.nameTruncate) {
+      return { width, height: padY + 24 + richPad };
+    }
     const charsPerLine = Math.max(1, Math.floor((nodeMaxWidth - padX) / 8));
     const lines = Math.max(1, Math.ceil(text.length / charsPerLine));
     return {
-      width: Math.min(nodeMaxWidth, Math.max(30, 30 + text.length * 8)),
-      height: padY + 24 * lines,
+      width,
+      height: padY + 24 * lines + richPad,
     };
   };
 
@@ -329,6 +338,9 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const [searchParams] = useSearchParams();
   const [nodeSpacing, setNodeSpacing] = useState('normal');
   const [deleteMode, setDeleteMode] = useState('trash');
+  const [nodeDisplayMode, setNodeDisplayMode] = useState('simple');
+  const [nodeNameTruncate, setNodeNameTruncate] = useState(false);
+  const [colorPicker, setColorPicker] = useState({ show: false, x: 0, y: 0, nodeId: null });
   const focusNodeId = useMindMapViewStore((s) => s.focusNodeId);
   const setFocusNodeId = useMindMapViewStore((s) => s.setFocusNodeId);
   const loadedNodeIds = useMindMapViewStore((s) => s.loadedNodeIds);
@@ -491,6 +503,30 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     setSelectedNode({ id, name });
     setPendingRevealNodeId(id);
   }, [allNotesNodeMap, focusNodeId, notesData, setSelectedNode]);
+
+  // 设置/清除节点颜色：写 state（即时刷新）+ DB + YAML（合并写，只动 category）
+  const setNodeCategory = useCallback(async (id, category) => {
+    const node = notesData?.find((n) => n.id === id);
+    if (!node) return;
+    const next = category || null;
+    setNotesData((nds) => (nds ? nds.map((n) => (n.id === id ? { ...n, category: next } : n)) : nds));
+    await db.notes.update({ id }, { category: next });
+    await window.api.updateYaml(`${id}-${node.name}.md`, { category: next });
+  }, [notesData]);
+
+  const openColorPicker = useCallback((nodeId, x, y) => {
+    setColorPicker({ show: true, x, y, nodeId });
+  }, []);
+
+  // 预览：单条查正文（不给列表查询加 content，遵守 MINDMAP_VIEW.md 禁忌#7）
+  const fetchPreview = useCallback(async (id) => {
+    const rows = await db.notes.select({ id }, '', '', { columns: 'content' });
+    return rows?.[0]?.content ?? '';
+  }, []);
+
+  const closeColorPicker = useCallback(() => {
+    setColorPicker((p) => ({ ...p, show: false }));
+  }, []);
 
   // 首次加载或聚焦切换时加载前三层；数据变更/导航返回不重置
   useEffect(() => {
@@ -777,6 +813,8 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       window.api.getSettings().then((s) => {
         if (s?.nodeSpacing) setNodeSpacing(s.nodeSpacing);
         if (s?.deleteMode) setDeleteMode(s.deleteMode);
+        if (s?.nodeDisplayMode) setNodeDisplayMode(s.nodeDisplayMode);
+        if (s?.nodeNameTruncate !== undefined) setNodeNameTruncate(s.nodeNameTruncate);
       });
     }
     // 首帧：若有缓存先立即渲染，避免返回脑图时的空白闪屏
@@ -866,6 +904,12 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     return window.api.onSettingsChanged((newSettings) => {
       if (newSettings.nodeSpacing) {
         setNodeSpacing(newSettings.nodeSpacing);
+      }
+      if (newSettings.nodeDisplayMode) {
+        setNodeDisplayMode(newSettings.nodeDisplayMode);
+      }
+      if (newSettings.nodeNameTruncate !== undefined) {
+        setNodeNameTruncate(newSettings.nodeNameTruncate);
       }
       if (newSettings.storagePath) {
         console.log("Settings changed, reloading notes for storagePath:", newSettings.storagePath);
@@ -967,7 +1011,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     const preset = SPACING_PRESETS[nodeSpacing] || SPACING_PRESETS.normal;
     // 复用上一轮实测尺寸，使本布局与 LayoutOnMeasured 的结果一致，
     // 避免“估算布局 → 实测再重排”造成的二次跳动
-    const posMap = layoutTree(displayedNotes, rootId, 50, 50, measuredSizesCache, preset);
+    const posMap = layoutTree(displayedNotes, rootId, 50, 50, measuredSizesCache, preset, { nameTruncate: nodeNameTruncate, displayMode: nodeDisplayMode });
 
     const displayedIds = new Set(displayedNotes.map(n => n.id));
     const descCountMap = new Map();
@@ -999,6 +1043,11 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           // 而不是靠订阅 context（那样任何选中变化都会重渲染整图）
           isSelected: selectedNodeId === n.id,
           lang: i18n.language,
+          displayMode: nodeDisplayMode,
+          nameTruncate: nodeNameTruncate,
+          onSetCategory: setNodeCategory,
+          onOpenColor: openColorPicker,
+          fetchPreview,
           onExpandOneLevel: expandOneLevel,
           onExpandAll: expandAll,
           onCollapseNode: collapseNode,
@@ -1059,6 +1108,9 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           p.data.isExpanded === n.data.isExpanded &&
           p.data.isSelected === n.data.isSelected &&
           p.data.lang === n.data.lang &&
+          p.data.category === n.data.category &&
+          p.data.displayMode === n.data.displayMode &&
+          p.data.nameTruncate === n.data.nameTruncate &&
           p.position.x === n.position.x &&
           p.position.y === n.position.y
         ) return p;
@@ -1081,7 +1133,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       ) return prev;
       return initEdges;
     });
-  }, [displayedNotes, setEdges, setNodes, allNotesNodeMap, loadedNodeIds, expandedNodeIds, expandOneLevel, expandAll, collapseNode, selectedNodeId, i18n.language]);
+  }, [displayedNotes, setEdges, setNodes, allNotesNodeMap, loadedNodeIds, expandedNodeIds, expandOneLevel, expandAll, collapseNode, selectedNodeId, i18n.language, nodeDisplayMode, nodeNameTruncate, setNodeCategory, openColorPicker, fetchPreview]);
 
   // 添加连接
   const onConnect = useCallback(
@@ -1738,6 +1790,13 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           requestDeleteNode={requestDeleteNode}
           onRequestMoveNode={requestMoveNode}
           onRequestSwapNode={requestSwapNode}
+          onRequestSetCategory={openColorPicker}
+        />
+        <ColorPalette
+          picker={colorPicker}
+          onPick={setNodeCategory}
+          onClear={(id) => setNodeCategory(id, null)}
+          onClose={closeColorPicker}
         />
         <OpenPrompt
           visible={visible}

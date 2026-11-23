@@ -22,6 +22,8 @@ const Settings = () => {
     systemFontSize: 16,
     noteFontSize: 16,
     nodeSpacing: "normal",
+    nodeDisplayMode: "simple",
+    nodeNameTruncate: false,
     deleteMode: "trash",
     trashRetentionDays: 30,
   });
@@ -107,6 +109,14 @@ const Settings = () => {
   const handleNodeSpacingChange = async (value) => {
     setSettings((prev) => ({ ...prev, nodeSpacing: value }));
     await window.api.saveSettings({ nodeSpacing: value });
+  };
+  const handleNodeDisplayModeChange = async (value) => {
+    setSettings((prev) => ({ ...prev, nodeDisplayMode: value }));
+    await window.api.saveSettings({ nodeDisplayMode: value });
+  };
+  const handleNodeNameTruncateChange = async (value) => {
+    setSettings((prev) => ({ ...prev, nodeNameTruncate: value }));
+    await window.api.saveSettings({ nodeNameTruncate: value });
   };
 
   const handleEditorWidthModeChange = async (value) => {
@@ -323,35 +333,6 @@ const Settings = () => {
             </div>
           </div>
 
-          <div style={{ ...rowStyle, borderBottom: "none" }}>
-            <div>
-              <span style={labelStyle}>{t("settings.noteFontSize.label")}</span>
-              <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 2 }}>
-                {t("settings.noteFontSize.hint")}
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <NumberField
-                min={12}
-                max={32}
-                fallback={16}
-                value={settings.noteFontSize ?? 16}
-                onCommit={handleNoteFontSizeChange}
-                style={{
-                  width: 56,
-                  padding: "4px 8px",
-                  borderRadius: 6,
-                  border: "1px solid var(--border)",
-                  background: "var(--bg-primary)",
-                  color: "var(--text-primary)",
-                  fontSize: 14,
-                  textAlign: "center",
-                }}
-              />
-              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>px</span>
-            </div>
-          </div>
-
           <div style={rowStyle}>
             <div>
               <span style={labelStyle}>{t("settings.nodeSpacing.label")}</span>
@@ -384,27 +365,71 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* Heading ratio preview */}
-          <div style={{
-            marginTop: 12,
-            padding: "10px 12px",
-            background: "var(--bg-secondary)",
-            borderRadius: 6,
-            fontSize: 12,
-            color: "var(--text-secondary)",
-            lineHeight: 1.8,
-          }}>
-            <div style={{ fontWeight: 600, marginBottom: 4, color: "var(--text-primary)" }}>
-              {t("settings.headingRatios.title")}
-            </div>
-            {["h1", "h2", "h3", "h4", "h5", "h6"].map((h, i) => (
-              <div key={h}>
-                {t(`settings.headingRatios.${h}`)}
-                <span style={{ color: "var(--link-color)" }}>
-                  {' '}({((settings.noteFontSize ?? 16) * [2, 1.75, 1.5, 1.25, 1.125, 1][i]).toFixed(1)}px)
-                </span>
+          <div style={rowStyle}>
+            <div>
+              <span style={labelStyle}>{t("settings.nodeDisplayMode.label")}</span>
+              <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 2 }}>
+                {t("settings.nodeDisplayMode.hint")}
               </div>
-            ))}
+            </div>
+            <div style={controlStyle}>
+              {["simple", "rich"].map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => handleNodeDisplayModeChange(mode)}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: 6,
+                    border: "1px solid var(--border)",
+                    background:
+                      settings.nodeDisplayMode === mode
+                        ? "var(--link-color)"
+                        : "var(--bg-primary)",
+                    color:
+                      settings.nodeDisplayMode === mode ? "var(--link-color-contrast)" : "var(--text-primary)",
+                    cursor: "pointer",
+                    fontSize: 13,
+                  }}
+                >
+                  {t(`settings.nodeDisplayMode.${mode}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ ...rowStyle, borderBottom: "none" }}>
+            <div>
+              <span style={labelStyle}>{t("settings.nodeNameTruncate.label")}</span>
+              <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 2 }}>
+                {t("settings.nodeNameTruncate.hint")}
+              </div>
+            </div>
+            <div style={controlStyle}>
+              {[
+                { label: t("settings.nodeNameTruncate.on"), value: true },
+                { label: t("settings.nodeNameTruncate.off"), value: false },
+              ].map(({ label, value }) => (
+                <button
+                  key={label}
+                  onClick={() => handleNodeNameTruncateChange(value)}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: 6,
+                    border: "1px solid var(--border)",
+                    background:
+                      settings.nodeNameTruncate === value
+                        ? "var(--link-color)"
+                        : "var(--bg-primary)",
+                    color:
+                      settings.nodeNameTruncate === value ? "var(--link-color-contrast)" : "var(--text-primary)",
+                    cursor: "pointer",
+                    fontSize: 13,
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -446,7 +471,7 @@ const Settings = () => {
             </div>
           </div>
 
-          <div style={{ ...rowStyle, borderBottom: "none" }}>
+          <div style={rowStyle}>
             <div>
               <span style={labelStyle}>{t("settings.backlinks.label")}</span>
               <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 2 }}>
@@ -479,6 +504,58 @@ const Settings = () => {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div style={{ ...rowStyle, borderBottom: "none" }}>
+            <div>
+              <span style={labelStyle}>{t("settings.noteFontSize.label")}</span>
+              <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 2 }}>
+                {t("settings.noteFontSize.hint")}
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <NumberField
+                min={12}
+                max={32}
+                fallback={16}
+                value={settings.noteFontSize ?? 16}
+                onCommit={handleNoteFontSizeChange}
+                style={{
+                  width: 56,
+                  padding: "4px 8px",
+                  borderRadius: 6,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-primary)",
+                  color: "var(--text-primary)",
+                  fontSize: 14,
+                  textAlign: "center",
+                }}
+              />
+              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>px</span>
+            </div>
+          </div>
+
+          {/* Heading ratio preview */}
+          <div style={{
+            marginTop: 12,
+            padding: "10px 12px",
+            background: "var(--bg-secondary)",
+            borderRadius: 6,
+            fontSize: 12,
+            color: "var(--text-secondary)",
+            lineHeight: 1.8,
+          }}>
+            <div style={{ fontWeight: 600, marginBottom: 4, color: "var(--text-primary)" }}>
+              {t("settings.headingRatios.title")}
+            </div>
+            {["h1", "h2", "h3", "h4", "h5", "h6"].map((h, i) => (
+              <div key={h}>
+                {t(`settings.headingRatios.${h}`)}
+                <span style={{ color: "var(--link-color)" }}>
+                  {' '}({((settings.noteFontSize ?? 16) * [2, 1.75, 1.5, 1.25, 1.125, 1][i]).toFixed(1)}px)
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 

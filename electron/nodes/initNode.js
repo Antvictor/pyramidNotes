@@ -25,27 +25,27 @@ async function initNode() {
     let trashRestored = 0;
     if (trashNotes.length) {
         const insertTrash = db.prepare(`
-            INSERT OR IGNORE INTO notes (id, name, content, alias, top, "left", last_up_time, "delete", sort)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+            INSERT OR IGNORE INTO notes (id, name, content, alias, top, "left", last_up_time, "delete", sort, category)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
         `);
         db.transaction(() => {
             for (const n of trashNotes) {
-                const info = insertTrash.run(n.id, n.name, n.content, n.alias, n.top, n.left, n.lastUpTime ?? now, n.sort);
+                const info = insertTrash.run(n.id, n.name, n.content, n.alias, n.top, n.left, n.lastUpTime ?? now, n.sort, n.category);
                 trashRestored += info.changes;
             }
         })();
     }
 
     // 读到刚补回的回收站行，供对账沿 top 链上溯
-    const rows = db.prepare('SELECT id, name, alias, top, "left", content, "delete", sort FROM notes').all();
+    const rows = db.prepare('SELECT id, name, alias, top, "left", content, "delete", sort, category FROM notes').all();
     const plan = planReconcile({ notes, skipped, rows });
 
     const insertStmt = db.prepare(`
-        INSERT INTO notes (id, name, content, alias, top, "left", last_up_time, "delete", sort)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)
+        INSERT INTO notes (id, name, content, alias, top, "left", last_up_time, "delete", sort, category)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
     `);
     const updateStmt = db.prepare(`
-        UPDATE notes SET name = ?, alias = ?, top = ?, "left" = ?, content = ?, "delete" = 0, last_up_time = ?, sort = ?
+        UPDATE notes SET name = ?, alias = ?, top = ?, "left" = ?, content = ?, "delete" = 0, last_up_time = ?, sort = ?, category = ?
         WHERE id = ?
     `);
     const deleteStmt = db.prepare('DELETE FROM notes WHERE id = ?');
@@ -53,10 +53,10 @@ async function initNode() {
     // 单事务：避免部分写入留下文件与库不一致的中间态
     db.transaction(() => {
         for (const n of plan.inserts) {
-            insertStmt.run(n.id, n.name, n.content, n.alias, n.top, n.left, now, n.sort);
+            insertStmt.run(n.id, n.name, n.content, n.alias, n.top, n.left, now, n.sort, n.category);
         }
         for (const n of plan.updates) {
-            updateStmt.run(n.name, n.alias, n.top, n.left, n.content, now, n.sort, n.id);
+            updateStmt.run(n.name, n.alias, n.top, n.left, n.content, now, n.sort, n.category, n.id);
         }
         for (const id of plan.removes) {
             deleteStmt.run(id);

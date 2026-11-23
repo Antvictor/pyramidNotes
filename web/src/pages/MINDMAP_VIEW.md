@@ -103,6 +103,7 @@ MindMap 在切到 `/note/...` 时会**卸载**。`MindMap.jsx` 顶部的模块�
 5. **不要在 `sameGraph` 里比较 `content` / `last_up_time`**：编辑正文会导致返回脑图时无谓重排。
 6. **不要退回「`loadedNodeIds` 为空 ⇒ 渲染全部节点」**：会先全图布局挂载再收缩，笔记多时首屏明显变慢。
 7. **不要给笔记页的 `allNodes` 查询加列投影**：`![[节点]]` 嵌入预览依赖每行的 `content`。
+8. **节点浮窗不要用卡片内 `position:absolute`**：卡片 `overflow:hidden` 且节点处于 ReactFlow 的 `transform`（随缩放）之下，会裁剪/变形。名字全名浮窗与正文预览浮窗**必须** `createPortal` 到 `document.body` + `position:fixed`。
 
 ## 常见修改速查
 
@@ -116,8 +117,16 @@ MindMap 在切到 `/note/...` 时会**卸载**。`MindMap.jsx` 顶部的模块�
 | 改过渡时长 | 节点位置：`web/src/index.css` 的 `.react-flow__node` transition；路由切换：`web/src/lib/routeTransition.js` + `index.css` 的 `route-anim-*` |
 | 改"返回脑图"行为 | `MindMap.jsx` 顶部三个模块级缓存 + `MapEntryCenter` + `ReactFlow` 的 `defaultViewport` / `fitView` |
 | 改聚焦行为 | 聚焦/全局按钮的 `setFocusNodeId(...)` + 必须配 `centerWhenRendered()` |
+| 改节点显示模式 / 固定宽度 / 颜色 | `NodeCustom.jsx`（模式分支、三角图标、色点、预览、名称截断）+ `layoutTree` 的 `opts{nameTruncate,displayMode}`（**估算须与 DOM 同源**）+ `ColorPalette.jsx`（色值单一事实源）+ `MindMap.jsx` 的 `setNodeCategory`/`fetchPreview`/`openColorPicker` |
+| 改颜色持久化 | 文件 YAML `category` → `noteSync.normalizeFields/differs` → `initNode.js` 四处列清单 → `notes` 表 `category` 列 → `db.js` 的 `NOTE_LIST_COLUMNS`；改色走 `db.notes.update` + `updateYaml({category})`（合并写） |
 
 ## 修复历史
+
+- **2026-11-23**：节点新增「简约/丰富」显示模式、颜色分类 `category`、可选固定宽度截断。
+  简约模式展开/折叠改实心三角（▶/▶▶/▼）；丰富模式加彩色圆点（7 色，点圆点或右键「设置颜色」改色）与正文预览图标（hover 1.2s 显示前 200 字）。
+  `category` 贯通 YAML→`noteSync`→`initNode` 四处列清单→`notes` 表列→`NOTE_LIST_COLUMNS`；`initNode` 的 INSERT/UPDATE 是显式列清单，加字段必须逐处改，否则每次启动都对账不到。
+  浮窗改用 `createPortal`→`body`（卡内 absolute 会被 `overflow:hidden` 与 ReactFlow transform 裁剪/缩放）。
+  `layoutTree` 增 `opts{nameTruncate,displayMode}`，固定宽度时按单行估算，维持两次布局同源。
 
 - **2026-11-20**：启动性能优化。FTS 由「每次启动全量重建」改为按需回填（触发器负责日常同步）；
   窗口先于全盘对账出现，完成后以 `notes:reconciled` 刷新；首帧只渲染聚焦根前三层（与初始化同源）；

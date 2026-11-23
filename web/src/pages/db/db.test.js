@@ -28,7 +28,7 @@ describe("db.notes.select", () => {
   it("projects only the requested columns (no content)", async () => {
     await db.notes.select("", "", "", { columns: NOTE_LIST_COLUMNS });
     expect(window.api.dbQuery).toHaveBeenCalledWith(
-      'SELECT id, name, alias, top, "left", sort FROM notes WHERE "delete" = 0 ORDER BY "sort" ASC, rowid ASC',
+      'SELECT id, name, alias, top, "left", sort, category FROM notes WHERE "delete" = 0 ORDER BY "sort" ASC, rowid ASC',
       [],
     );
   });

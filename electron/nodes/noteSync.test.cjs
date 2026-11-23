@@ -46,6 +46,27 @@ test('normalizeFields 把 sort 规整为整数，缺省为 0', () => {
   assert.equal(normalizeFields({ id: 'a', sort: 'x' }).sort, 0);
 });
 
+test('normalizeFields 解析并规整 category', () => {
+  assert.equal(normalizeFields({ id: 'a', category: 'gray' }).category, 'gray');
+  assert.equal(normalizeFields({ id: 'a', category: '' }).category, null);
+  assert.equal(normalizeFields({ id: 'a' }).category, null);
+});
+
+test('planReconcile 在 category 不一致时更新，一致时不更新', () => {
+  const diff = planReconcile({
+    notes: [rootNote(), note({ id: 'n1', top: '1', category: 'gray' })],
+    rows: [rootRow(), row({ id: 'n1', top: '1', category: null })],
+  });
+  assert.deepEqual(diff.updates.map((n) => n.id), ['n1']);
+  assert.equal(diff.updates[0].category, 'gray');
+
+  const same = planReconcile({
+    notes: [rootNote(), note({ id: 'n1', top: '1', category: 'gray' })],
+    rows: [rootRow(), row({ id: 'n1', top: '1', category: 'gray' })],
+  });
+  assert.deepEqual(same.updates, []);
+});
+
 test('isProtectedRoot 同时认定 id 为 1 与 top 为 0 的行', () => {
   assert.equal(ROOT_ID, '1');
   assert.equal(isProtectedRoot({ id: '1', top: null }), true);

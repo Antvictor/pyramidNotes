@@ -225,19 +225,30 @@ export default function ShortcutsModal({ open, onOpenChange }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent style={{ maxWidth: 500 }}>
+      <DialogContent
+        style={{
+          maxWidth: 500,
+          maxHeight: "85vh",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{t("shortcuts.title")}</DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList style={{ width: "100%", marginBottom: 16 }}>
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}
+        >
+          <TabsList style={{ width: "100%", marginBottom: 16, flexShrink: 0 }}>
             <TabsTrigger value="node" style={{ flex: 1 }}>{t("shortcuts.tabs.node")}</TabsTrigger>
             <TabsTrigger value="note" style={{ flex: 1 }}>{t("shortcuts.tabs.note")}</TabsTrigger>
             <TabsTrigger value="global" style={{ flex: 1 }}>{t("shortcuts.tabs.global")}</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="node">
+          <TabsContent value="node" style={{ overflowY: "auto", minHeight: 0, flex: 1, paddingRight: 6 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {Object.entries(shortcuts.node).map(([key, value]) => (
                 <div
@@ -258,7 +269,7 @@ export default function ShortcutsModal({ open, onOpenChange }) {
             </div>
           </TabsContent>
 
-          <TabsContent value="global">
+          <TabsContent value="global" style={{ overflowY: "auto", minHeight: 0, flex: 1, paddingRight: 6 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {Object.entries(shortcuts.global).map(([key, value]) => (
                 <div
@@ -279,7 +290,7 @@ export default function ShortcutsModal({ open, onOpenChange }) {
             </div>
           </TabsContent>
 
-          <TabsContent value="note">
+          <TabsContent value="note" style={{ overflowY: "auto", minHeight: 0, flex: 1, paddingRight: 6 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {Object.entries(shortcuts.note).map(([key, value]) => (
                 <div
@@ -307,6 +318,7 @@ export default function ShortcutsModal({ open, onOpenChange }) {
             justifyContent: "space-between",
             marginTop: 16,
             paddingTop: 16,
+            flexShrink: 0,
             borderTop: "1px solid var(--border)",
           }}
         >

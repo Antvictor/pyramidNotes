@@ -42,6 +42,8 @@ const DEFAULT_SETTINGS = {
   },
   editorWidthMode: 'constrained',
   showBacklinks: true,
+  nodeDisplayMode: 'simple',      // 'simple' | 'rich'
+  nodeNameTruncate: false,
   plugins: { tasks: true },
   deleteMode: 'trash',        // 'trash' | 'systemTrash' | 'permanent'
   trashRetentionDays: 30,

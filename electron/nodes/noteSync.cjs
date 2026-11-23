@@ -31,6 +31,7 @@ function normalizeFields(data) {
     top: toStr(d.top),
     left: toStr(d.left),
     sort: toSort(d.sort),
+    category: toStr(d.category),
   };
 }
 
@@ -119,6 +120,7 @@ function differs(row, note) {
     || (row.top ?? null) !== note.top
     || (row.left ?? null) !== note.left
     || (row.content ?? null) !== note.content
+    || (row.category ?? null) !== (note.category ?? null)
     || Number(row.sort ?? 0) !== Number(note.sort ?? 0);
 }
 

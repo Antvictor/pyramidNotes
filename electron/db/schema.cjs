@@ -10,6 +10,9 @@ function migrateNotes(notesDb) {
   if (!cols.includes('sort')) {
     notesDb.exec('ALTER TABLE notes ADD COLUMN sort INTEGER DEFAULT 0');
   }
+  if (!cols.includes('category')) {
+    notesDb.exec('ALTER TABLE notes ADD COLUMN category TEXT');
+  }
   notesDb.exec('DROP TABLE IF EXISTS deleted_notes');
 }
 
