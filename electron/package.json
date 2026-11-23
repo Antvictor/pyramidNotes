@@ -1,7 +1,7 @@
 {
   "name": "pyramid-notes",
   "private": true,
-  "version": "1.0.0-alpha.30",
+  "version": "1.0.0-alpha.31",
   "description": "Pyramid Notes - Mind Map Note Taking",
   "author": "AntVictor",
   "type": "commonjs",
