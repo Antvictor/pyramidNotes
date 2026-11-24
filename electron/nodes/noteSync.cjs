@@ -1,5 +1,4 @@
 const fs = require('fs');
-const path = require('path');
 const matter = require('gray-matter');
 const yaml = require('yaml');
 const { ROOT_TOP } = require('../ipc/trashUtils.cjs');
@@ -22,6 +21,13 @@ function toSort(value) {
   return Number.isFinite(n) ? Math.trunc(n) : 0;
 }
 
+// iCloud「优化 Mac 存储」会驱逐文件内容：inode 元数据仍在，但正文需联网下载。
+// 这种 dataless 文件 readFile 会永久阻塞（open 成功、read 不返回），把主线程卡死、窗口永不显示。
+// stat 只读元数据、不触发下载；大小 > 0 且占用 0 块即为 dataless。仅 macOS 有该语义。
+function isDataless(stat) {
+  return process.platform === 'darwin' && stat.blocks === 0 && stat.size > 0;
+}
+
 function normalizeFields(data) {
   const d = data && typeof data === 'object' ? data : {};
   return {
@@ -35,76 +41,13 @@ function normalizeFields(data) {
   };
 }
 
-function scanNoteFiles(storagePath) {
-  const notes = [];
-  const skipped = [];
-  let names;
-  try {
-    names = fs.readdirSync(storagePath);
-  } catch (error) {
-    return { notes, skipped: [{ file: null, reason: `readdir failed: ${error.message}` }] };
-  }
-  // 排序：多份文件共用同一 id 时，胜出者必须确定，否则连续两次启动会来回翻转
-  names.sort();
-  for (const file of names) {
-    if (path.extname(file) !== '.md') continue;
-    try {
-      const parsed = matter(fs.readFileSync(path.join(storagePath, file), 'utf-8'));
-      const fields = normalizeFields(parsed.data);
-      if (!fields.id) {
-        skipped.push({ file, reason: 'frontmatter 缺少 id' });
-        continue;
-      }
-      notes.push({ ...fields, content: parsed.content, file });
-    } catch (error) {
-      skipped.push({ file, reason: error.message });
-    }
-  }
-  return { notes, skipped };
-}
-
-// 回收站文件仅存在于 .delete/：DB 重建后需要据此补回 delete=1 行，
-// 否则回收站 UI 为空，且仅被回收站引用的附件会被当作孤儿清理。
-function scanTrashFiles(storagePath) {
-  const dir = path.join(storagePath, '.delete');
-  const notes = [];
-  let names;
-  try {
-    names = fs.readdirSync(dir);
-  } catch {
-    return notes;
-  }
-  // 与 scanNoteFiles 一致：文件名排序保证多份同 id 时结果确定
-  names.sort();
-  for (const file of names) {
-    if (path.extname(file) !== '.md') continue;
-    try {
-      const filePath = path.join(dir, file);
-      const parsed = matter(fs.readFileSync(filePath, 'utf-8'));
-      const fields = normalizeFields(parsed.data);
-      if (!fields.id) continue;
-      const stat = fs.statSync(filePath);
-      notes.push({
-        ...fields,
-        content: parsed.content,
-        file,
-        lastUpTime: stat.mtime.toISOString(),
-      });
-    } catch {
-      // 无法解析的回收站文件跳过，不影响启动
-    }
-  }
-  return notes;
-}
-
 // 根行保护：不看 top 单字段，因为历史 bug 已把根行 top 写成 NULL
 function isProtectedRoot(row) {
   return !!row && (String(row.id) === ROOT_ID || row.top === ROOT_TOP);
 }
 
 // 把修正后的 top 写回文件，保留其余 frontmatter 与正文。
-// 与 file.cjs 的 updateYaml 同语义：那里是渲染侧改一个节点，这里是启动对账修正一批陈旧文件。
-// 不回写的话，文件里那个不可达的旧上级会每次启动都被重新判一次（幂等但一直在刷告警）。
+// 只用于「已成功读到」的可读文件（重挂的对象），不涉及会阻塞的 dataless 文件。
 function writeNoteTop(filePath, top) {
   const parsed = matter(fs.readFileSync(filePath, 'utf-8'));
   const merged = {
@@ -124,50 +67,54 @@ function differs(row, note) {
     || Number(row.sort ?? 0) !== Number(note.sort ?? 0);
 }
 
-// 纯函数：输入文件侧解析结果 + DB 行，输出待执行的增/改/删与告警，不碰 db
-function planReconcile({ notes, skipped = [], rows }) {
+// 纯函数：输入「扫描事实 + DB 快照」，输出「增/改 / 可用性标记 / 重挂 / 告警」，不碰 db、不读文件。
+// 事实来自 Repository.scanNotes：
+//   notes      —— 可读且新增/变更（含 content、mtime、size）
+//   unchanged  —— 可读且 mtime+size 未变（未读正文，视为 available）
+//   unreadable —— 存在但读不出（dataless/超时/权限…），带 reason
+// 对账「不再硬删」：目录里没有的行一律保留，标记 availability=missing（或 unreadable），交给用户在动作时处置。
+function planReconcile({
+  notes, unchanged = [], unreadable = [], skipped = [], rows, storageUnavailable = false,
+}) {
   const warn = [];
+
+  // 浅拷贝文件侧节点，避免就地修改输入（纯函数）
   const fileById = new Map();
   for (const note of notes) {
     if (fileById.has(note.id)) warn.push(`多份文件共用 id: ${note.id}`);
-    fileById.set(note.id, note);
+    fileById.set(note.id, { ...note, delete: 0 });
   }
+  const unchangedIds = new Set(unchanged.map((u) => u.id));
+  const unreadableById = new Map();
+  for (const u of unreadable) unreadableById.set(u.id, u.reason || 'io_error');
+
   const rowById = new Map();
   for (const row of rows) {
     if (rowById.has(row.id)) warn.push(`DB 重复 id: ${row.id}`);
     rowById.set(row.id, row);
   }
 
-  const survivors = [...fileById.values()].map((n) => ({ ...n, delete: 0 }));
-
-  // 反向：delete=0 但目录里没有对应文件 → 硬删。目录里没有任何 .md 时整体跳过
-  const orphans = rows.filter(
-    (r) => Number(r.delete) === 0 && !isProtectedRoot(r) && !fileById.has(r.id),
-  );
-  let removes = [];
-  if (survivors.length === 0) {
-    if (orphans.length) warn.push('目录中没有任何 .md，跳过删除阶段（防止存储盘未挂载/半同步时清库）');
-  } else {
-    removes = orphans.map((r) => r.id);
+  // 存储不可信（目录空/读不动）：不标记任何缺失、不重挂，只保证不破坏
+  if (storageUnavailable) {
+    warn.push('存储不可用，跳过对账（不标记缺失、不重挂）');
+    return { inserts: [], updates: [], availabilityMarks: [], reattachments: [], skipped, warn };
   }
 
-  // 可见集合 = 对账后 delete=0 的节点。没有文件又不被删除的行（受保护的根）同样算可见，
-  // 否则会给它的子节点刷出无意义的重挂告警。
-  const visibleIds = new Set(survivors.map((n) => n.id));
+  // 可见集合：所有未删除的行（对账不删，均保留）+ 所有可读文件（写后 delete=0）
+  const visibleIds = new Set();
   for (const r of rows) {
-    const willBeRemoved = Number(r.delete) === 0 && !isProtectedRoot(r) && !fileById.has(r.id);
-    if (willBeRemoved) continue;
-    if (Number(r.delete) === 0 || fileById.has(r.id)) visibleIds.add(r.id);
+    if (Number(r.delete) === 0) visibleIds.add(r.id);
   }
+  for (const id of fileById.keys()) visibleIds.add(id);
 
-  // 根 id 优先取文件侧的根（不硬编码 '1'：demo-data 用 top: "0" / id: "zho01root001"），
-  // 取不到才退回 DB 里可见的 '1'
-  const rootNote = survivors.find((n) => n.top === ROOT_TOP);
-  const rootId = rootNote ? rootNote.id : (visibleIds.has(ROOT_ID) ? ROOT_ID : null);
+  // 根 id：优先文件侧/行侧 top===ROOT_TOP 的可见节点（不硬编码 '1'），退回可见的 '1'
+  const rootFromFile = [...fileById.values()].find((n) => n.top === ROOT_TOP);
+  const rootFromRow = rows.find((r) => Number(r.delete) === 0 && r.top === ROOT_TOP);
+  const rootId = rootFromFile?.id ?? rootFromRow?.id ?? (visibleIds.has(ROOT_ID) ? ROOT_ID : null);
 
   // 沿 DB 的 top 链上溯，返回第一个可见祖先（可穿过已软删/已失踪的父节点）。
-  // 不直接挂根：App 删节点时把子节点提升到「上一级」（MindMap.jsx 的 promoteChildren），
-  // 只有落到同一个祖先上才与 App 的语义一致；一路掉到根会把节点从原来的位置甩走。
+  // 不直接挂根：App 删节点时把子节点提升到「上一级」（MindMap.jsx promoteChildren），
+  // 只有落到同一个祖先上才与 App 语义一致。
   const nearestVisibleAncestor = (startId) => {
     let current = startId;
     const seen = new Set();
@@ -180,9 +127,9 @@ function planReconcile({ notes, skipped = [], rows }) {
     return null;
   };
 
-  // 可见性不变量：delete=0 的节点必须可从根可达
-  const reattached = [];
-  for (const note of survivors) {
+  // 可见性不变量：可读节点必须可从根可达（仅在文件侧重挂，不改不可读文件）
+  const reattachments = [];
+  for (const note of fileById.values()) {
     if (note.id === rootId) continue;
     if (note.top === ROOT_TOP) continue;
     if (note.top && visibleIds.has(note.top)) continue;
@@ -194,25 +141,48 @@ function planReconcile({ notes, skipped = [], rows }) {
     const where = target === rootId ? '根' : '最近可用祖先';
     warn.push(`父节点不可达，重挂到${where}: ${note.id} (top=${note.top ?? 'null'} -> ${target})`);
     note.top = target;
-    if (note.file) reattached.push({ file: note.file, id: note.id, top: target });
+    if (note.file) reattachments.push({ file: note.file, id: note.id, top: target });
   }
 
   const inserts = [];
   const updates = [];
-  for (const note of survivors) {
+  for (const note of fileById.values()) {
     const row = rowById.get(note.id);
-    if (!row) {
-      inserts.push(note);
-      continue;
-    }
+    if (!row) { inserts.push(note); continue; }
     if (Number(row.delete) === 1) warn.push(`文件回到目录，自动恢复: ${note.id}`);
     if (Number(row.delete) === 1 || differs(row, note)) updates.push(note);
   }
 
-  return { inserts, updates, removes, skipped, warn, reattached };
+  // 可用性判定（仅「未删除的行」与「本次被恢复的行」）：
+  // 优先级：读过(notes) / 未变(unchanged) → available；读不出(unreadable) → unavailable；
+  // 其余无文件 → missing。只在最终值与库中不同的时候产出 mark。
+  const availabilityMarks = [];
+  for (const row of rows) {
+    const isLive = Number(row.delete) === 0;
+    const restored = Number(row.delete) === 1 && fileById.has(row.id);
+    if (!isLive && !restored) continue; // 仍在回收站且未回来：不判可用性
+
+    let availability = 'available';
+    let reason = null;
+    if (fileById.has(row.id) || unchangedIds.has(row.id)) {
+      availability = 'available';
+    } else if (unreadableById.has(row.id)) {
+      availability = 'unavailable';
+      reason = unreadableById.get(row.id);
+    } else {
+      availability = 'missing';
+    }
+
+    const prev = row.availability ?? 'available';
+    const prevReason = row.availability_reason ?? null;
+    if (prev !== availability || prevReason !== reason) {
+      availabilityMarks.push({ id: row.id, availability, reason });
+    }
+  }
+
+  return { inserts, updates, availabilityMarks, reattachments, skipped, warn };
 }
 
 module.exports = {
-  ROOT_ID, normalizeFields, isProtectedRoot, scanNoteFiles, scanTrashFiles,
-  planReconcile, writeNoteTop,
+  ROOT_ID, normalizeFields, isProtectedRoot, isDataless, planReconcile, writeNoteTop,
 };

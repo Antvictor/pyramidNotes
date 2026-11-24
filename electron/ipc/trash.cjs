@@ -8,6 +8,7 @@ const {
   filterDeletableIds, collectCluster, listTrashBoundaries, isExpired,
 } = require('./trashUtils.cjs');
 const { sweepUnreferencedAttachments } = require('./attachment.cjs');
+const repository = require('../source/noteRepository.cjs');
 
 function getTrashDir() {
   const dir = path.join(resolveStoragePath(), '.delete');
@@ -37,8 +38,7 @@ async function deleteNotes(nodeIds) {
     const deletable = filterDeletableIds(nodeIds, rowsById); // 根永不删/进回收站
     const now = new Date().toISOString();
 
-    // 文件操作先做（systemTrash 为异步），DB 写合并为单个事务：
-    // 减少主进程阻塞时间与 WAL 抖动
+    // 文件操作走 Repository（元数据操作，不读正文）；DB 写合并为单事务
     const softIds = [];
     const hardIds = [];
     const trashDir = mode === 'trash' ? getTrashDir() : null;
@@ -48,13 +48,13 @@ async function deleteNotes(nodeIds) {
       const src = path.join(storagePath, fileNameOf(row));
       if (mode === 'trash') {
         const dest = path.join(trashDir, fileNameOf(row));
-        if (fs.existsSync(src)) fs.renameSync(src, dest);
+        if (await repository.exists(src)) await repository.rename(src, dest);
         softIds.push(id);
       } else if (mode === 'systemTrash') {
-        if (fs.existsSync(src)) await shell.trashItem(src);
+        if (await repository.exists(src)) await shell.trashItem(src);
         hardIds.push(id);
       } else { // permanent
-        if (fs.existsSync(src)) fs.unlinkSync(src);
+        if (await repository.exists(src)) await repository.unlink(src);
         hardIds.push(id);
       }
     }
@@ -67,7 +67,7 @@ async function deleteNotes(nodeIds) {
     })();
 
     // trash 模式下文件仍在回收站（可恢复），不扫除
-    if (mode !== 'trash') sweepUnreferencedAttachments();
+    if (mode !== 'trash') await sweepUnreferencedAttachments();
 
     return { ok: true, mode, count: deletable.length };
   } catch (error) {
@@ -89,7 +89,7 @@ function listTrash() {
   }
 }
 
-function restoreTrash(nodeId) {
+async function restoreTrash(nodeId) {
   try {
     const db = getDb();
     const rows = db.prepare('SELECT id, name, top, "delete" FROM notes').all();
@@ -104,7 +104,7 @@ function restoreTrash(nodeId) {
       if (!r) continue;
       const src = path.join(trashDir, fileNameOf(r));
       const dest = path.join(storagePath, fileNameOf(r));
-      if (fs.existsSync(src)) fs.renameSync(src, dest);
+      if (await repository.exists(src)) await repository.rename(src, dest);
       idsToRestore.push(id);
     }
     const stmt = db.prepare('UPDATE notes SET "delete" = 0, last_up_time = ? WHERE id = ?');
@@ -118,7 +118,7 @@ function restoreTrash(nodeId) {
   }
 }
 
-function purgeExpiredTrash() {
+async function purgeExpiredTrash() {
   try {
     const db = getDb();
     const settings = getCachedSettings() || DEFAULT_SETTINGS;
@@ -131,12 +131,12 @@ function purgeExpiredTrash() {
     for (const r of rows) {
       if (!isExpired(r.last_up_time, days, nowMs)) continue;
       const p = path.join(trashDir, fileNameOf(r));
-      if (fs.existsSync(p)) fs.unlinkSync(p);
+      if (await repository.exists(p)) await repository.unlink(p);
       db.prepare('DELETE FROM notes WHERE id = ?').run(r.id);
       purged += 1;
     }
 
-    if (purged > 0) sweepUnreferencedAttachments();
+    if (purged > 0) await sweepUnreferencedAttachments();
 
     return { purged };
   } catch (error) {
@@ -146,8 +146,7 @@ function purgeExpiredTrash() {
 }
 
 // 回收站内「彻底删除」：无条件物理删除选中条目及其所在整簇（顶层 + 其 delete=1 后代）。
-// 不复用 deleteNotes —— 后者按 settings.deleteMode 分支，而这里必须始终物理删除。
-function purgeTrashNodes(nodeIds) {
+async function purgeTrashNodes(nodeIds) {
   try {
     const db = getDb();
     const rows = db.prepare('SELECT id, name, top, "delete" FROM notes').all();
@@ -163,7 +162,7 @@ function purgeTrashNodes(nodeIds) {
       const r = byId.get(cid);
       if (!r || r.delete !== 1) continue;
       const p = path.join(trashDir, fileNameOf(r));
-      if (fs.existsSync(p)) fs.unlinkSync(p);
+      if (await repository.exists(p)) await repository.unlink(p);
       ids.push(cid);
     }
     const stmt = db.prepare('DELETE FROM notes WHERE id = ?');
@@ -171,7 +170,7 @@ function purgeTrashNodes(nodeIds) {
       for (const cid of ids) stmt.run(cid);
     })();
 
-    if (ids.length) sweepUnreferencedAttachments();
+    if (ids.length) await sweepUnreferencedAttachments();
 
     return { ok: true, purged: ids.length };
   } catch (error) {

@@ -4,7 +4,7 @@ const { resolveLanguage, getWindowTitle } = require("../common/locale.cjs");
 const { resolveAppIconPath } = require("../common/assets.cjs");
 
 function createWindow(settings = {}) {
-  const language = resolveLanguage(settings.language, [app.getLocale()]);
+  const language = resolveLanguage(settings?.language, [app.getLocale()]);
   const win = new BrowserWindow({
     width: 1200,
     height: 800,

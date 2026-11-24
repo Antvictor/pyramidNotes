@@ -64,9 +64,32 @@
   脑图**先订阅再 select**，收到事件后重读并用 `sameGraph` 去重。
 - **建根守卫**：模块级 `reconcileDone`（跨卸载保留）为假时禁止建根，
   防止「库为空但目录有文件」时抢建 `1-root.md` 与对账导入的既有根冲突（双根）。
+- **文件 I/O 异步 + 可用性状态**：对账与编辑器文件读写统一走 `electron/source/noteRepository.cjs`（异步 + 超时 +
+  `isDataless` 快路径），**不再同步 `readFileSync` 阻塞主线程**。详见下节「文件可用性、Source 分层与刷新」。
 - **列表查询**：脑图两处列表查询只取 `NOTE_LIST_COLUMNS`（不含 `content`）；
   笔记页 `allNodes` **必须保留正文**——编辑器 `![[节点]]` 嵌入预览直接渲染 `target.content`。
 - **编辑器按需加载**：`TipTapEditor` 为懒加载 chunk，脑图空闲时预取；动画仍由 `Node` 容器负责。
+
+## 文件可用性、Source 分层与刷新
+
+**分层（不可越界）**：`Repository/Source(I/O)` → `planReconcile(纯函数)` → `Apply(DB 事务 + 回写)`。
+- `electron/source/noteRepository.cjs`：唯一文件访问入口；`scanNotes` **只产 I/O 事实**（`notes/unchanged/unreadable/unmatchedFilenames`），**不判 missing**；`isDataless`（macOS `blocks===0 && size>0`）快路径不读、避免卡死；mtime+size 未变则跳过读正文。
+- `electron/nodes/noteSync.cjs::planReconcile`：**纯函数**，输入事实+DB 快照，输出 `inserts/updates/availabilityMarks/reattachments`。**对账不再硬删**：目录里没有的行保留并标 `availability=missing`；硬删只来自 `trash.cjs` 显式删除。
+- `electron/nodes/initNode.js`：Apply 层，单事务落库（content/availability/mtime/size）+ 回写重挂。
+
+**availability 状态机**（落 `notes`）：`available / unavailable(+availability_reason: not_downloaded/timeout/permission/io_error) / missing`。`sync_state` 仅文档预留、不落库。
+- **读不到 ≠ 缺失**：文件名在即 `unavailable`（iCloud dataless 仍在 `readdir`）；`missing` 仅当列表里确实无该名。
+- `deferred/unreadable/missing` 行**不删、仍可见、不重挂其子节点**；破坏性动作只在用户确认后。
+
+**三层保鲜**：
+
+| 层 | 位置 | 说明 |
+|---|---|---|
+| 启动快照 | `initNode` → `scanNotes` | 异步、限并发/超时/预算、mtime+size 增量 |
+| 自动轮询 | `electron/nodes/statusPoller.cjs` | 只 `readdir+stat`、聚焦 ~10s/失焦 ~60s、单飞；仅变化时 UPDATE 并发 `notes:statusChanged`；发现可读新文件→触发增量对账 |
+| 点击复核 | `note:recheckAvailability` | 点节点/图标时对该文件当场核验（hydrate/超时重试）；`note:recoverFromCache` 用 DB 行重建文件 |
+
+**渲染侧**：`NOTE_LIST_COLUMNS` 含 `availability/availability_reason`；节点复用 memo **要含 availability**；`sameGraph` **不含** availability（状态变化不触发整图重排）；`notes:statusChanged` 只按 id 打补丁更新 `notesData`；**文件异常时**显示**仅圆形图标**（hover 才出提示，点击复核/恢复）：**简单模式**顶部多一条独立状态行（`getNodeSize` 的 `statusPad` 计入，估算==实测），**丰富模式并入已有顶栏**（不额外增高）；**正常节点不占位**。
 
 ## 跨卸载缓存（返回脑图不重载）
 
@@ -104,6 +127,9 @@ MindMap 在切到 `/note/...` 时会**卸载**。`MindMap.jsx` 顶部的模块�
 6. **不要退回「`loadedNodeIds` 为空 ⇒ 渲染全部节点」**：会先全图布局挂载再收缩，笔记多时首屏明显变慢。
 7. **不要给笔记页的 `allNodes` 查询加列投影**：`![[节点]]` 嵌入预览依赖每行的 `content`。
 8. **节点浮窗不要用卡片内 `position:absolute`**：卡片 `overflow:hidden` 且节点处于 ReactFlow 的 `transform`（随缩放）之下，会裁剪/变形。名字全名浮窗与正文预览浮窗**必须** `createPortal` 到 `document.body` + `position:fixed`。
+9. **不要在对账里硬删目录缺失的行**：保留并标 `availability=missing`（见上节「对账不再硬删」）；硬删只来自显式删除 IPC。
+10. **不要把 `availability` 加进 `sameGraph`**：它属装饰状态，加进去会让状态变化触发整图重排；但**节点复用 memo 必须含 `availability/availability_reason`**，否则图标不刷新。
+11. **轮询只做 `readdir + stat`**：绝不读正文、不触发云下载；且只在 availability 实际变化时 `UPDATE`（否则每轮刷 FTS 触发器）。
 
 ## 常见修改速查
 
@@ -121,6 +147,11 @@ MindMap 在切到 `/note/...` 时会**卸载**。`MindMap.jsx` 顶部的模块�
 | 改颜色持久化 | 文件 YAML `category` → `noteSync.normalizeFields/differs` → `initNode.js` 四处列清单 → `notes` 表 `category` 列 → `db.js` 的 `NOTE_LIST_COLUMNS`；改色走 `db.notes.update` + `updateYaml({category})`（合并写） |
 
 ## 修复历史
+
+- **2026-11-24**：文件可用性 + 异步对账 + 统一文件仓库。
+  ① 启动卡死：笔记在 iCloud 被「优化存储」驱逐为 dataless 时对账 `readFileSync` 永久阻塞、窗口不显示；改为文件 I/O 全部收进 `noteRepository`（异步 + 超时 + `isDataless` 快路径 + mtime/size 增量），`planReconcile` 纯函数输出 `availabilityMarks` 取代硬删，`deferred/missing` 行保留、可见、不重挂。
+  ② 三层保鲜：启动快照 + `statusPoller` 轮询 + 点击复核；新增 `notes:statusChanged`/`note:recheckAvailability`/`note:recoverFromCache`；左侧圆形状态图标（恒定占位不重排）。
+  ③ `activate` 在设置未加载时 `createWindow(null)` 崩溃，改为未就绪不建窗 + `settings?.language` 兜底。
 
 - **2026-11-23**：节点新增「简约/丰富」显示模式、颜色分类 `category`、可选固定宽度截断。
   简约模式展开/折叠改实心三角（▶/▶▶/▼）；丰富模式加彩色圆点（7 色，点圆点或右键「设置颜色」改色）与正文预览图标（hover 1.2s 显示前 200 字）。

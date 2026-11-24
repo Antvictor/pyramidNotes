@@ -1,8 +1,12 @@
+// 提高 libuv 线程池，降低个别慢/卡读把异步 fs 整体拖垮的概率（须在首次异步 IO 前设置）
+process.env.UV_THREADPOOL_SIZE = process.env.UV_THREADPOOL_SIZE || '16'
+
 const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron')
 const path = require('path')
 const { registerFileIPC } = require('./ipc/file.cjs')
 const { registerAttachmentIPC } = require('./ipc/attachment.cjs')
 const { registerPathIPC } = require('./ipc/userPath.cjs')
+const { getDataPath } = require('./ipc/userPath.cjs')
 const { createWindow } = require('./window/window.cjs')
 const { initializeDatabase, closeDatabase } = require('./db/db.cjs')
 const { setWriteGate } = require('./db/writeGate.cjs')
@@ -16,6 +20,8 @@ const { applyApplicationMenu } = require('./common/locale.cjs')
 const { buildRecoveryNotice } = require('./common/recoveryNotice.cjs')
 const { registerLicenseIPC } = require('./ipc/license.cjs')
 const { registerPluginsIPC } = require('./ipc/plugins.cjs')
+const { registerNoteStatusIPC } = require('./ipc/noteStatus.cjs')
+const { startStatusPolling } = require('./nodes/statusPoller.cjs')
 const { ensureOfficialPlugins, resolveSeedRoot } = require('./common/pluginSeed.cjs')
 
 // 数据库损坏后已自动从本地文件重建：窗口加载完成后提示一次（含备份位置与恢复数量）
@@ -134,9 +140,22 @@ app.whenReady().then(async () => {
     registerTrashIPC();
     registerLicenseIPC(mainWindow);
     registerPluginsIPC();
+    registerNoteStatusIPC();
 
     // 首帧不等全盘扫描：对账在窗口出现后后台执行，完成后通知渲染端刷新
     void runReconcile(mainWindow, resolvedLanguage, recovery);
+
+    // 文件可用性轮询：持续保鲜；对账进行中自动跳过；发现可读新文件/内容变化时触发增量对账
+    const statusPoller = startStatusPolling({
+      win: mainWindow,
+      getStoragePath: () => getDataPath(),
+      isBusy: () => Boolean(reconcilePromise),
+      requestReconcile: () => {
+        if (mainWindow && !mainWindow.isDestroyed()) void runReconcile(mainWindow, resolvedLanguage, null);
+      },
+    });
+    app.on('before-quit', () => statusPoller.stop());
+    mainWindow.on('closed', () => statusPoller.stop());
 
     // Handler to reload database when storagePath changes
     ipcMain.handle('reloadDatabase', async (event, newStoragePath) => {
@@ -185,5 +204,8 @@ app.on('window-all-closed', () => {
 })
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow(getCachedSettings())
+  // 启动初始化尚未完成时 getCachedSettings() 为 null：此刻建窗会读 null.language 崩溃，
+  // 也可能与 whenReady 的主窗口重复。交给启动流程创建，此后再响应停靠栏点击重建窗口。
+  const settings = getCachedSettings()
+  if (settings && BrowserWindow.getAllWindows().length === 0) createWindow(settings)
 })

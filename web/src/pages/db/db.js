@@ -4,7 +4,7 @@ export function escapeLike(keyword) {
 
 // 脑图列表只需要结构字段，不传输正文（正文按笔记单独读取）。
 // 内部常量，禁止把外部输入拼进 SELECT 列表。
-export const NOTE_LIST_COLUMNS = 'id, name, alias, top, "left", sort, category';
+export const NOTE_LIST_COLUMNS = 'id, name, alias, top, "left", sort, category, availability, availability_reason';
 
 class Table {
     constructor(tableName) {

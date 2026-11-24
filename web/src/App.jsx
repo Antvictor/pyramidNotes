@@ -36,6 +36,24 @@ function AppContent() {
     });
   }, []);
 
+  // 输入框全选：应用菜单移除了 selectAll 角色（为保护 ProseMirror 的选区同步），
+  // 导致 macOS 下所有 <input>/<textarea> 的 Cmd/Ctrl+A 失效。这里只对普通输入框补全选，
+  // 不碰 contenteditable（编辑器），因此不影响 ProseMirror。
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      const isSelectAll = (e.metaKey || e.ctrlKey) && !e.altKey && (e.key === 'a' || e.key === 'A');
+      if (!isSelectAll) return;
+      const el = e.target;
+      const tag = el && el.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') {
+        e.preventDefault();
+        try { el.select(); } catch { /* ignore */ }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, []);
+
   const clearSelectedNode = useCallback(() => {
     setSelectedNode(null);
   }, []);

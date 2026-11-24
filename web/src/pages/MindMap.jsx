@@ -73,6 +73,9 @@ const MOVE_ANIM_MS = 1300;
 let notesDataCache = null;       // 上次的节点行
 let measuredSizesCache = null;   // 各节点实测尺寸 Map
 let viewportCache = null;        // ReactFlow 视口 { x, y, zoom }
+// 布局相关设置缓存：返回脑图重新挂载时首帧即用正确宽度/截断/模式/间距，
+// 避免"默认值→真实设置"的二次布局（表现为先换行再变不换行/位置跳一下）
+let layoutSettingsCache = null;
 // 启动对账完成前，渲染端不得建根：库为空而目录有文件时（如损坏恢复），
 // 抢建 1-root.md 会与对账导入的既有根冲突，形成双根。模块级存在，跨卸载保留。
 let reconcileDone = typeof window === "undefined" || !window.api?.onNotesReconciled;
@@ -127,15 +130,18 @@ function layoutTree(nodes, rootId, startX, startY, nodeSizes, spacingPreset, opt
     const width = Math.min(nodeMaxWidth, Math.max(30, 30 + text.length * 8));
     // 丰富模式顶部多一行（色点/预览图标）
     const richPad = opts.displayMode === 'rich' ? 18 : 0;
+    // 简单模式异常时顶部多一条仅图标的状态行；丰富模式并入已有顶栏，不额外增高（与 DOM 同源）
+    const statusPad = (node?.availability && node.availability !== 'available' && opts.displayMode !== 'rich') ? 18 : 0;
+    const extraPad = richPad + statusPad;
     // 固定宽度开启：与 DOM 的 nowrap 一致，强制单行
     if (opts.nameTruncate) {
-      return { width, height: padY + 24 + richPad };
+      return { width, height: padY + 24 + extraPad };
     }
     const charsPerLine = Math.max(1, Math.floor((nodeMaxWidth - padX) / 8));
     const lines = Math.max(1, Math.ceil(text.length / charsPerLine));
     return {
       width,
-      height: padY + 24 * lines + richPad,
+      height: padY + 24 * lines + extraPad,
     };
   };
 
@@ -336,12 +342,13 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const [swapTarget, setSwapTarget] = useState(null);
   const [permissionError, setPermissionError] = useState(null);
   const [searchParams] = useSearchParams();
-  const [nodeSpacing, setNodeSpacing] = useState('normal');
+  const [nodeSpacing, setNodeSpacing] = useState(layoutSettingsCache?.nodeSpacing ?? 'normal');
   const [deleteMode, setDeleteMode] = useState('trash');
-  const [nodeDisplayMode, setNodeDisplayMode] = useState('simple');
-  const [nodeNameTruncate, setNodeNameTruncate] = useState(false);
-  const [nodeWidth, setNodeWidth] = useState(140);
+  const [nodeDisplayMode, setNodeDisplayMode] = useState(layoutSettingsCache?.nodeDisplayMode ?? 'simple');
+  const [nodeNameTruncate, setNodeNameTruncate] = useState(layoutSettingsCache?.nodeNameTruncate ?? false);
+  const [nodeWidth, setNodeWidth] = useState(layoutSettingsCache?.nodeWidth ?? 140);
   const [colorPicker, setColorPicker] = useState({ show: false, x: 0, y: 0, nodeId: null });
+  const [recoverTarget, setRecoverTarget] = useState(null);
   const focusNodeId = useMindMapViewStore((s) => s.focusNodeId);
   const setFocusNodeId = useMindMapViewStore((s) => s.setFocusNodeId);
   const loadedNodeIds = useMindMapViewStore((s) => s.loadedNodeIds);
@@ -528,6 +535,29 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   const closeColorPicker = useCallback(() => {
     setColorPicker((p) => ({ ...p, show: false }));
   }, []);
+
+  // 节点状态图标点击：缺失→恢复对话框；不可用→当场复核（hydrate/超时重试）
+  const handleStatusAction = useCallback(async (id) => {
+    const node = allNotesNodeMapRef.current?.get(id);
+    if (node?.availability === 'missing') {
+      setRecoverTarget({ id, name: node.name });
+      return;
+    }
+    const res = await window.api?.recheckAvailability?.(id);
+    if (res?.availability) {
+      setNotesData((nds) => (nds ? nds.map((n) => (n.id === id ? { ...n, availability: res.availability, availability_reason: res.reason ?? null } : n)) : nds));
+    }
+    if (res?.availability === 'missing') setRecoverTarget({ id, name: node?.name });
+  }, []);
+
+  // 从缓存恢复：用 DB 行重建 .md，状态拉回 available
+  const confirmRecover = useCallback(async () => {
+    if (!recoverTarget) return;
+    const id = recoverTarget.id;
+    await window.api?.recoverFromCache?.(id);
+    setNotesData((nds) => (nds ? nds.map((n) => (n.id === id ? { ...n, availability: 'available', availability_reason: null } : n)) : nds));
+    setRecoverTarget(null);
+  }, [recoverTarget]);
 
   // 首次加载或聚焦切换时加载前三层；数据变更/导航返回不重置
   useEffect(() => {
@@ -812,11 +842,19 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
   useEffect(() => {
     if (window.api?.getSettings) {
       window.api.getSettings().then((s) => {
-        if (s?.nodeSpacing) setNodeSpacing(s.nodeSpacing);
+        // 缓存布局设置：返回时首帧即按真实宽度/截断渲染，避免二次布局闪烁
+        const layout = {
+          nodeSpacing: s?.nodeSpacing ?? 'normal',
+          nodeDisplayMode: s?.nodeDisplayMode ?? 'simple',
+          nodeNameTruncate: s?.nodeNameTruncate ?? false,
+          nodeWidth: s?.nodeWidth ?? 140,
+        };
+        layoutSettingsCache = layout;
+        setNodeSpacing(layout.nodeSpacing);
+        setNodeDisplayMode(layout.nodeDisplayMode);
+        setNodeNameTruncate(layout.nodeNameTruncate);
+        setNodeWidth(layout.nodeWidth);
         if (s?.deleteMode) setDeleteMode(s.deleteMode);
-        if (s?.nodeDisplayMode) setNodeDisplayMode(s.nodeDisplayMode);
-        if (s?.nodeNameTruncate !== undefined) setNodeNameTruncate(s.nodeNameTruncate);
-        if (s?.nodeWidth) setNodeWidth(s.nodeWidth);
       });
     }
     // 首帧：若有缓存先立即渲染，避免返回脑图时的空白闪屏
@@ -841,9 +879,21 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
         // 同时新建markdown文件, 保存yaml数据，title;left;top等元信息
         saveNode(rootNode);
         setNotesData([rootNode]);
-      } else if (!sameGraph(notesDataCache, res)) {
-        // 结构有变化（如编辑页新增/删除了节点）才更新，避免无谓重排
-        setNotesData(res);
+      } else {
+        // 结构变化→整表替换；仅 availability 变→打补丁（不触发重排）
+        setNotesData((prev) => {
+          if (!sameGraph(prev, res)) return res;
+          const prevById = new Map((prev || []).map((x) => [x.id, x]));
+          let statusChanged = false;
+          for (const r of res) {
+            const p = prevById.get(r.id);
+            if (p && (p.availability !== r.availability || (p.availability_reason ?? null) !== (r.availability_reason ?? null))) {
+              statusChanged = true;
+              break;
+            }
+          }
+          return statusChanged ? res : prev;
+        });
       }
     };
 
@@ -852,6 +902,25 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     const unsubscribe = window.api?.onNotesReconciled?.(() => {
       reconcileDone = true;
       if (!disposed) db.notes.select("", "", "", { columns: NOTE_LIST_COLUMNS }).then(applyRows);
+    });
+
+    // 主进程轮询推送的可用性变化：只按 id 打补丁，不整图重读
+    const unsubscribeStatus = window.api?.onStatusChanged?.((updates) => {
+      if (disposed || !Array.isArray(updates) || !updates.length) return;
+      const patch = new Map(updates.map((u) => [u.id, u]));
+      setNotesData((prev) => {
+        if (!prev) return prev;
+        let changed = false;
+        const next = prev.map((n) => {
+          const u = patch.get(n.id);
+          if (u && (n.availability !== u.availability || (n.availability_reason ?? null) !== (u.reason ?? null))) {
+            changed = true;
+            return { ...n, availability: u.availability, availability_reason: u.reason ?? null };
+          }
+          return n;
+        });
+        return changed ? next : prev;
+      });
     });
 
     const loadRows = () => {
@@ -871,6 +940,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
     return () => {
       disposed = true;
       unsubscribe?.();
+      unsubscribeStatus?.();
     };
   }, []);
 
@@ -916,6 +986,14 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       if (newSettings.nodeWidth) {
         setNodeWidth(newSettings.nodeWidth);
       }
+      // 同步布局设置缓存，保证下次从编辑器返回时首帧即用最新值
+      layoutSettingsCache = {
+        nodeSpacing: newSettings.nodeSpacing ?? layoutSettingsCache?.nodeSpacing ?? 'normal',
+        nodeDisplayMode: newSettings.nodeDisplayMode ?? layoutSettingsCache?.nodeDisplayMode ?? 'simple',
+        nodeNameTruncate: newSettings.nodeNameTruncate !== undefined
+          ? newSettings.nodeNameTruncate : (layoutSettingsCache?.nodeNameTruncate ?? false),
+        nodeWidth: newSettings.nodeWidth ?? layoutSettingsCache?.nodeWidth ?? 140,
+      };
       if (newSettings.storagePath) {
         console.log("Settings changed, reloading notes for storagePath:", newSettings.storagePath);
         db.notes.select("", "", "", { columns: NOTE_LIST_COLUMNS }).then((res) => {
@@ -1054,6 +1132,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           onSetCategory: setNodeCategory,
           onOpenColor: openColorPicker,
           fetchPreview,
+          onStatusAction: handleStatusAction,
           onExpandOneLevel: expandOneLevel,
           onExpandAll: expandAll,
           onCollapseNode: collapseNode,
@@ -1118,6 +1197,8 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           p.data.displayMode === n.data.displayMode &&
           p.data.nameTruncate === n.data.nameTruncate &&
           p.data.nodeWidth === n.data.nodeWidth &&
+          p.data.availability === n.data.availability &&
+          p.data.availability_reason === n.data.availability_reason &&
           p.position.x === n.position.x &&
           p.position.y === n.position.y
         ) return p;
@@ -1140,7 +1221,7 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
       ) return prev;
       return initEdges;
     });
-  }, [displayedNotes, setEdges, setNodes, allNotesNodeMap, loadedNodeIds, expandedNodeIds, expandOneLevel, expandAll, collapseNode, selectedNodeId, i18n.language, nodeDisplayMode, nodeNameTruncate, nodeWidth, setNodeCategory, openColorPicker, fetchPreview]);
+  }, [displayedNotes, setEdges, setNodes, allNotesNodeMap, loadedNodeIds, expandedNodeIds, expandOneLevel, expandAll, collapseNode, selectedNodeId, i18n.language, nodeDisplayMode, nodeNameTruncate, nodeWidth, setNodeCategory, openColorPicker, fetchPreview, handleStatusAction]);
 
   // 添加连接
   const onConnect = useCallback(
@@ -1710,6 +1791,11 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
 
               lastClickRef.current = null;
 
+              // 双击进入编辑；文件不可用/缺失则先复核或弹恢复对话框，不直接进
+              if (node.data.availability && node.data.availability !== 'available') {
+                handleStatusAction(node.id);
+                return;
+              }
               // 双击进入编辑，设置 selectedNode 以便返回时居中
               openNodeWithTransition(node.id, node.data.name);
               return;
@@ -1805,6 +1891,15 @@ export default function MindMap({ selectedNode, setSelectedNode, clearSelectedNo
           onClear={(id) => setNodeCategory(id, null)}
           onClose={closeColorPicker}
         />
+        <ConfirmDialog
+          open={!!recoverTarget}
+          title={t("recover.title")}
+          message={t("recover.message", { name: recoverTarget?.name ?? "" })}
+          onConfirm={confirmRecover}
+          onCancel={() => setRecoverTarget(null)}
+          onOpenChange={(open) => { if (!open) setRecoverTarget(null); }}
+        />
+
         <OpenPrompt
           visible={visible}
           id={nodeId}

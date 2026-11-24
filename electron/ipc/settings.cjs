@@ -30,7 +30,7 @@ function registerSettingsIPC() {
     // Retention change should purge expired trash immediately
     if (newSettings.trashRetentionDays !== undefined) {
       try {
-        purgeExpiredTrash();
+        await purgeExpiredTrash();
       } catch (err) {
         console.error('Failed to purge expired trash:', err);
       }

@@ -4,6 +4,7 @@ const path = require('path');
 const { resolveStoragePath, resolveAttachmentDir } = require('../common/utils/fileHelper');
 const { getDb } = require('../db/db.cjs');
 const { extractImageRefs, pickUnreferenced } = require('./attachmentRefs.cjs');
+const repository = require('../source/noteRepository.cjs');
 
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'];
 
@@ -29,11 +30,11 @@ function getCounterPattern(safeName) {
   return new RegExp(`^${safeName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-(\\d+)\\.(${IMAGE_EXTENSIONS.join('|')})$`, 'i');
 }
 
-function getNextCounter(safeName, attachmentDir) {
+async function getNextCounter(safeName, attachmentDir) {
   let maxCounter = 0;
   const pattern = getCounterPattern(safeName);
   try {
-    const files = fs.readdirSync(attachmentDir);
+    const files = await repository.readdir(attachmentDir);
     for (const file of files) {
       const match = pattern.exec(file);
       if (match) {
@@ -49,15 +50,13 @@ function getNextCounter(safeName, attachmentDir) {
 
 // 删除 attachment/img 下没有任何笔记引用的文件。
 // 引用来源 = 全部 notes.content（含 delete=1 的回收站条目），
-// 因此回收站中的笔记仍"占住"它的图片，恢复后不会缺图。
+// 因此回收站中的笔记、以及「缺失但保留」的行仍"占住"它们的图片，恢复后不会缺图。
 // 只应在「应用启动」与「永久删除之后」调用 —— 保存时调用会因撤销丢图。
-function sweepUnreferencedAttachments() {
+async function sweepUnreferencedAttachments() {
   try {
     const db = getDb();
-    // 用 resolveStoragePath() 拼路径而不是 resolveAttachmentDir() —— 后者会 mkdir，
-    // 会让从没用过图片的用户每次启动都多出一个空目录
     const attachmentDir = path.join(resolveStoragePath(), 'attachment', 'img');
-    if (!fs.existsSync(attachmentDir)) return { removed: 0 };
+    if (!(await repository.exists(attachmentDir))) return { removed: 0 };
 
     const referenced = new Set();
     for (const row of db.prepare('SELECT content FROM notes').all()) {
@@ -65,12 +64,14 @@ function sweepUnreferencedAttachments() {
     }
 
     let removed = 0;
-    for (const file of pickUnreferenced(fs.readdirSync(attachmentDir), referenced)) {
+    const names = await repository.readdir(attachmentDir);
+    for (const file of pickUnreferenced(names, referenced)) {
       const p = path.resolve(attachmentDir, file);
       if (!p.startsWith(attachmentDir + path.sep)) continue; // 路径穿越校验
       try {
-        if (fs.statSync(p).isFile()) {
-          fs.unlinkSync(p);
+        const st = await repository.stat(p);
+        if (st.isFile()) {
+          await repository.unlink(p);
           removed += 1;
         }
       } catch {
@@ -93,12 +94,12 @@ function registerAttachmentIPC() {
       }
       const safeName = sanitizeFileName(noteName);
       const ext = (extension || 'png').toLowerCase();
-      const counter = getNextCounter(safeName, attachmentDir);
+      const counter = await getNextCounter(safeName, attachmentDir);
       const fileName = `${safeName}-${String(counter).padStart(3, '0')}.${ext}`;
       const filePath = path.join(attachmentDir, fileName);
 
       const buffer = Buffer.from(base64Data, 'base64');
-      fs.writeFileSync(filePath, buffer);
+      await repository.writeFile(filePath, buffer);
 
       return { fileName };
     } catch (error) {
@@ -115,11 +116,11 @@ function registerAttachmentIPC() {
       }
       const safeName = sanitizeFileName(noteName);
       const ext = path.extname(sourcePath).replace('.', '').toLowerCase() || 'png';
-      const counter = getNextCounter(safeName, attachmentDir);
+      const counter = await getNextCounter(safeName, attachmentDir);
       const fileName = `${safeName}-${String(counter).padStart(3, '0')}.${ext}`;
       const filePath = path.join(attachmentDir, fileName);
 
-      fs.copyFileSync(sourcePath, filePath);
+      await repository.copyFile(sourcePath, filePath);
 
       return { fileName };
     } catch (error) {
@@ -135,7 +136,7 @@ function registerAttachmentIPC() {
       if (!filePath.startsWith(attachmentDir + path.sep)) {
         return { error: 'Invalid file name' };
       }
-      const buffer = fs.readFileSync(filePath);
+      const buffer = await repository.readFile(filePath);
       const ext = path.extname(fileName).replace('.', '').toLowerCase();
       const mimeType = MIME_MAP[ext] || 'application/octet-stream';
       return { base64: buffer.toString('base64'), mimeType };

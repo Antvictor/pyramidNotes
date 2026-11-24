@@ -84,10 +84,17 @@ a:hover {
   color: var(--link-color);
 }
 
+html, body, #root {
+  height: 100%;
+}
+
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  /* 桌面应用：文档级不滚动，各页面（设置/回收站/编辑器）用各自的内部滚动容器。
+     避免外壳 100vh 下被浮层/舍入撑出整页滚动条。 */
+  overflow: hidden;
 }
 
 h1 {

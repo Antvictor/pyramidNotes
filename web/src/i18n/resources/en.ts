@@ -75,6 +75,16 @@ const en = {
     blue: 'Blue',
     purple: 'Purple',
   },
+  noteStatus: {
+    available: 'Available',
+    unavailable: 'Temporarily unavailable',
+    notDownloaded: 'Not downloaded (click to download)',
+    missing: 'File missing (click to recover)',
+  },
+  recover: {
+    title: 'Recover missing node',
+    message: 'The local file for "{{name}}" is missing. Rebuild it from the cached content?',
+  },
   search: {
     dialogTitle: 'Search notes',
     dialogDescription: 'Search node titles or note content.',

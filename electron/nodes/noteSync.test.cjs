@@ -5,12 +5,8 @@ const os = require('os');
 const path = require('path');
 const matter = require('gray-matter');
 const {
-  ROOT_ID, normalizeFields, isProtectedRoot, scanNoteFiles, scanTrashFiles,
-  planReconcile, writeNoteTop,
+  ROOT_ID, normalizeFields, isProtectedRoot, isDataless, planReconcile, writeNoteTop,
 } = require('./noteSync.cjs');
-
-const tmpDir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'pn-sync-'));
-const write = (dir, file, body) => fs.writeFileSync(path.join(dir, file), body, 'utf-8');
 
 const note = (over = {}) => ({
   id: 'n1', name: 'n1', alias: null, top: '1', left: null, content: 'body', ...over,
@@ -52,19 +48,10 @@ test('normalizeFields 解析并规整 category', () => {
   assert.equal(normalizeFields({ id: 'a' }).category, null);
 });
 
-test('planReconcile 在 category 不一致时更新，一致时不更新', () => {
-  const diff = planReconcile({
-    notes: [rootNote(), note({ id: 'n1', top: '1', category: 'gray' })],
-    rows: [rootRow(), row({ id: 'n1', top: '1', category: null })],
-  });
-  assert.deepEqual(diff.updates.map((n) => n.id), ['n1']);
-  assert.equal(diff.updates[0].category, 'gray');
-
-  const same = planReconcile({
-    notes: [rootNote(), note({ id: 'n1', top: '1', category: 'gray' })],
-    rows: [rootRow(), row({ id: 'n1', top: '1', category: 'gray' })],
-  });
-  assert.deepEqual(same.updates, []);
+test('isDataless 仅在 macOS 把「有大小但零块」判定为未下载', () => {
+  assert.equal(isDataless({ size: 100, blocks: 0 }), process.platform === 'darwin');
+  assert.equal(isDataless({ size: 100, blocks: 8 }), false);
+  assert.equal(isDataless({ size: 0, blocks: 0 }), false);
 });
 
 test('isProtectedRoot 同时认定 id 为 1 与 top 为 0 的行', () => {
@@ -73,57 +60,6 @@ test('isProtectedRoot 同时认定 id 为 1 与 top 为 0 的行', () => {
   assert.equal(isProtectedRoot({ id: 'x', top: '0' }), true);
   assert.equal(isProtectedRoot({ id: '9.9', top: '1' }), false);
   assert.equal(isProtectedRoot(undefined), false);
-});
-
-test('scanNoteFiles 读一批带引号 frontmatter 的文件（含自定义根 id）', () => {
-  // demo-data/ 与 openspec/specs 一样被 .git/info/exclude 排除，不是仓库资源，
-  // 所以夹具在这里现造，保证新克隆上也能通过。
-  const dir = tmpDir();
-  write(dir, 'root-os.md', '---\nid: "zho01root001"\nname: "操作系统"\nalias: ""\ntop: "0"\nleft: ""\n---\n\n# 操作系统\n');
-  for (let i = 1; i <= 11; i += 1) {
-    write(dir, `n${i}.md`, `---\nid: "zho${String(i).padStart(2, '0')}leaf0001"\nname: "节点${i}"\nalias: ""\ntop: "zho01root001"\nleft: ""\n---\n\n正文${i}\n`);
-  }
-
-  const { notes, skipped } = scanNoteFiles(dir);
-  assert.equal(notes.length, 12);
-  assert.deepEqual(skipped, []);
-  const root = notes.find((n) => n.id === 'zho01root001');
-  assert.equal(root.top, '0');
-  assert.equal(root.name, '操作系统');
-  assert.ok(notes.every((n) => typeof n.top === 'string' && typeof n.content === 'string'));
-  assert.ok(notes.every((n) => !n.content.startsWith('---')));
-  // 自定义根 id 下所有子节点都可达
-  const plan = planReconcile({ notes, rows: [] });
-  assert.equal(plan.inserts.length, 12);
-  assert.deepEqual(plan.warn, []);
-});
-
-test('scanNoteFiles 跳过无 id 的文件并给出原因', () => {
-  const dir = tmpDir();
-  write(dir, 'good.md', '---\nid: g1\ntitle: G\ntop: "1"\n---\nbody\n');
-  write(dir, 'bad.md', '---\ntitle: 副业|测试\n---\n123\n');
-  write(dir, 'not-note.txt', 'ignored');
-  const { notes, skipped } = scanNoteFiles(dir);
-  assert.deepEqual(notes.map((n) => n.id), ['g1']);
-  assert.equal(skipped.length, 1);
-  assert.equal(skipped[0].file, 'bad.md');
-  assert.match(skipped[0].reason, /id/);
-});
-
-test('scanNoteFiles 按文件名排序，保证重复 id 的胜出者确定', () => {
-  const dir = tmpDir();
-  write(dir, 'b.md', '---\nid: b1\ntop: "1"\n---\nb\n');
-  write(dir, 'a.md', '---\nid: a1\ntop: "1"\n---\na\n');
-  assert.deepEqual(scanNoteFiles(dir).notes.map((n) => n.id), ['a1', 'b1']);
-});
-
-test('scanNoteFiles 在目录不可读时返回 skipped 而非抛出', () => {
-  const missing = path.join(tmpDir(), 'missing-subdir');
-  const { notes, skipped } = scanNoteFiles(missing);
-  assert.deepEqual(notes, []);
-  assert.equal(skipped.length, 1);
-  assert.equal(skipped[0].file, null);
-  assert.match(skipped[0].reason, /readdir failed/);
 });
 
 test('planReconcile 新增目录里有、DB 里没有的笔记', () => {
@@ -135,8 +71,23 @@ test('planReconcile 新增目录里有、DB 里没有的笔记', () => {
   assert.equal(plan.inserts[0].top, '1');
   assert.equal(plan.inserts[0].delete, 0);
   assert.deepEqual(plan.updates, []);
-  assert.deepEqual(plan.removes, []);
-  assert.deepEqual(plan.warn, []);
+  assert.deepEqual(plan.availabilityMarks, []);
+  assert.equal('removes' in plan, false); // 对账不再硬删
+});
+
+test('planReconcile 在 category/sort 不一致时更新，一致时不更新', () => {
+  const diff = planReconcile({
+    notes: [rootNote(), note({ id: 'n1', top: '1', category: 'gray', sort: 3 })],
+    rows: [rootRow(), row({ id: 'n1', top: '1', category: null, sort: 1 })],
+  });
+  assert.deepEqual(diff.updates.map((n) => n.id), ['n1']);
+  assert.equal(diff.updates[0].category, 'gray');
+
+  const same = planReconcile({
+    notes: [rootNote(), note({ id: 'n1', top: '1', category: 'gray', sort: 3 })],
+    rows: [rootRow(), row({ id: 'n1', top: '1', category: 'gray', sort: 3 })],
+  });
+  assert.deepEqual(same.updates, []);
 });
 
 test('planReconcile 修复脏行：top 1.0 与带 frontmatter 的 content', () => {
@@ -147,16 +98,6 @@ test('planReconcile 修复脏行：top 1.0 与带 frontmatter 的 content', () =
   assert.deepEqual(plan.updates.map((n) => n.id), ['z']);
   assert.equal(plan.updates[0].top, '1');
   assert.equal(plan.updates[0].content, '正文');
-  assert.deepEqual(plan.inserts, []);
-});
-
-test('planReconcile 在 sort 不一致时更新', () => {
-  const plan = planReconcile({
-    notes: [rootNote(), note({ id: 'n1', top: '1', sort: 3 })],
-    rows: [rootRow(), row({ id: 'n1', top: '1', sort: 1 })],
-  });
-  assert.deepEqual(plan.updates.map((n) => n.id), ['n1']);
-  assert.equal(plan.updates[0].sort, 3);
 });
 
 test('planReconcile 恢复回到目录的软删笔记', () => {
@@ -165,33 +106,59 @@ test('planReconcile 恢复回到目录的软删笔记', () => {
     rows: [rootRow(), row({ id: 'z', top: '1', delete: 1 })],
   });
   assert.deepEqual(plan.updates.map((n) => n.id), ['z']);
-  assert.equal(plan.updates[0].delete, 0);
   assert.ok(plan.warn.some((w) => /自动恢复/.test(w)));
 });
 
-test('planReconcile 硬删目录里已不存在的行，但不碰根', () => {
+test('planReconcile 缺失的行标记 missing，不硬删', () => {
   const plan = planReconcile({
     notes: [rootNote()],
     rows: [rootRow(), row({ id: 'orphan', top: '1' })],
   });
-  assert.deepEqual(plan.removes, ['orphan']);
+  assert.equal('removes' in plan, false);
+  assert.ok(plan.availabilityMarks.some((m) => m.id === 'orphan' && m.availability === 'missing'));
 });
 
-test('planReconcile 根行 top 为 NULL 且无文件时仍不被删', () => {
-  const plan = planReconcile({
-    notes: [rootNote()],
-    rows: [row({ id: '1', name: 'root', top: null })],
-  });
-  assert.deepEqual(plan.removes, []);
-});
-
-test('planReconcile 目录里没有任何 .md 时跳过删除并告警', () => {
+test('planReconcile 存储不可用时不标记缺失、不重挂', () => {
   const plan = planReconcile({
     notes: [],
     rows: [rootRow(), row({ id: 'orphan', top: '1' })],
+    storageUnavailable: true,
   });
-  assert.deepEqual(plan.removes, []);
-  assert.ok(plan.warn.some((w) => /跳过删除阶段/.test(w)));
+  assert.deepEqual(plan.availabilityMarks, []);
+  assert.deepEqual(plan.reattachments, []);
+  assert.ok(plan.warn.some((w) => /存储不可用/.test(w)));
+});
+
+test('planReconcile 读不到(unreadable)标记 unavailable，且不把其子节点重挂走', () => {
+  const plan = planReconcile({
+    notes: [rootNote(), note({ id: 'c', top: 'cloudparent', file: 'c-子.md' })],
+    unreadable: [{ id: 'cloudparent', file: 'x-行为.md', reason: 'not_downloaded' }],
+    rows: [rootRow(), row({ id: 'cloudparent', top: '1' }), row({ id: 'c', top: 'cloudparent' })],
+  });
+  assert.equal('removes' in plan, false);
+  assert.equal(plan.updates.length, 0);
+  assert.equal(plan.reattachments.length, 0);
+  const m = plan.availabilityMarks.find((x) => x.id === 'cloudparent');
+  assert.equal(m.availability, 'unavailable');
+  assert.equal(m.reason, 'not_downloaded');
+});
+
+test('planReconcile 未变(unchanged)的行把可用性拉回 available（仅当此前不同）', () => {
+  const plan = planReconcile({
+    notes: [rootNote()],
+    unchanged: [{ id: 'n1', file: 'n1-N.md' }],
+    rows: [rootRow(), row({ id: 'n1', top: '1', availability: 'unavailable', availability_reason: 'not_downloaded' })],
+  });
+  const m = plan.availabilityMarks.find((x) => x.id === 'n1');
+  assert.equal(m.availability, 'available');
+  assert.equal(m.reason, null);
+
+  const same = planReconcile({
+    notes: [rootNote()],
+    unchanged: [{ id: 'n1', file: 'n1-N.md' }],
+    rows: [rootRow(), row({ id: 'n1', top: '1', availability: 'available' })],
+  });
+  assert.equal(same.availabilityMarks.some((x) => x.id === 'n1'), false);
 });
 
 test('planReconcile 把父节点不可达的笔记重挂到根（根 id 为 1）', () => {
@@ -248,7 +215,7 @@ test('planReconcile 把重挂结果登记为待回写的文件', () => {
   const plan = planReconcile({
     notes: [
       rootNote(),
-      note({ id: 'gp', top: '1', file: 'gp-祖父.md' }),
+      note({ id: 'gp', top: '1' }),
       note({ id: 'c', top: 'trashed', file: 'c-子.md' }),
     ],
     rows: [
@@ -258,22 +225,7 @@ test('planReconcile 把重挂结果登记为待回写的文件', () => {
       row({ id: 'c', top: 'trashed' }),
     ],
   });
-  assert.deepEqual(plan.reattached, [{ file: 'c-子.md', id: 'c', top: 'gp' }]);
-});
-
-test('writeNoteTop 只改 top，保留其余 frontmatter 与正文', () => {
-  const dir = tmpDir();
-  const file = path.join(dir, 'n-标题.md');
-  fs.writeFileSync(file, '---\nid: n\ntitle: 标题\nalias: "a"\ntop: gone\nleft: ""\n---\n正文\n', 'utf-8');
-
-  writeNoteTop(file, '1');
-
-  const parsed = matter(fs.readFileSync(file, 'utf-8'));
-  assert.equal(parsed.data.top, '1');
-  assert.equal(parsed.data.id, 'n');
-  assert.equal(parsed.data.title, '标题');
-  assert.equal(parsed.data.alias, 'a');
-  assert.match(parsed.content, /正文/);
+  assert.deepEqual(plan.reattachments, [{ file: 'c-子.md', id: 'c', top: 'gp' }]);
 });
 
 test('planReconcile 在没有任何根时只告警不重挂', () => {
@@ -300,26 +252,17 @@ test('planReconcile 透传 skipped', () => {
   assert.deepEqual(plan.skipped, skipped);
 });
 
-test('scanTrashFiles 读取 .delete 下的回收站文件', () => {
-  const dir = tmpDir();
-  const trashDir = path.join(dir, '.delete');
-  fs.mkdirSync(trashDir, { recursive: true });
-  write(trashDir, 'n1-a.md', '---\nid: "n1"\ntitle: "A"\ntop: "1"\nsort: 3\n---\nhello\n');
-  write(trashDir, 'note.txt', 'ignored');
-  write(trashDir, 'bad.md', 'no frontmatter id');
+test('writeNoteTop 只改 top，保留其余 frontmatter 与正文', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pn-sync-'));
+  const file = path.join(dir, 'n-标题.md');
+  fs.writeFileSync(file, '---\nid: n\ntitle: 标题\nalias: "a"\ntop: gone\nleft: ""\n---\n正文\n', 'utf-8');
 
-  const notes = scanTrashFiles(dir);
-  assert.equal(notes.length, 1);
-  assert.equal(notes[0].id, 'n1');
-  assert.equal(notes[0].name, 'A');
-  assert.equal(notes[0].top, '1');
-  assert.equal(notes[0].sort, 3);
-  assert.equal(notes[0].file, 'n1-a.md');
-  assert.equal(notes[0].content.trim(), 'hello');
-  assert.match(notes[0].lastUpTime, /^\d{4}-\d{2}-\d{2}T/);
-});
+  writeNoteTop(file, '1');
 
-test('scanTrashFiles 在 .delete 不存在时返回空数组', () => {
-  const dir = tmpDir();
-  assert.deepEqual(scanTrashFiles(dir), []);
+  const parsed = matter(fs.readFileSync(file, 'utf-8'));
+  assert.equal(parsed.data.top, '1');
+  assert.equal(parsed.data.id, 'n');
+  assert.equal(parsed.data.title, '标题');
+  assert.equal(parsed.data.alias, 'a');
+  assert.match(parsed.content, /正文/);
 });

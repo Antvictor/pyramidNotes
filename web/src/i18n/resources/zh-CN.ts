@@ -75,6 +75,16 @@ const zhCN = {
     blue: '蓝色',
     purple: '紫色',
   },
+  noteStatus: {
+    available: '正常',
+    unavailable: '暂不可用',
+    notDownloaded: '未下载到本地（点此尝试下载）',
+    missing: '文件缺失（点此恢复）',
+  },
+  recover: {
+    title: '恢复缺失节点',
+    message: '“{{name}}” 的本地文件缺失。是否用缓存内容重建该文件？',
+  },
   search: {
     dialogTitle: '搜索笔记',
     dialogDescription: '搜索节点名称或笔记正文。',

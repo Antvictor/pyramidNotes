@@ -13,6 +13,21 @@ function migrateNotes(notesDb) {
   if (!cols.includes('category')) {
     notesDb.exec('ALTER TABLE notes ADD COLUMN category TEXT');
   }
+  if (!cols.includes('availability')) {
+    notesDb.exec("ALTER TABLE notes ADD COLUMN availability TEXT DEFAULT 'available'");
+  }
+  if (!cols.includes('availability_reason')) {
+    notesDb.exec('ALTER TABLE notes ADD COLUMN availability_reason TEXT');
+  }
+  if (!cols.includes('availability_checked_at')) {
+    notesDb.exec('ALTER TABLE notes ADD COLUMN availability_checked_at TEXT');
+  }
+  if (!cols.includes('mtime')) {
+    notesDb.exec('ALTER TABLE notes ADD COLUMN mtime INTEGER');
+  }
+  if (!cols.includes('size')) {
+    notesDb.exec('ALTER TABLE notes ADD COLUMN size INTEGER');
+  }
   notesDb.exec('DROP TABLE IF EXISTS deleted_notes');
 }
 

@@ -26,7 +26,6 @@ function HoverCard({ anchor, interactive = false, onEnter, onLeave, children }) 
         fontSize: 12,
         lineHeight: 1.5,
         zIndex: 10000,
-        // 正文预览可交互：能移入、可选中复制；仅名称浮窗透传不挡操作
         pointerEvents: interactive ? 'auto' : 'none',
         userSelect: interactive ? 'text' : 'none',
         cursor: interactive ? 'text' : 'default',
@@ -37,6 +36,43 @@ function HoverCard({ anchor, interactive = false, onEnter, onLeave, children }) 
       {children}
     </div>,
     document.body,
+  )
+}
+
+// 文件状态圆形图标（仅图标；hover 用 portal tooltip 显示原因；点击触发动作）。可用时返回 null。
+// 简单模式放在独立状态行里；丰富模式并入顶栏（与色点同一行），不额外增高。
+function StatusIcon({ availability, reason, nodeId, onAction }) {
+  const { t } = useTranslation()
+  const [tip, setTip] = useState(null)
+  if (!availability || availability === 'available') return null
+  const isMissing = availability === 'missing'
+  const label = isMissing
+    ? t('noteStatus.missing')
+    : (reason === 'not_downloaded' ? t('noteStatus.notDownloaded') : t('noteStatus.unavailable'))
+  const color = isMissing ? '#ef4444' : '#9ca3af'
+  const glyph = isMissing ? '!' : (reason === 'not_downloaded' ? '⟳' : '!')
+
+  return (
+    <>
+      <span
+        onClick={(e) => { e.stopPropagation(); onAction?.(nodeId); }}
+        onMouseDown={(e) => e.stopPropagation()}
+        onMouseEnter={(e) => {
+          const r = e.currentTarget.getBoundingClientRect()
+          setTip({ x: r.left, y: r.bottom + 6, text: label })
+        }}
+        onMouseLeave={() => setTip(null)}
+        style={{
+          width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
+          border: `1.5px solid ${color}`, color, fontSize: 9,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer',
+        }}
+      >
+        {glyph}
+      </span>
+      <HoverCard anchor={tip}>{tip?.text}</HoverCard>
+    </>
   )
 }
 
@@ -63,6 +99,8 @@ function NodeCustom({ data }) {
   const rich = data.displayMode === 'rich'
   const truncate = !!data.nameTruncate
   const categoryColor = data.category ? CATEGORY_COLORS[data.category] : null
+  const nodeWidth = data.nodeWidth ?? 140
+  const showStatus = !!data.availability && data.availability !== 'available'
 
   const [nameTip, setNameTip] = useState(null)
   const [previewTip, setPreviewTip] = useState(null)
@@ -106,7 +144,6 @@ function NodeCustom({ data }) {
     setPreviewTip({ ...anchor, text: text || t('mindMap.noPreview') })
   }
 
-  // 悬停图标：延时出现；已显示则保持
   const onPreviewEnter = (e) => {
     clearTimeout(previewHideTimer.current)
     if (previewTip) return
@@ -114,7 +151,6 @@ function NodeCustom({ data }) {
     const anchor = anchorBelow(e.currentTarget)
     previewShowTimer.current = setTimeout(() => showPreviewPanel(anchor), 1200)
   }
-  // 离开图标：给 160ms 宽限，允许鼠标跨过间隙移入面板时取消关闭
   const onPreviewLeave = () => {
     clearTimeout(previewShowTimer.current)
     clearTimeout(previewHideTimer.current)
@@ -122,11 +158,9 @@ function NodeCustom({ data }) {
       if (mountedRef.current) setPreviewTip(null)
     }, 160)
   }
-  // 移入面板：取消关闭，保持可阅读/复制
   const onPreviewPanelEnter = () => {
     clearTimeout(previewHideTimer.current)
   }
-  // 移出面板：关闭
   const onPreviewPanelLeave = () => {
     if (mountedRef.current) setPreviewTip(null)
   }
@@ -147,35 +181,59 @@ function NodeCustom({ data }) {
         boxShadow: isSelected ? 'var(--mm-selected-shadow)' : 'var(--mm-card-shadow)',
         cursor: 'pointer',
         minWidth: 40,
-        maxWidth: data.nodeWidth ?? 140,
+        maxWidth: nodeWidth,
         textAlign: 'center',
         color: 'var(--mm-node-text)',
         transition: 'border-color 0.2s, box-shadow 0.2s',
         overflow: 'hidden',
       }}
     >
+      {!rich && showStatus && (
+        <div style={{
+          display: 'flex', alignItems: 'center',
+          padding: '2px 6px',
+          borderBottom: '1px solid var(--mm-card-border)',
+          background: data.availability === 'missing' ? 'rgba(239,68,68,0.08)' : 'rgba(156,163,175,0.14)',
+        }}>
+          <StatusIcon
+            availability={data.availability}
+            reason={data.availability_reason}
+            nodeId={data.id}
+            onAction={data.onStatusAction}
+          />
+        </div>
+      )}
+
       {rich && (
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '3px 6px',
           borderBottom: '1px solid var(--mm-card-border)',
         }}>
-          <button
-            type="button"
-            aria-label={t('nodeMenu.setCategory')}
-            title={t('nodeMenu.setCategory')}
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation()
-              data.onOpenColor?.(data.id, e.clientX, e.clientY)
-            }}
-            style={{
-              width: 12, height: 12, padding: 0, borderRadius: '50%', cursor: 'pointer',
-              border: categoryColor ? 'none' : '1.5px solid var(--text-secondary)',
-              background: categoryColor || 'transparent',
-              boxSizing: 'border-box',
-            }}
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <StatusIcon
+              availability={data.availability}
+              reason={data.availability_reason}
+              nodeId={data.id}
+              onAction={data.onStatusAction}
+            />
+            <button
+              type="button"
+              aria-label={t('nodeMenu.setCategory')}
+              title={t('nodeMenu.setCategory')}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                data.onOpenColor?.(data.id, e.clientX, e.clientY)
+              }}
+              style={{
+                width: 12, height: 12, padding: 0, borderRadius: '50%', cursor: 'pointer',
+                border: categoryColor ? 'none' : '1.5px solid var(--text-secondary)',
+                background: categoryColor || 'transparent',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
           <button
             type="button"
             aria-label={t('mindMap.preview')}
@@ -196,7 +254,7 @@ function NodeCustom({ data }) {
         style={{
           padding: '6px 8px',
           ...(truncate
-            ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: (data.nodeWidth ?? 140) - 20, margin: '0 auto' }
+            ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: nodeWidth - 20, margin: '0 auto' }
             : null),
         }}
         onMouseEnter={onNameEnter}
@@ -251,6 +309,7 @@ function NodeCustom({ data }) {
           </span>
         </div>
       )}
+
       <Handle id="top" type="target" position={Position.Top} isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
       <Handle id="left" type="target" position={Position.Left} isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
       <Handle id="bottom" type="source" position={Position.Bottom} isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
@@ -269,6 +328,5 @@ function NodeCustom({ data }) {
   )
 }
 
-// 只在 data 对象变化时重渲染。MindMap 重建 nodes 时会复用未变化节点的 data，
-// 因此新建/移动/选中/改色/切模式只会刷新真正变化的节点，而不是整图。
+// 只在 data 对象变化时重渲染。
 export default React.memo(NodeCustom, (a, b) => a.data === b.data)

@@ -43,6 +43,21 @@ test('is idempotent', () => {
   assert.ok(true);
 });
 
+test('adds availability/mtime/size columns with defaults', () => {
+  const db = freshDb();
+  db.prepare('INSERT INTO notes (id, name, top) VALUES (?,?,?)').run('1', 'root', '0');
+  migrateNotes(db);
+  const cols = db.prepare('PRAGMA table_info(notes)').all().map((c) => c.name);
+  for (const c of ['availability', 'availability_reason', 'availability_checked_at', 'mtime', 'size']) {
+    assert.ok(cols.includes(c), `missing column ${c}`);
+  }
+  const r = db.prepare('SELECT availability AS a, availability_reason AS ar, mtime AS m, size AS s FROM notes WHERE id=?').get('1');
+  assert.equal(r.a, 'available');
+  assert.equal(r.ar, null);
+  assert.equal(r.m, null);
+  assert.equal(r.s, null);
+});
+
 test('drops legacy deleted_notes table', () => {
   const db = freshDb();
   db.exec('create table deleted_notes(id text)');
